@@ -1,0 +1,11 @@
+# Directories
+.vs/
+OutputFile/bin/
+Project/Engine/x64/
+Project/Client/x64/
+Project/Scripts/x64/
+External/include/Engine
+External/library/Engine
+
+# Files
+*.user
