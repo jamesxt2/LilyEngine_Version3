@@ -1,0 +1,73 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="03.Device">
+      <UniqueIdentifier>{b4efe570-ff92-47e6-9f6d-176521706222}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Engine">
+      <UniqueIdentifier>{11d9edf9-2f64-473e-ac91-ff13aaf6c6fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Default">
+      <UniqueIdentifier>{9002a260-8298-48a8-b50e-efdb5a6279f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Module">
+      <UniqueIdentifier>{278f35ae-e6d3-458a-97d0-a1728a0dd15f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="08.Asset">
+      <UniqueIdentifier>{9900aaf6-15f3-4341-a9d2-3ad786676e04}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.Basis">
+      <UniqueIdentifier>{dd08d26f-76bb-4812-9ceb-ba240b2f9299}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="framework.h">
+      <Filter>Default</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Default</Filter>
+    </ClInclude>
+    <ClInclude Include="global.h">
+      <Filter>01.Basis</Filter>
+    </ClInclude>
+    <ClInclude Include="CDevice.h">
+      <Filter>03.Device</Filter>
+    </ClInclude>
+    <ClInclude Include="singleton.h">
+      <Filter>Module</Filter>
+    </ClInclude>
+    <ClInclude Include="CEngine.h">
+      <Filter>02.Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="define.h">
+      <Filter>01.Basis</Filter>
+    </ClInclude>
+    <ClInclude Include="ptr.h">
+      <Filter>08.Asset</Filter>
+    </ClInclude>
+    <ClInclude Include="d3dUtils.h">
+      <Filter>01.Basis</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine.cpp">
+      <Filter>Default</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Default</Filter>
+    </ClCompile>
+    <ClCompile Include="CDevice.cpp">
+      <Filter>03.Device</Filter>
+    </ClCompile>
+    <ClCompile Include="CEngine.cpp">
+      <Filter>02.Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="d3dUtils.cpp">
+      <Filter>01.Basis</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
