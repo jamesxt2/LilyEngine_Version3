@@ -68,6 +68,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         else
         {
             // Game Engine Code
+            CEngine::GetInst()->Run();
         }
     }
 
@@ -145,7 +146,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         PostQuitMessage(0);
         break;
     default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
+        return CEngine::GetInst()->MsgProc(hWnd, message, wParam, lParam);
     }
     return 0;
 }

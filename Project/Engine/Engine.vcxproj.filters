@@ -23,6 +23,12 @@
     <Filter Include="01.Basis">
       <UniqueIdentifier>{dd08d26f-76bb-4812-9ceb-ba240b2f9299}</UniqueIdentifier>
     </Filter>
+    <Filter Include="04.Manager">
+      <UniqueIdentifier>{c3d4a271-8b11-4241-9893-f41b645b2753}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04.Manager\01.TimeMgr">
+      <UniqueIdentifier>{e514a386-a9e2-44a4-bfb1-53636d87c203}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -52,6 +58,9 @@
     <ClInclude Include="d3dUtils.h">
       <Filter>01.Basis</Filter>
     </ClInclude>
+    <ClInclude Include="CTimeMgr.h">
+      <Filter>04.Manager\01.TimeMgr</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -68,6 +77,9 @@
     </ClCompile>
     <ClCompile Include="d3dUtils.cpp">
       <Filter>01.Basis</Filter>
+    </ClCompile>
+    <ClCompile Include="CTimeMgr.cpp">
+      <Filter>04.Manager\01.TimeMgr</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

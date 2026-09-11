@@ -9,6 +9,9 @@ using namespace Microsoft::WRL;
 #include <DirectXPackedVector.h>
 #include <dxgi1_4.h>
 #include <DirectX/d3dx12.h>
+#include <DirectX/DirectXColors.h>
+
+using namespace DirectX;
 
 #pragma comment(lib,"d3dcompiler")
 #pragma comment(lib, "d3d12")
