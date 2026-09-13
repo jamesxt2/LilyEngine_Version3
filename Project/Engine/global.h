@@ -10,8 +10,10 @@ using namespace Microsoft::WRL;
 #include <dxgi1_4.h>
 #include <DirectX/d3dx12.h>
 #include <DirectX/DirectXColors.h>
+#include <DirectX/SimpleMath.h>
 
 using namespace DirectX;
+using namespace DirectX::SimpleMath;
 
 #pragma comment(lib,"d3dcompiler")
 #pragma comment(lib, "d3d12")
@@ -21,7 +23,11 @@ using namespace DirectX;
 #include <string>
 #include <exception>
 #include <comdef.h>
+#include <vector>
+#include <map>
 
 #include "d3dUtils.h"
 #include "define.h"
 #include "ptr.h"
+#include "enum.h"
+#include "struct.h"

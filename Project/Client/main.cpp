@@ -6,6 +6,7 @@
 #include "Client.h"
 
 #include <Engine/CEngine.h>
+#include "CTestLevel.h"
 
 #ifdef _DEBUG
     #pragma comment(lib, "Engine//Engine_d.lib")
@@ -47,6 +48,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return 0;
     }
 
+    CTestLevel::CreateTestLevel();
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_CLIENT));
 

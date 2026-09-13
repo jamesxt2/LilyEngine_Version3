@@ -25,3 +25,9 @@ inline std::wstring AnsiToWString(const std::string& str)
     if(FAILED(hr__)) { throw DxException(hr__, L#x, wfn, __LINE__); } \
 }
 #endif
+
+#define CLONE(type) virtual type* Clone() override { return new type(*this); }
+#define CLONE_DISABLE(type) virtual type* Clone() override { return nullptr; } 
+
+#define DEVICE CDevice::GetInst()->GetDevice()
+#define CMDLIST CDevice::GetInst()->GetCmdList()

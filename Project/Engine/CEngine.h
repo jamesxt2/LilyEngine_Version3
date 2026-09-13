@@ -13,8 +13,6 @@ public:
 
 private:
 
-	void Draw();
-
 	HWND		m_MainWnd;
 	POINT		m_Resolution;
 

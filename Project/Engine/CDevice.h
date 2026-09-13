@@ -1,6 +1,8 @@
 #pragma once
 #include "singleton.h"
 
+class CConstantBuffer;
+
 class CDevice : public CSingleton<CDevice>
 {
 	SINGLE(CDevice)
@@ -9,6 +11,12 @@ public:
 	int Init(HWND _MainWnd, POINT _RenderResolution);
 
 	void OnResize(POINT newRenderResolution);
+
+	void ClearTargetAndPrepareRender(XMVECTORF32 color);
+	void ExecuteAndFinishDrawCall();
+
+	void Reset();
+	void Close();
 
 	void Draw();
 
@@ -23,6 +31,8 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
 
 	void FlushCommandQueue();
+
+	void CreateConstantBuffer();
 
 
 	HWND								m_MainWnd;
@@ -55,5 +65,15 @@ private:
 
 	D3D12_VIEWPORT						m_ScreenViewport;
 	D3D12_RECT							m_ScissorRect;
+
+	CConstantBuffer*					m_CB[(UINT)CB_TYPE::END];
+
+public:
+	inline ComPtr<ID3D12Device> GetDevice() const { return m_d3dDevice; }
+	inline ComPtr<ID3D12GraphicsCommandList> GetCmdList() const { return m_CommandList; }
+	inline CConstantBuffer* GetConstBuffer(CB_TYPE type) { return m_CB[(UINT)type]; }
+
+	inline Vector2 GetRenderResolution() const { return Vector2((float)m_RenderResolution.x, (float)m_RenderResolution.y); }
+	inline float GetAspectRatio() const { return (float)m_RenderResolution.x / (float)m_RenderResolution.y; }
 };
 

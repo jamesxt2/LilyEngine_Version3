@@ -4,6 +4,10 @@
 #include "CDevice.h"
 
 #include "CTimeMgr.h"
+#include "CLevelMgr.h"
+#include "CRenderMgr.h"
+#include "CPathMgr.h"
+#include "CAssetMgr.h"
 
 CEngine::CEngine()
     : m_MainWnd(nullptr), m_Resolution{}
@@ -33,9 +37,13 @@ int CEngine::Init(HWND _MainWnd, POINT _Resolution)
     }
 
 	/*******************************************************/
-	// Reset Timer
+	// Manager Init
 	/*******************************************************/
 	CTimeMgr::GetInst()->Reset();
+	CPathMgr::GetInst()->Init();
+	CAssetMgr::GetInst()->Init();
+	CRenderMgr::GetInst()->Init();
+	CLevelMgr::GetInst()->Init();
 
     return S_OK;
 }
@@ -45,7 +53,9 @@ void CEngine::Run()
 	CTimeMgr::GetInst()->Tick();
     if (!m_Paused)
     {
-		Draw();
+		CTimeMgr::GetInst()->Tick();
+		CLevelMgr::GetInst()->Tick();
+		CRenderMgr::GetInst()->Render();
     }
     else
         Sleep(100);
@@ -141,7 +151,3 @@ LRESULT CEngine::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-void CEngine::Draw()
-{
-	CDevice::GetInst()->Draw();
-}

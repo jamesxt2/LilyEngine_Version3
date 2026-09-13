@@ -1,11 +1,14 @@
 #include "pch.h"
 #include "CDevice.h"
 
+#include "CConstantBuffer.h"
+
 CDevice::CDevice()
 	: m_MainWnd(nullptr), m_RenderResolution{},
 	m_CurrentFence(0), m_RtvDescriptorSize(0),
 	m_DsvDescriptorSize(0), m_CbvUavDescriptorSize(0),
-	m_4xMsaaQuality(0), m_ScreenViewport(), m_ScissorRect{}
+	m_4xMsaaQuality(0), m_ScreenViewport(), m_ScissorRect{}, 
+	m_CB{}
 {
 
 }
@@ -80,6 +83,11 @@ int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
 	CreateRtvAndDsvDescriptorHeaps();
 
 	OnResize(m_RenderResolution);
+
+	/*************************************/
+	// Create CB
+	/*************************************/
+	CreateConstantBuffer();
 
 	return S_OK;
 }
@@ -173,6 +181,12 @@ void CDevice::FlushCommandQueue()
 		WaitForSingleObject(eventHandle, INFINITE);
 		CloseHandle(eventHandle);
 	}
+}
+
+void CDevice::CreateConstantBuffer()
+{
+	m_CB[(UINT)CB_TYPE::TRANSFORM] = new CConstantBuffer;
+	m_CB[(UINT)CB_TYPE::TRANSFORM]->Create(sizeof(TTransform), CB_TYPE::TRANSFORM);
 }
 
 void CDevice::OnResize(POINT newRenderResolution)
@@ -276,6 +290,75 @@ void CDevice::OnResize(POINT newRenderResolution)
 	m_ScissorRect = { 0, 0, m_RenderResolution.x, m_RenderResolution.y };
 }
 
+void CDevice::ClearTargetAndPrepareRender(XMVECTORF32 color)
+{
+	// Reuse the memory associated with command recording.
+   // We can only reset when the associated command lists have finished execution on the GPU.
+	ThrowIfFailed(m_DirectCmdListAlloc->Reset());
+
+	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
+	// Reusing the command list reuses memory.
+	ThrowIfFailed(m_CommandList->Reset(m_DirectCmdListAlloc.Get(), nullptr));
+
+	m_CommandList->RSSetViewports(1, &m_ScreenViewport);
+	m_CommandList->RSSetScissorRects(1, &m_ScissorRect);
+
+	// Indicate a state transition on the resource usage.
+	CD3DX12_RESOURCE_BARRIER barrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	m_CommandList->ResourceBarrier(1, &barrier);
+
+	// Clear the back buffer and depth buffer.
+	m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
+	m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+	// Specify the buffers we are going to render to.
+	D3D12_CPU_DESCRIPTOR_HANDLE CurrBBV = CurrentBackBufferView();
+	D3D12_CPU_DESCRIPTOR_HANDLE DSV = DepthStencilView();
+	m_CommandList->OMSetRenderTargets(1, &CurrBBV, true, &DSV);
+
+}
+
+void CDevice::ExecuteAndFinishDrawCall()
+{
+	// Indicate a state transition on the resource usage.
+	CD3DX12_RESOURCE_BARRIER barrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	m_CommandList->ResourceBarrier(1, &barrier);
+
+	// Done recording commands.
+	ThrowIfFailed(m_CommandList->Close());
+
+	// Add the command list to the queue for execution.
+	ID3D12CommandList* cmdsLists[] = { m_CommandList.Get() };
+	m_CommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+
+	// swap the back and front buffers
+	ThrowIfFailed(m_SwapChain->Present(0, 0));
+	m_CurrentBackBuffer = (m_CurrentBackBuffer + 1) % m_SwapChainBufferCount;
+
+	// Wait until frame commands are complete.  This waiting is inefficient and is
+	// done for simplicity.  Later we will show how to organize our rendering code
+	// so we do not have to wait per frame.
+	FlushCommandQueue();
+}
+
+void CDevice::Reset()
+{
+	ThrowIfFailed(m_DirectCmdListAlloc->Reset());
+	ThrowIfFailed(m_CommandList->Reset(m_DirectCmdListAlloc.Get(), nullptr));
+}
+
+void CDevice::Close()
+{
+	ThrowIfFailed(m_CommandList->Close());
+
+	ID3D12CommandList* cmdsLists[] = { m_CommandList.Get() };
+	m_CommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+
+	FlushCommandQueue();
+}
+
 void CDevice::Draw()
 {
 	ThrowIfFailed(m_DirectCmdListAlloc->Reset());
@@ -314,3 +397,4 @@ void CDevice::Draw()
 
 	FlushCommandQueue();
 }
+
