@@ -35,38 +35,42 @@ private:
 	void CreateConstantBuffer();
 
 
-	HWND								m_MainWnd;
-	POINT								m_RenderResolution;
+	HWND											m_MainWnd;
+	POINT											m_RenderResolution;
 
-	ComPtr<ID3D12Device>				m_d3dDevice;
-	ComPtr<IDXGIFactory4>				m_dxgiFactory;
+	ComPtr<ID3D12Device>							m_d3dDevice;
+	ComPtr<IDXGIFactory4>							m_dxgiFactory;
 
-	ComPtr<ID3D12Fence>					m_Fence;
-	UINT64								m_CurrentFence;
-	UINT								m_RtvDescriptorSize;
-	UINT								m_DsvDescriptorSize;
-	UINT								m_CbvUavDescriptorSize;
+	ComPtr<ID3D12Fence>								m_Fence;
+	UINT64											m_CurrentFence;
+	UINT											m_RtvDescriptorSize;
+	UINT											m_DsvDescriptorSize;
+	UINT											m_CbvUavDescriptorSize;
 
-	UINT								m_4xMsaaQuality;
+	UINT											m_4xMsaaQuality;
 
-	ComPtr<ID3D12CommandQueue>			m_CommandQueue;
-	ComPtr<ID3D12CommandAllocator>		m_DirectCmdListAlloc;
-	ComPtr<ID3D12GraphicsCommandList>	m_CommandList;
+	ComPtr<ID3D12CommandQueue>						m_CommandQueue;
+	ComPtr<ID3D12CommandAllocator>					m_DirectCmdListAlloc;
+	ComPtr<ID3D12GraphicsCommandList>				m_CommandList;
 
-	int									m_CurrentBackBuffer = 0;
-	static constexpr int				m_SwapChainBufferCount = 2;
-	ComPtr<IDXGISwapChain>				m_SwapChain;
+	int												m_CurrentBackBuffer = 0;
+	static constexpr int							m_SwapChainBufferCount = 2;
+	ComPtr<IDXGISwapChain>							m_SwapChain;
 
-	ComPtr<ID3D12Resource>				m_SwapChainBuffer[m_SwapChainBufferCount];
-	ComPtr<ID3D12Resource>				m_DepthStencilBuffer;
+	ComPtr<ID3D12Resource>							m_SwapChainBuffer[m_SwapChainBufferCount];
+	ComPtr<ID3D12Resource>							m_DepthStencilBuffer;
 
-	ComPtr<ID3D12DescriptorHeap>		m_RtvHeap;
-	ComPtr<ID3D12DescriptorHeap>		m_DsvHeap;
+	ComPtr<ID3D12DescriptorHeap>					m_RtvHeap;
+	ComPtr<ID3D12DescriptorHeap>					m_DsvHeap;
 
-	D3D12_VIEWPORT						m_ScreenViewport;
-	D3D12_RECT							m_ScissorRect;
+	D3D12_VIEWPORT									m_ScreenViewport;
+	D3D12_RECT										m_ScissorRect;
 
-	CConstantBuffer*					m_CB[(UINT)CB_TYPE::END];
+	CConstantBuffer*								m_CB[(UINT)CB_TYPE::END];
+
+	std::vector<std::unique_ptr<FrameResource>>		m_FrameResources;
+	FrameResource*									m_CurrFrameResource;
+	int												m_CurrFrameResourceIndex;
 
 public:
 	inline ComPtr<ID3D12Device> GetDevice() const { return m_d3dDevice; }

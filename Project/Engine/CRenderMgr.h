@@ -18,9 +18,6 @@ public:
 	void CopyRenderTarget();
 
 private:
-	void DataBind();
-	void DataClear();
-
 	void Render_Play();
 
 private:

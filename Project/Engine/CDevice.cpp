@@ -3,12 +3,15 @@
 
 #include "CConstantBuffer.h"
 
+const int g_NumFrameResources = 3;
+
 CDevice::CDevice()
 	: m_MainWnd(nullptr), m_RenderResolution{},
 	m_CurrentFence(0), m_RtvDescriptorSize(0),
 	m_DsvDescriptorSize(0), m_CbvUavDescriptorSize(0),
 	m_4xMsaaQuality(0), m_ScreenViewport(), m_ScissorRect{}, 
-	m_CB{}
+	m_CB{}, 
+	m_CurrFrameResource(nullptr), m_CurrFrameResourceIndex(0)
 {
 
 }

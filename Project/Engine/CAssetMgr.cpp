@@ -27,11 +27,10 @@ void CAssetMgr::GetAssetNames(ASSET_TYPE type, _Out_ std::vector<std::string>& v
 void CAssetMgr::Init()
 {
 	CDevice::GetInst()->Reset();
-
 	CreateDefaultMesh();
-	CreateDefaultGraphicsShader();
-
 	CDevice::GetInst()->Close();
+
+	CreateDefaultGraphicsShader();
 }
 
 void CAssetMgr::CreateDefaultMesh()

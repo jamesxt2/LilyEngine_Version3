@@ -77,6 +77,9 @@
     <Filter Include="HLSL">
       <UniqueIdentifier>{7ae88509-c67c-43a3-bf26-88f16a26ca3a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="04.Manager\03.KeyMgr">
+      <UniqueIdentifier>{a940532a-1cb2-4aeb-ad5f-30ffe5895149}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -169,6 +172,15 @@
     <ClInclude Include="CRenderMgr.h">
       <Filter>04.Manager\07.RenderMgr</Filter>
     </ClInclude>
+    <ClInclude Include="CKeyMgr.h">
+      <Filter>04.Manager\03.KeyMgr</Filter>
+    </ClInclude>
+    <ClInclude Include="UploadBuffer.h">
+      <Filter>01.Basis</Filter>
+    </ClInclude>
+    <ClInclude Include="FrameResource.h">
+      <Filter>01.Basis</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -242,6 +254,12 @@
     </ClCompile>
     <ClCompile Include="CRenderMgr.cpp">
       <Filter>04.Manager\07.RenderMgr</Filter>
+    </ClCompile>
+    <ClCompile Include="CKeyMgr.cpp">
+      <Filter>04.Manager\03.KeyMgr</Filter>
+    </ClCompile>
+    <ClCompile Include="FrameResource.cpp">
+      <Filter>01.Basis</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

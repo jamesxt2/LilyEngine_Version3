@@ -35,8 +35,6 @@ void CRenderMgr::Render()
 	//Ptr<CTexture> pDSTex = CAssetMgr::GetInst()->FindAsset<CTexture>(L"DepthStencilTex");
 	//CONTEXT->OMSetRenderTargets(1, pRTTex->GetRTV().GetAddressOf(), pDSTex->GetDSV().Get());
 
-	DataBind();
-
 	// Target Clear
 	//float ClearColor[4] = { 0.3f, 0.3f, 0.3f, 1.f };
 	CDevice::GetInst()->ClearTargetAndPrepareRender(Colors::LightSteelBlue);
@@ -45,7 +43,6 @@ void CRenderMgr::Render()
 
 	CDevice::GetInst()->ExecuteAndFinishDrawCall();
 
-	DataClear();
 }
 
 void CRenderMgr::Render_Play()
@@ -72,14 +69,4 @@ void CRenderMgr::CopyRenderTarget()
 {
 	//Ptr<CTexture> pRenderTargetTex = CAssetMgr::GetInst()->FindAsset<CTexture>(L"RenderTargetTex");
 	//CONTEXT->CopyResource(m_RenderTargetCopyTex->GetTex2D().Get(), pRenderTargetTex->GetTex2D().Get());
-}
-
-void CRenderMgr::DataBind()
-{
-	
-}
-
-void CRenderMgr::DataClear()
-{
-	
 }

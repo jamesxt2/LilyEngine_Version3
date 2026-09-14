@@ -25,9 +25,12 @@ using namespace DirectX::SimpleMath;
 #include <comdef.h>
 #include <vector>
 #include <map>
+#include <memory>
 
 #include "d3dUtils.h"
 #include "define.h"
 #include "ptr.h"
 #include "enum.h"
 #include "struct.h"
+#include "UploadBuffer.h"
+#include "FrameResource.h"

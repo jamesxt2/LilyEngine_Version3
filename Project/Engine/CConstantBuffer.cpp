@@ -11,6 +11,14 @@ CConstantBuffer::CConstantBuffer()
 
 }
 
+CConstantBuffer::CConstantBuffer(size_t bufferSize, CB_TYPE type)
+	: m_Type(CB_TYPE::END), m_BufferSize(0), m_ElementByteSize(0),
+	m_CbvHeap(nullptr), m_UploadBuffer(nullptr), m_MappedData(nullptr),
+	m_RootSignature(nullptr)
+{
+	Create(bufferSize, type);
+}
+
 CConstantBuffer::~CConstantBuffer()
 {
 	if (m_UploadBuffer != nullptr)
