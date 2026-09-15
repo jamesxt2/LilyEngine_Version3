@@ -5,16 +5,22 @@
 struct FrameResource
 {
 public:
-	FrameResource(ID3D12Device* device, UINT passBufferSize, CB_TYPE passBufferType, UINT objectBufferSize, CB_TYPE objectBufferType);
+	FrameResource(ID3D12Device* device);
 	FrameResource(const FrameResource& rhs) = delete;
 	FrameResource& operator=(const FrameResource& rhs) = delete;
 	~FrameResource();
 
-	ComPtr<ID3D12CommandAllocator> CmdListAlloc;
+	void CreateCB(UINT elementByteSize, UINT elementCount, CB_TYPE type);
 
-	std::unique_ptr<CConstantBuffer> PassCB = nullptr;
-	std::unique_ptr<CConstantBuffer> ObjectCB = nullptr;
+	ComPtr<ID3D12CommandAllocator> m_CmdListAlloc;
+
+	std::shared_ptr<CConstantBuffer> m_CBs[(UINT)CB_TYPE::END];
 
 	UINT64 Fence = 0;
+
+	std::shared_ptr<CConstantBuffer> GetConstantBuffer(CB_TYPE type)
+	{
+		return m_CBs[(UINT)type];
+	}
 };
 

@@ -11,6 +11,7 @@ CAssetMgr::CAssetMgr()
 
 CAssetMgr::~CAssetMgr()
 {
+
 }
 
 void CAssetMgr::GetAssetNames(ASSET_TYPE type, _Out_ std::vector<std::string>& vecNames)

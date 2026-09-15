@@ -21,7 +21,5 @@ void CMeshRender::Render()
 {
 	if (GetMesh() == nullptr) return;
 
-	GetOwner()->GetTransformComp()->Bind();
-
 	GetMesh()->Render();
 }

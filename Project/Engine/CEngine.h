@@ -11,6 +11,8 @@ public:
 	void Run();
 	LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+	void ShutDown();
+
 private:
 
 	HWND		m_MainWnd;

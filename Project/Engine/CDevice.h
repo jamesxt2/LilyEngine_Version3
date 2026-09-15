@@ -12,13 +12,19 @@ public:
 
 	void OnResize(POINT newRenderResolution);
 
+	void Update();
+
 	void ClearTargetAndPrepareRender(XMVECTORF32 color);
 	void ExecuteAndFinishDrawCall();
 
 	void Reset();
 	void Close();
 
-	void Draw();
+	void FlushCommandQueue();
+
+	UINT											m_RtvDescriptorSize;
+	UINT											m_DsvDescriptorSize;
+	UINT											m_CbvUavDescriptorSize;
 
 private:
 
@@ -30,9 +36,9 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
 
-	void FlushCommandQueue();
+	
 
-	void CreateConstantBuffer();
+	void BuildFrameResources();
 
 
 	HWND											m_MainWnd;
@@ -43,9 +49,7 @@ private:
 
 	ComPtr<ID3D12Fence>								m_Fence;
 	UINT64											m_CurrentFence;
-	UINT											m_RtvDescriptorSize;
-	UINT											m_DsvDescriptorSize;
-	UINT											m_CbvUavDescriptorSize;
+	
 
 	UINT											m_4xMsaaQuality;
 
@@ -66,8 +70,6 @@ private:
 	D3D12_VIEWPORT									m_ScreenViewport;
 	D3D12_RECT										m_ScissorRect;
 
-	CConstantBuffer*								m_CB[(UINT)CB_TYPE::END];
-
 	std::vector<std::unique_ptr<FrameResource>>		m_FrameResources;
 	FrameResource*									m_CurrFrameResource;
 	int												m_CurrFrameResourceIndex;
@@ -75,7 +77,10 @@ private:
 public:
 	inline ComPtr<ID3D12Device> GetDevice() const { return m_d3dDevice; }
 	inline ComPtr<ID3D12GraphicsCommandList> GetCmdList() const { return m_CommandList; }
-	inline CConstantBuffer* GetConstBuffer(CB_TYPE type) { return m_CB[(UINT)type]; }
+	inline std::shared_ptr<CConstantBuffer> GetConstBuffer(CB_TYPE type)
+	{
+		return m_CurrFrameResource->GetConstantBuffer(type);
+	}
 
 	inline Vector2 GetRenderResolution() const { return Vector2((float)m_RenderResolution.x, (float)m_RenderResolution.y); }
 	inline float GetAspectRatio() const { return (float)m_RenderResolution.x / (float)m_RenderResolution.y; }

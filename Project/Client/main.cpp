@@ -14,6 +14,11 @@
     #pragma comment(lib, "Engine//Engine.lib")
 #endif
 
+#ifdef _DEBUG
+#include <dxgidebug.h>
+#pragma comment(lib, "dxguid.lib")
+#endif
+
 // Global Variables:
 HINSTANCE hInst;                                // current instance
 
@@ -73,6 +78,20 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             CEngine::GetInst()->Run();
         }
     }
+
+    CEngine::GetInst()->ShutDown();
+
+//#ifdef _DEBUG
+//    ComPtr<IDXGIDebug1> dxgiDebug;
+//    if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug))))
+//    {
+//        dxgiDebug->ReportLiveObjects(
+//            DXGI_DEBUG_ALL,
+//            DXGI_DEBUG_RLO_FLAGS(
+//                DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL
+//            ));
+//    }
+//#endif
 
     return (int) msg.wParam;
 }

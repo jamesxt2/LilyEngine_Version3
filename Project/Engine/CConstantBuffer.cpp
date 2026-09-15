@@ -3,20 +3,23 @@
 
 #include "CDevice.h"
 
+ComPtr<ID3D12DescriptorHeap> CConstantBuffer::m_CbvHeap = nullptr;
+ComPtr<ID3D12RootSignature> CConstantBuffer::m_RootSignature = nullptr;
+
 CConstantBuffer::CConstantBuffer()
 	: m_Type(CB_TYPE::END), m_BufferSize(0), m_ElementByteSize(0),
-	m_CbvHeap(nullptr), m_UploadBuffer(nullptr), m_MappedData(nullptr),
-	m_RootSignature(nullptr)
+	m_TotalSize(0),
+	m_UploadBuffer(nullptr), m_MappedData(nullptr)
 {
 
 }
 
-CConstantBuffer::CConstantBuffer(size_t bufferSize, CB_TYPE type)
+CConstantBuffer::CConstantBuffer(UINT elementByteSize, UINT elementCount, CB_TYPE type)
 	: m_Type(CB_TYPE::END), m_BufferSize(0), m_ElementByteSize(0),
-	m_CbvHeap(nullptr), m_UploadBuffer(nullptr), m_MappedData(nullptr),
-	m_RootSignature(nullptr)
+	m_TotalSize(0),
+	 m_UploadBuffer(nullptr), m_MappedData(nullptr)
 {
-	Create(bufferSize, type);
+	Create(elementByteSize, elementCount, type);
 }
 
 CConstantBuffer::~CConstantBuffer()
@@ -28,8 +31,10 @@ CConstantBuffer::~CConstantBuffer()
 
 void CConstantBuffer::BuildCbvDescriptorHeap()
 {
+	UINT NumDescriptors = g_MaxObjectCount * g_NumFrameResources;
+
 	D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
-	cbvHeapDesc.NumDescriptors = 1;
+	cbvHeapDesc.NumDescriptors = NumDescriptors;
 	cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	cbvHeapDesc.NodeMask = 0;
@@ -37,16 +42,15 @@ void CConstantBuffer::BuildCbvDescriptorHeap()
 		IID_PPV_ARGS(&m_CbvHeap)));
 }
 
-void CConstantBuffer::Create(size_t bufferSize, CB_TYPE type)
+void CConstantBuffer::Create(UINT elementByteSize, UINT elementCount, CB_TYPE type)
 {
-	BuildCbvDescriptorHeap();
-
-	m_BufferSize = (UINT)bufferSize;
+	m_BufferSize = (UINT)elementByteSize;
 	m_Type = type;
-	m_ElementByteSize = CalcConstantBufferByteSize((UINT)bufferSize);
+	m_ElementByteSize = CalcConstantBufferByteSize((UINT)elementByteSize);
+	m_TotalSize = m_ElementByteSize * elementCount;
 
 	CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-	CD3DX12_RESOURCE_DESC rDesc(CD3DX12_RESOURCE_DESC::Buffer(m_ElementByteSize));
+	CD3DX12_RESOURCE_DESC rDesc(CD3DX12_RESOURCE_DESC::Buffer(m_TotalSize));
 	ThrowIfFailed(DEVICE->CreateCommittedResource(
 		&heapProps,
 		D3D12_HEAP_FLAG_NONE,
@@ -56,46 +60,72 @@ void CConstantBuffer::Create(size_t bufferSize, CB_TYPE type)
 		IID_PPV_ARGS(&m_UploadBuffer)
 	));
 
-	ThrowIfFailed(m_UploadBuffer->Map(0, nullptr, &m_MappedData));
+	ThrowIfFailed(m_UploadBuffer->Map(0, nullptr, reinterpret_cast<void**>(&m_MappedData)));
 
-	D3D12_GPU_VIRTUAL_ADDRESS cbAddress = m_UploadBuffer->GetGPUVirtualAddress();
+	for (int frameIndex = 0; frameIndex < g_NumFrameResources; ++frameIndex)
+	{
+		for (UINT i = 0; i < elementCount; ++i)
+		{
+			D3D12_GPU_VIRTUAL_ADDRESS cbAddress = m_UploadBuffer->GetGPUVirtualAddress();
+			cbAddress += i * m_ElementByteSize;
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
-	cbvDesc.BufferLocation = cbAddress;
-	cbvDesc.SizeInBytes = m_ElementByteSize;
+			int heapIndex = frameIndex * elementCount + i;
+			auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_CbvHeap->GetCPUDescriptorHandleForHeapStart());
+			handle.Offset(heapIndex, CDevice::GetInst()->m_CbvUavDescriptorSize);
 
-	DEVICE->CreateConstantBufferView(&cbvDesc, m_CbvHeap->GetCPUDescriptorHandleForHeapStart());
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
+			cbvDesc.BufferLocation = cbAddress;
+			cbvDesc.SizeInBytes = m_ElementByteSize;
 
-	BuildRootSignature();
+			DEVICE->CreateConstantBufferView(&cbvDesc, handle);
+		}
+	}
 }
 
 // Set which slot to bind
-void CConstantBuffer::BuildRootSignature()
+void CConstantBuffer::BuildRootSignature(UINT slotCount)
 {
-	CD3DX12_ROOT_PARAMETER slotRootParameter[1];
+	std::vector<CD3DX12_DESCRIPTOR_RANGE> cbvTables;
 
-	// define descriptor range, 1 means one descriptor, 0 means bind to b0
-	CD3DX12_DESCRIPTOR_RANGE cbvTable;
-	cbvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+	for (UINT i = 0; i < slotCount; ++i)
+	{
+		CD3DX12_DESCRIPTOR_RANGE cbvTable;
+		cbvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, i);
+		cbvTables.push_back(cbvTable);
+	}
 
-	// it means the shader can access the descriptor table containing b0's CBV
-	// through root parameter 0
-	slotRootParameter[0].InitAsDescriptorTable(1, &cbvTable);
+	// Root parameter can be a table, root descriptor or root constants.
+	std::vector<CD3DX12_ROOT_PARAMETER> slotRootParameters;
 
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(1, slotRootParameter, 0, nullptr,
+	// Create root CBVs.
+	for (UINT i = 0; i < slotCount; ++i)
+	{
+		CD3DX12_ROOT_PARAMETER slotRootParameter;
+		slotRootParameter.InitAsDescriptorTable(1, &cbvTables[i]);
+		slotRootParameters.push_back(slotRootParameter);
+	}
+
+	// A root signature is an array of root parameters.
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(2, slotRootParameters.data(), 0, nullptr,
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
+	// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
 	ComPtr<ID3DBlob> serializedRootSig = nullptr;
 	ComPtr<ID3DBlob> errorBlob = nullptr;
-	// Turn root signature into binary blob cause CreateRootSignature needs
-	// binary data
-	HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc,
-		D3D_ROOT_SIGNATURE_VERSION_1,
+	HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
 		serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+	if (errorBlob != nullptr)
+	{
+		::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+	}
+	ThrowIfFailed(hr);
+
 	ThrowIfFailed(DEVICE->CreateRootSignature(
-		0, serializedRootSig->GetBufferPointer(),
-		serializedRootSig->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)
-	));
+		0,
+		serializedRootSig->GetBufferPointer(),
+		serializedRootSig->GetBufferSize(),
+		IID_PPV_ARGS(m_RootSignature.GetAddressOf())));
 }
 
 void CConstantBuffer::Bind()
@@ -108,7 +138,13 @@ void CConstantBuffer::Bind()
 	CMDLIST->SetGraphicsRootDescriptorTable(0, m_CbvHeap->GetGPUDescriptorHandleForHeapStart());
 }
 
-void CConstantBuffer::CopyData(const void* data)
+void CConstantBuffer::CopyData(int elementIndex, const void* data)
 {
-	memcpy(m_MappedData, data, m_BufferSize);
+	memcpy(&m_MappedData[elementIndex * m_ElementByteSize], data, m_BufferSize);
+}
+
+void CConstantBuffer::Init(UINT cbvSlotNums)
+{
+	BuildCbvDescriptorHeap();
+	BuildRootSignature(cbvSlotNums);
 }

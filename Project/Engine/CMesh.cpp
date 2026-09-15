@@ -4,7 +4,7 @@
 #include "CDevice.h"
 
 CMesh::CMesh()
-	: CAsset(ASSET_TYPE::MESH),
+	: CAsset(ASSET_TYPE::MESH), m_Shader(nullptr),
 	m_VertexBufferCPU(nullptr), m_VertexBufferGPU(nullptr),
 	m_VertexBufferUploader(nullptr), m_VertexCount(0),
 	m_VertexByteStride(0), m_VertexBufferByteSize(0),
@@ -43,7 +43,7 @@ void CMesh::Render()
 {
 	Bind();
 
-	if (m_Shader.Get() != nullptr)
+	if (m_Shader != nullptr)
 		m_Shader->Bind();
 
 	CMDLIST->DrawIndexedInstanced(m_IndexCount, 1, 0, 0, 0);

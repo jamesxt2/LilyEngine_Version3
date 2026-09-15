@@ -5,6 +5,7 @@
 #include "CLevelMgr.h"
 #include "CLevel.h"
 #include "CRenderComponent.h"
+#include "CTransform.h"
 
 CGameObject::CGameObject()
 	: m_arrComp{}, m_RenderComp(nullptr), m_Parent(nullptr), m_Dead(false)
@@ -70,6 +71,9 @@ void CGameObject::Tick()
 	{
 		m_vecChild[i]->Tick();
 	}
+
+	if (GetTransformComp())
+		GetTransformComp()->Bind();
 }
 
 void CGameObject::FinalTick()

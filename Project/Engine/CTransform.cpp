@@ -68,16 +68,21 @@ void CTransform::FinalTick()
 
 void CTransform::Bind()
 {
-	// System memory -> GPU
-	CConstantBuffer* pCB = CDevice::GetInst()->GetConstBuffer(CB_TYPE::TRANSFORM);
+	if (m_NumFramesDirty > 0)
+	{
+		// System memory -> GPU
+		std::shared_ptr<CConstantBuffer> pCB = CDevice::GetInst()->GetConstBuffer(CB_TYPE::TRANSFORM);
 
-	g_Trans.matModel = m_matWorld;
-	g_Trans.matMV = g_Trans.matModel * g_Trans.matView;
-	g_Trans.matMVP = g_Trans.matMV * g_Trans.matProj;
+		g_Trans.matModel = m_matWorld;
+		g_Trans.matMV = g_Trans.matModel * g_Trans.matView;
+		g_Trans.matMVP = g_Trans.matMV * g_Trans.matProj;
 
-	pCB->CopyData(&g_Trans);
-	pCB->Bind();
+		pCB->CopyData(m_ObjCBIndex, &g_Trans);
+
+		--m_NumFramesDirty;
+	}
 }
+
 
 Vector3 CTransform::GetWorldPosition() const
 {

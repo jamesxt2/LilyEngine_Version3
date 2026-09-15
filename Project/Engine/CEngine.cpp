@@ -50,11 +50,11 @@ int CEngine::Init(HWND _MainWnd, POINT _Resolution)
 
 void CEngine::Run()
 {
-	CTimeMgr::GetInst()->Tick();
     if (!m_Paused)
     {
 		CTimeMgr::GetInst()->Tick();
 		CLevelMgr::GetInst()->Tick();
+		CDevice::GetInst()->Update();
 		CRenderMgr::GetInst()->Render();
     }
     else
@@ -149,5 +149,11 @@ LRESULT CEngine::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return DefWindowProc(hwnd, msg, wParam, lParam);
     }
     return 0;
+}
+
+void CEngine::ShutDown()
+{
+	CDevice::GetInst()->FlushCommandQueue();
+	
 }
 

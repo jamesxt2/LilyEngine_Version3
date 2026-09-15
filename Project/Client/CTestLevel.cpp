@@ -38,7 +38,7 @@ void CTestLevel::CreateTestLevel()
 	pCube->GetTransformComp()->SetRelativeScale(20.f, 20.f, 20.f);
 
 	pCube->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"CubeMesh"));
-	pCube->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"ColorShader"));
+	pCube->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"ColorShader").Get());
 
 	pLevel->AddObject(pCube);
 	//pLevel->RegisterObject(pCube);

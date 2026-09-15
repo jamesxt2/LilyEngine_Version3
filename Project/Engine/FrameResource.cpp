@@ -2,14 +2,17 @@
 #include "FrameResource.h"
 
 
-FrameResource::FrameResource(ID3D12Device* device, UINT passBufferSize, CB_TYPE passBufferType, UINT objectBufferSize, CB_TYPE objectBufferType)
+FrameResource::FrameResource(ID3D12Device* device)
 {
 	ThrowIfFailed(device->CreateCommandAllocator(
 		D3D12_COMMAND_LIST_TYPE_DIRECT,
-		IID_PPV_ARGS(CmdListAlloc.GetAddressOf())
+		IID_PPV_ARGS(m_CmdListAlloc.GetAddressOf())
 	));
-	PassCB = std::make_unique<CConstantBuffer>(passBufferSize, passBufferType);
-	ObjectCB = std::make_unique<CConstantBuffer>(objectBufferSize, objectBufferType);
 }
 
 FrameResource::~FrameResource() {}
+
+void FrameResource::CreateCB(UINT elementByteSize, UINT elementCount, CB_TYPE type)
+{
+	m_CBs[(UINT)type] = std::make_shared<CConstantBuffer>(elementByteSize, elementCount, type);
+}

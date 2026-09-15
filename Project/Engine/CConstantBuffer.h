@@ -5,27 +5,31 @@ class CConstantBuffer : public CEntity
 {
 public:
 	CConstantBuffer();
-	CConstantBuffer(size_t bufferSize, CB_TYPE type);
+	CConstantBuffer(UINT elementByteSize, UINT elementCount, CB_TYPE type);
 	CConstantBuffer(const CConstantBuffer& _other) = delete;
 	~CConstantBuffer();
 	CLONE_DISABLE(CConstantBuffer)
 
-	void Create(size_t bufferSize, CB_TYPE type);
+	void Create(UINT elementByteSize, UINT elementCount, CB_TYPE type);
 	void Bind();
-	void CopyData(const void* data);
+	void CopyData(int elementIndex, const void* data);
+
+	static void Init(UINT cbvSlotNums);
+
+	static void BuildCbvDescriptorHeap();
+	static void BuildRootSignature(UINT slotCount);
+
 
 private:
-
-	void BuildCbvDescriptorHeap();
-	void BuildRootSignature();
-
 	CB_TYPE									m_Type;
 	UINT									m_BufferSize;
 	UINT									m_ElementByteSize;
-	ComPtr<ID3D12DescriptorHeap>			m_CbvHeap;
+	UINT									m_TotalSize;
+
+	static ComPtr<ID3D12DescriptorHeap>		m_CbvHeap;
 	ComPtr<ID3D12Resource>					m_UploadBuffer;
-	void*									m_MappedData;
-	ComPtr<ID3D12RootSignature>				m_RootSignature;
+	BYTE*									m_MappedData;
+	static ComPtr<ID3D12RootSignature>		m_RootSignature;
 
 public:
 	inline ComPtr<ID3D12RootSignature> GetRootSignature() const { return m_RootSignature; }

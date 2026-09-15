@@ -11,7 +11,7 @@ CLevel::CLevel()
 
 CLevel::~CLevel()
 {
-	
+	Safe_Del_Vector(m_vecParent);
 }
 
 void CLevel::Begin()

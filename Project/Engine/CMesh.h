@@ -24,7 +24,7 @@ private:
 
 	void Bind();
 
-	Ptr<CGraphicsShader>					m_Shader;
+	CGraphicsShader*						m_Shader;
 
 	// Vertex
 	ComPtr<ID3DBlob>						m_VertexBufferCPU;
@@ -43,7 +43,6 @@ private:
 	UINT									m_IndexBufferByteSize;
 
 public:
-	inline void SetShader(Ptr<CGraphicsShader> shader) { m_Shader = shader; }
-	inline Ptr<CGraphicsShader> GetShader() const { return m_Shader; }
+	inline void SetShader(CGraphicsShader* shader) { m_Shader = shader; }
 };
 

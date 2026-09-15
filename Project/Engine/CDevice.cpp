@@ -3,14 +3,11 @@
 
 #include "CConstantBuffer.h"
 
-const int g_NumFrameResources = 3;
-
 CDevice::CDevice()
 	: m_MainWnd(nullptr), m_RenderResolution{},
 	m_CurrentFence(0), m_RtvDescriptorSize(0),
 	m_DsvDescriptorSize(0), m_CbvUavDescriptorSize(0),
-	m_4xMsaaQuality(0), m_ScreenViewport(), m_ScissorRect{}, 
-	m_CB{}, 
+	m_4xMsaaQuality(0), m_ScreenViewport(), m_ScissorRect{},
 	m_CurrFrameResource(nullptr), m_CurrFrameResourceIndex(0)
 {
 
@@ -18,7 +15,24 @@ CDevice::CDevice()
 
 CDevice::~CDevice()
 {
-
+	//FlushCommandQueue();
+	//
+	//for (auto& buf : m_SwapChainBuffer)
+	//	buf.Reset();
+	//m_DepthStencilBuffer.Reset();
+	//
+	//m_RtvHeap.Reset();
+	//m_DsvHeap.Reset();
+	//
+	//m_SwapChain.Reset();
+	//
+	//m_CommandList.Reset();
+	//m_DirectCmdListAlloc.Reset();
+	//m_CommandQueue.Reset();
+	//m_Fence.Reset();
+	//
+	//m_d3dDevice.Reset();
+	//m_dxgiFactory.Reset();
 }
 
 int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
@@ -88,9 +102,10 @@ int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
 	OnResize(m_RenderResolution);
 
 	/*************************************/
-	// Create CB
+	// Init and Create CB
 	/*************************************/
-	CreateConstantBuffer();
+	CConstantBuffer::Init(2);
+	BuildFrameResources();
 
 	return S_OK;
 }
@@ -186,10 +201,15 @@ void CDevice::FlushCommandQueue()
 	}
 }
 
-void CDevice::CreateConstantBuffer()
+
+void CDevice::BuildFrameResources()
 {
-	m_CB[(UINT)CB_TYPE::TRANSFORM] = new CConstantBuffer;
-	m_CB[(UINT)CB_TYPE::TRANSFORM]->Create(sizeof(TTransform), CB_TYPE::TRANSFORM);
+	for (int i = 0; i < g_NumFrameResources; ++i)
+	{
+		m_FrameResources.push_back(std::make_unique<FrameResource>(m_d3dDevice.Get()));
+		m_FrameResources[i]->CreateCB(sizeof(TTransform), g_MaxObjectCount, CB_TYPE::TRANSFORM);
+	}
+	m_CurrFrameResource = m_FrameResources[0].get();
 }
 
 void CDevice::OnResize(POINT newRenderResolution)
@@ -293,15 +313,36 @@ void CDevice::OnResize(POINT newRenderResolution)
 	m_ScissorRect = { 0, 0, m_RenderResolution.x, m_RenderResolution.y };
 }
 
+void CDevice::Update()
+{
+	m_CurrFrameResourceIndex = (m_CurrFrameResourceIndex + 1) % g_NumFrameResources;
+	m_CurrFrameResource = m_FrameResources[m_CurrFrameResourceIndex].get();
+
+	if (m_CurrFrameResource->Fence != 0 && m_Fence->GetCompletedValue() < m_CurrFrameResource->Fence)
+	{
+		HANDLE eventHandle = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+		ThrowIfFailed(m_Fence->SetEventOnCompletion(
+			m_CurrFrameResource->Fence, eventHandle
+		));
+		WaitForSingleObject(eventHandle, INFINITE);
+		CloseHandle(eventHandle);
+	}
+
+	ThrowIfFailed(m_CurrFrameResource->m_CmdListAlloc->Reset());
+	ThrowIfFailed(m_CommandList->Reset(m_CurrFrameResource->m_CmdListAlloc.Get(), nullptr));
+
+	GetConstBuffer(CB_TYPE::TRANSFORM)->Bind();
+}
+
 void CDevice::ClearTargetAndPrepareRender(XMVECTORF32 color)
 {
 	// Reuse the memory associated with command recording.
    // We can only reset when the associated command lists have finished execution on the GPU.
-	ThrowIfFailed(m_DirectCmdListAlloc->Reset());
+	//ThrowIfFailed(m_CurrFrameResource->m_CmdListAlloc->Reset());
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
 	// Reusing the command list reuses memory.
-	ThrowIfFailed(m_CommandList->Reset(m_DirectCmdListAlloc.Get(), nullptr));
+	//ThrowIfFailed(m_CommandList->Reset(m_CurrFrameResource->m_CmdListAlloc.Get(), nullptr));
 
 	m_CommandList->RSSetViewports(1, &m_ScreenViewport);
 	m_CommandList->RSSetScissorRects(1, &m_ScissorRect);
@@ -343,7 +384,15 @@ void CDevice::ExecuteAndFinishDrawCall()
 	// Wait until frame commands are complete.  This waiting is inefficient and is
 	// done for simplicity.  Later we will show how to organize our rendering code
 	// so we do not have to wait per frame.
-	FlushCommandQueue();
+	//FlushCommandQueue();
+
+	// Advance the fence value to mark commands up to this fence point.
+	m_CurrFrameResource->Fence = ++m_CurrentFence;
+
+	// Add an instruction to the command queue to set a new fence point. 
+	// Because we are on the GPU timeline, the new fence point won't be 
+	// set until the GPU finishes processing all the commands prior to this Signal().
+	m_CommandQueue->Signal(m_Fence.Get(), m_CurrentFence);
 }
 
 void CDevice::Reset()
@@ -361,43 +410,3 @@ void CDevice::Close()
 
 	FlushCommandQueue();
 }
-
-void CDevice::Draw()
-{
-	ThrowIfFailed(m_DirectCmdListAlloc->Reset());
-	ThrowIfFailed(m_CommandList->Reset(m_DirectCmdListAlloc.Get(), nullptr));
-
-	D3D12_RESOURCE_BARRIER barrier(CD3DX12_RESOURCE_BARRIER::Transition(
-		CurrentBackBuffer(), 
-		D3D12_RESOURCE_STATE_PRESENT,
-		D3D12_RESOURCE_STATE_RENDER_TARGET
-		));
-	m_CommandList->ResourceBarrier(1, &barrier);
-
-	m_CommandList->RSSetViewports(1, &m_ScreenViewport);
-	m_CommandList->RSSetScissorRects(1, &m_ScissorRect);
-
-	m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
-	m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE rtDescriptor = CurrentBackBufferView();
-	D3D12_CPU_DESCRIPTOR_HANDLE dsDescriptor = DepthStencilView();
-	m_CommandList->OMSetRenderTargets(1, &rtDescriptor, true, &dsDescriptor);
-
-	barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		CurrentBackBuffer(),
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		D3D12_RESOURCE_STATE_PRESENT
-	);
-	m_CommandList->ResourceBarrier(1, &barrier);
-
-	ThrowIfFailed(m_CommandList->Close());
-	ID3D12CommandList* cmdsLists[] = { m_CommandList.Get() };
-	m_CommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
-
-	ThrowIfFailed(m_SwapChain->Present(0, 0));
-	m_CurrentBackBuffer = (m_CurrentBackBuffer + 1) % m_SwapChainBufferCount;
-
-	FlushCommandQueue();
-}
-

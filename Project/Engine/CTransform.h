@@ -22,6 +22,9 @@ private:
 
 	bool		m_Absolute;
 
+	UINT		m_NumFramesDirty = g_NumFrameResources;
+	int			m_ObjCBIndex = 0;
+
 public:
 	inline Vector3 GetRelativePosition() const { return m_RelativePosition; }
 	inline Vector3 GetRelativeRotation() const { return m_RelativeRotation; }
@@ -46,5 +49,7 @@ public:
 
 	inline void SetAbsolute(bool bAbsolute) { m_Absolute = bAbsolute; }
 	inline bool IsAbsolute() const { return m_Absolute; }
+
+	inline void SetObjCBIndex(int index) { m_ObjCBIndex = index; }
 };
 

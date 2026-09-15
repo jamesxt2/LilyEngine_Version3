@@ -58,6 +58,9 @@ enum class DIR_TYPE
 	FORWARD
 };
 
+extern int g_NumFrameResources;
+extern int g_MaxObjectCount;
+
 extern Vector3 XAxis;
 extern Vector3 YAxis;
 extern Vector3 ZAxis;
