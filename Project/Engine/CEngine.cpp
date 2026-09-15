@@ -8,6 +8,7 @@
 #include "CRenderMgr.h"
 #include "CPathMgr.h"
 #include "CAssetMgr.h"
+#include "CKeyMgr.h"
 
 CEngine::CEngine()
     : m_MainWnd(nullptr), m_Resolution{}
@@ -41,6 +42,7 @@ int CEngine::Init(HWND _MainWnd, POINT _Resolution)
 	/*******************************************************/
 	CTimeMgr::GetInst()->Reset();
 	CPathMgr::GetInst()->Init();
+	CKeyMgr::GetInst()->Init();
 	CAssetMgr::GetInst()->Init();
 	CRenderMgr::GetInst()->Init();
 	CLevelMgr::GetInst()->Init();
@@ -53,6 +55,7 @@ void CEngine::Run()
     if (!m_Paused)
     {
 		CTimeMgr::GetInst()->Tick();
+		CKeyMgr::GetInst()->Tick();
 		CLevelMgr::GetInst()->Tick();
 		CDevice::GetInst()->Update();
 		CRenderMgr::GetInst()->Render();

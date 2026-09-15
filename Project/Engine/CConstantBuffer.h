@@ -11,7 +11,7 @@ public:
 	CLONE_DISABLE(CConstantBuffer)
 
 	void Create(UINT elementByteSize, UINT elementCount, CB_TYPE type);
-	void Bind();
+	void Bind(int ObjCBIndex = 0, int slot = 0);
 	void CopyData(int elementIndex, const void* data);
 
 	static void Init(UINT cbvSlotNums);

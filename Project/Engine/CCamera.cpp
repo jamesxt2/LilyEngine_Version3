@@ -12,7 +12,7 @@ CCamera::CCamera()
 	: CComponent(COMPONENT_TYPE::CAMERA),
 	m_ProjType(PROJ_TYPE::PERSPECTIVE), m_CamPriority(-1),
 	m_FOV(XM_PI / 3.f), m_Far(10000.f), m_Width(0.f), m_AspectRatio(1.f),
-	m_Scale(1.f)
+	m_Scale(1.f), m_IsDirty(false)
 {
 	m_Width = CDevice::GetInst()->GetRenderResolution().x;
 	m_AspectRatio = CDevice::GetInst()->GetAspectRatio();
@@ -26,7 +26,8 @@ CCamera::CCamera(const CCamera& other)
 	m_Far(other.m_Far),
 	m_Width(other.m_Width),
 	m_AspectRatio(other.m_AspectRatio),
-	m_Scale(other.m_Scale)
+	m_Scale(other.m_Scale),
+	m_IsDirty(false)
 {
 }
 
@@ -67,6 +68,12 @@ void CCamera::Render()
 {
 	m_vecObjects = CLevelMgr::GetInst()->GetCurrentLevel()->GetObjects();
 
+	if (m_IsDirty)
+	{
+		MarkDirty();
+		m_IsDirty = false;
+	}
+
 	g_Trans.matView = m_matView;
 	g_Trans.matProj = m_matProj;
 
@@ -74,10 +81,30 @@ void CCamera::Render()
 	{
 		if (m_vecObjects[i]->GetRenderComp() == nullptr)
 			continue;
+		if (m_vecObjects[i]->GetTransformComp() != nullptr)
+			CDevice::GetInst()->GetConstBuffer(CB_TYPE::TRANSFORM)->Bind(m_vecObjects[i]->GetTransformComp()->GetObjCBIndex());
 		m_vecObjects[i]->Render();
 	}
 
 	m_vecObjects.clear();
+}
+
+void CCamera::MarkDirty()
+{
+	for (size_t i = 0; i < m_vecObjects.size(); ++i)
+	{
+		if (m_vecObjects[i] == nullptr)
+			continue;
+		if (m_vecObjects[i]->GetRenderComp() == nullptr)
+			continue;
+		if (m_vecObjects[i]->GetTransformComp() != nullptr)
+			m_vecObjects[i]->GetTransformComp()->ResetDirty();
+	}
+}
+
+void CCamera::SetDirty()
+{
+	m_IsDirty = true;
 }
 
 void CCamera::SetCameraPriority(int priority)

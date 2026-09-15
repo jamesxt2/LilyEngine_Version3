@@ -331,7 +331,7 @@ void CDevice::Update()
 	ThrowIfFailed(m_CurrFrameResource->m_CmdListAlloc->Reset());
 	ThrowIfFailed(m_CommandList->Reset(m_CurrFrameResource->m_CmdListAlloc.Get(), nullptr));
 
-	GetConstBuffer(CB_TYPE::TRANSFORM)->Bind();
+	//GetConstBuffer(CB_TYPE::TRANSFORM)->Bind();
 }
 
 void CDevice::ClearTargetAndPrepareRender(XMVECTORF32 color)

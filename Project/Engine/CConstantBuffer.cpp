@@ -128,14 +128,17 @@ void CConstantBuffer::BuildRootSignature(UINT slotCount)
 		IID_PPV_ARGS(m_RootSignature.GetAddressOf())));
 }
 
-void CConstantBuffer::Bind()
+void CConstantBuffer::Bind(int ObjCBIndex, int slot)
 {
 	ID3D12DescriptorHeap* descriptorHeaps[] = { m_CbvHeap.Get() };
 	CMDLIST->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
 	CMDLIST->SetGraphicsRootSignature(m_RootSignature.Get());
 
-	CMDLIST->SetGraphicsRootDescriptorTable(0, m_CbvHeap->GetGPUDescriptorHandleForHeapStart());
+	auto handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
+		m_CbvHeap->GetGPUDescriptorHandleForHeapStart(), ObjCBIndex, CDevice::GetInst()->m_CbvUavDescriptorSize
+	);
+	CMDLIST->SetGraphicsRootDescriptorTable(slot, handle);
 }
 
 void CConstantBuffer::CopyData(int elementIndex, const void* data)

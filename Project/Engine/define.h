@@ -37,3 +37,5 @@ inline std::wstring AnsiToWString(const std::string& str)
 #define KEY_PRESSED(Key) KEY_CHECK(Key, KEY_STATE::PRESSED)
 #define KEY_RELEASED(Key) KEY_CHECK(Key, KEY_STATE::RELEASED)
 #define KEY_NONE(Key) KEY_CHECK(Key, KEY_STATE::NONE)
+
+#define DT CTimeMgr::GetInst()->DeltaTime()

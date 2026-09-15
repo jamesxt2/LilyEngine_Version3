@@ -80,6 +80,9 @@
     <Filter Include="04.Manager\03.KeyMgr">
       <UniqueIdentifier>{a940532a-1cb2-4aeb-ad5f-30ffe5895149}</UniqueIdentifier>
     </Filter>
+    <Filter Include="07.Component\Script">
+      <UniqueIdentifier>{687cca46-9bae-4636-b4ad-ff5b7c038e85}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -181,6 +184,12 @@
     <ClInclude Include="FrameResource.h">
       <Filter>01.Basis</Filter>
     </ClInclude>
+    <ClInclude Include="CScript.h">
+      <Filter>07.Component\Script</Filter>
+    </ClInclude>
+    <ClInclude Include="CCameraMoveScript.h">
+      <Filter>07.Component\Script</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -260,6 +269,12 @@
     </ClCompile>
     <ClCompile Include="FrameResource.cpp">
       <Filter>01.Basis</Filter>
+    </ClCompile>
+    <ClCompile Include="CScript.cpp">
+      <Filter>07.Component\Script</Filter>
+    </ClCompile>
+    <ClCompile Include="CCameraMoveScript.cpp">
+      <Filter>07.Component\Script</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

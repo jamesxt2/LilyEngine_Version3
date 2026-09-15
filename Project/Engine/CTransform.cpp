@@ -15,6 +15,11 @@ CTransform::~CTransform()
 {
 }
 
+void CTransform::Tick()
+{
+	
+}
+
 void CTransform::FinalTick()
 {
 	m_matWorld = XMMatrixIdentity();
@@ -71,13 +76,13 @@ void CTransform::Bind()
 	if (m_NumFramesDirty > 0)
 	{
 		// System memory -> GPU
-		std::shared_ptr<CConstantBuffer> pCB = CDevice::GetInst()->GetConstBuffer(CB_TYPE::TRANSFORM);
+		std::shared_ptr<CConstantBuffer> pObjCB = CDevice::GetInst()->GetConstBuffer(CB_TYPE::TRANSFORM);
 
 		g_Trans.matModel = m_matWorld;
 		g_Trans.matMV = g_Trans.matModel * g_Trans.matView;
 		g_Trans.matMVP = g_Trans.matMV * g_Trans.matProj;
 
-		pCB->CopyData(m_ObjCBIndex, &g_Trans);
+		pObjCB->CopyData(m_ObjCBIndex, &g_Trans);
 
 		--m_NumFramesDirty;
 	}

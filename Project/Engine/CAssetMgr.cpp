@@ -229,6 +229,7 @@ void CAssetMgr::CreateDefaultMesh()
 		vecVtx.clear();
 		vecIdx.clear();
 	}
+
 }
 
 void CAssetMgr::CreateDefaultGraphicsShader()
@@ -247,4 +248,27 @@ void CAssetMgr::CreateDefaultGraphicsShader()
 	//pShader->SetBSType(BS_TYPE::DEFAULT);
 
 	AddAsset<CGraphicsShader>(L"ColorShader", pShader);
+}
+
+void CAssetMgr::CreateCylinderMesh(const std::wstring& name, float bottomRadius, float topRadius, float height, UINT sliceCount, UINT stackCount)
+{
+	float stackHeight = height / stackCount;
+
+	float radiusStep = (topRadius - bottomRadius) / stackCount;
+	UINT ringCount = stackCount + 1;
+
+	Ptr<CMesh> pMesh = nullptr;
+	std::vector<Vertex> vecVtx;
+	std::vector<UINT> vecIdx;
+
+	for (UINT i = 0; i < ringCount; ++i)
+	{
+		float y = -0.5f * height + i * stackHeight;
+		float r = bottomRadius + i * radiusStep;
+		float dTheta = 2 * XM_PI / sliceCount;
+		for (UINT j = 0; j <= sliceCount; ++j)
+		{
+
+		}
+	}
 }

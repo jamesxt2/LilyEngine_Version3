@@ -6,6 +6,7 @@ class CTransform;
 class CCamera;
 class CMeshRender;
 class CRenderComponent;
+class CScript;
 
 class CGameObject : public CEntity
 {
@@ -29,6 +30,7 @@ public:
 private:
 	CComponent*					m_arrComp[(UINT)COMPONENT_TYPE::END];
 	CRenderComponent*			m_RenderComp;
+	std::vector<CScript*>		m_vecScript;
 
 	CGameObject*				 m_Parent;
 	std::vector<CGameObject*>	m_vecChild;

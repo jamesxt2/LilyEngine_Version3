@@ -6,6 +6,7 @@
 #include "CLevel.h"
 #include "CRenderComponent.h"
 #include "CTransform.h"
+#include "CScript.h"
 
 CGameObject::CGameObject()
 	: m_arrComp{}, m_RenderComp(nullptr), m_Parent(nullptr), m_Dead(false)
@@ -20,11 +21,10 @@ CGameObject::CGameObject(const CGameObject& other)
 		if (other.m_arrComp[i])
 			AddComponent(other.m_arrComp[i]->Clone());
 	}
-	/*
 	for (size_t i = 0; i < other.m_vecScript.size(); ++i)
 	{
 		AddComponent(other.m_vecScript[i]->Clone());
-	}*/
+	}
 	for (size_t i = 0; i < other.m_vecChild.size(); ++i)
 	{
 		AddChild(other.m_vecChild[i]->Clone());
@@ -44,11 +44,10 @@ void CGameObject::Begin()
 		if (m_arrComp[i] != nullptr)
 			m_arrComp[i]->Begin();
 	}
-	/*
 	for (size_t i = 0; i < m_vecScript.size(); ++i)
 	{
 		m_vecScript[i]->Begin();
-	}*/
+	}
 	for (size_t i = 0; i < m_vecChild.size(); ++i)
 	{
 		m_vecChild[i]->Begin();
@@ -62,11 +61,10 @@ void CGameObject::Tick()
 		if (m_arrComp[i] != nullptr)
 			m_arrComp[i]->Tick();
 	}
-	/*
 	for (size_t i = 0; i < m_vecScript.size(); ++i)
 	{
 		m_vecScript[i]->Tick();
-	}*/
+	}
 	for (size_t i = 0; i < m_vecChild.size(); ++i)
 	{
 		m_vecChild[i]->Tick();
@@ -108,7 +106,7 @@ void CGameObject::AddComponent(CComponent* component)
 
 	if (type == COMPONENT_TYPE::SCRIPT)
 	{
-		//m_vecScript.push_back((CScript*)component);
+		m_vecScript.push_back((CScript*)component);
 	}
 	else
 	{

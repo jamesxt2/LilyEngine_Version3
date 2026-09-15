@@ -8,6 +8,7 @@ public:
 	~CTransform();
 	CLONE(CTransform)
 
+	virtual void Tick() override;
 	virtual void FinalTick() override;
 	void Bind();
 
@@ -51,5 +52,8 @@ public:
 	inline bool IsAbsolute() const { return m_Absolute; }
 
 	inline void SetObjCBIndex(int index) { m_ObjCBIndex = index; }
+	inline int GetObjCBIndex() const { return m_ObjCBIndex; }
+
+	inline void ResetDirty() { m_NumFramesDirty = g_NumFrameResources; }
 };
 

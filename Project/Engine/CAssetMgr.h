@@ -23,6 +23,8 @@ public:
 	void GetAssetNames(ASSET_TYPE type, _Out_ std::vector<std::string>& vecNames);
 	inline const std::map<std::wstring, Ptr<CAsset>>& GetAssets(ASSET_TYPE type) const { return m_AssetMap[(UINT)type]; }
 
+	void CreateCylinderMesh(const std::wstring& name, float bottomRadius, float topRadius, float height, UINT sliceCount, UINT stackCount);
+
 private:
 
 	void CreateDefaultMesh();

@@ -15,7 +15,12 @@ public:
 	virtual void FinalTick() override;
 	void Render();
 
+	void SetDirty();
+
 private:
+
+	void MarkDirty();
+
 	PROJ_TYPE		m_ProjType;
 
 	int				m_CamPriority;
@@ -32,6 +37,8 @@ private:
 	Matrix			m_matProj;
 
 	std::vector<CGameObject*> m_vecObjects;
+
+	bool			m_IsDirty;
 
 public:
 	inline void SetProjType(PROJ_TYPE type) { m_ProjType = type; }
