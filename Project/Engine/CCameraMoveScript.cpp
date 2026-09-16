@@ -8,7 +8,7 @@
 #include "CTimeMgr.h"
 
 CCameraMoveScript::CCameraMoveScript()
-	: m_Speed(100.f)
+	: m_Speed(10.f)
 {
 }
 

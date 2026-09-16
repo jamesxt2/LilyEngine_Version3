@@ -184,6 +184,7 @@ call Copy.bat</Command>
     <ClInclude Include="FrameResource.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="global.h" />
+    <ClInclude Include="MeshData.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="ptr.h" />
     <ClInclude Include="singleton.h" />

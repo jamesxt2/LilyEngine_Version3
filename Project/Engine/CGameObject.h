@@ -7,6 +7,7 @@ class CCamera;
 class CMeshRender;
 class CRenderComponent;
 class CScript;
+struct SubmeshGeometry;
 
 class CGameObject : public CEntity
 {
@@ -32,10 +33,12 @@ private:
 	CRenderComponent*			m_RenderComp;
 	std::vector<CScript*>		m_vecScript;
 
-	CGameObject*				 m_Parent;
+	CGameObject*				m_Parent;
 	std::vector<CGameObject*>	m_vecChild;
 
 	bool						m_Dead;
+
+	SubmeshGeometry*			m_SubMeshGeo;
 
 public:
 	inline CComponent* GetComponent(COMPONENT_TYPE type) const { return m_arrComp[(UINT)type]; }
@@ -48,5 +51,7 @@ public:
 	inline CGameObject* GetParent() const { return m_Parent; }
 
 	inline bool IsDead() const { return m_Dead; }
+
+	inline void SetSubMeshGeo(SubmeshGeometry* geo) { m_SubMeshGeo = geo; }
 };
 

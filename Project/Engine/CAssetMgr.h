@@ -3,6 +3,7 @@
 
 #include "CPathMgr.h"
 #include "assets.h"
+#include "MeshData.h"
 
 class CAssetMgr : public CSingleton<CAssetMgr>
 {
@@ -23,14 +24,58 @@ public:
 	void GetAssetNames(ASSET_TYPE type, _Out_ std::vector<std::string>& vecNames);
 	inline const std::map<std::wstring, Ptr<CAsset>>& GetAssets(ASSET_TYPE type) const { return m_AssetMap[(UINT)type]; }
 
-	void CreateCylinderMesh(const std::wstring& name, float bottomRadius, float topRadius, float height, UINT sliceCount, UINT stackCount);
+
+	///<summary>
+	/// Creates a box centered at the origin with the given dimensions, where each
+	/// face has m rows and n columns of vertices.
+	///</summary>
+	void CreateBox(const std::wstring& name, float width, float height, float depth, uint32 numSubdivisions = 0);
+
+	///<summary>
+	/// Creates a sphere centered at the origin with the given radius.  The
+	/// slices and stacks parameters control the degree of tessellation.
+	///</summary>
+	void CreateSphere(const std::wstring& name, float radius, uint32 sliceCount, uint32 stackCount);
+
+	///<summary>
+	/// Creates a geosphere centered at the origin with the given radius.  The
+	/// depth controls the level of tessellation.
+	///</summary>
+	void CreateGeosphere(const std::wstring& name, float radius, uint32 numSubdivisions);
+
+	///<summary>
+	/// Creates a cylinder parallel to the y-axis, and centered about the origin.  
+	/// The bottom and top radius can vary to form various cone shapes rather than true
+	// cylinders.  The slices and stacks parameters control the degree of tessellation.
+	///</summary>
+	void CreateCylinder(const std::wstring& name, float bottomRadius, float topRadius, float height, UINT sliceCount, UINT stackCount);
+
+	///<summary>
+	/// Creates an mxn grid in the xz-plane with m rows and n columns, centered
+	/// at the origin with the specified width and depth.
+	///</summary>
+	void CreateGrid(const std::wstring& name, float width, float depth, uint32 m, uint32 n);
+
+	///<summary>
+	/// Creates a quad aligned with the screen.  This is useful for postprocessing and screen effects.
+	///</summary>
+	void CreateQuad(const std::wstring& name, float x, float y, float w, float h, float depth);
+
 
 private:
 
 	void CreateDefaultMesh();
 	void CreateDefaultGraphicsShader();
 
+	void BuildCylinderTopCap(float bottomRadius, float topRadius, float height, uint32 sliceCount, uint32 stackCount, MeshData& meshData);
+	void BuildCylinderBottomCap(float bottomRadius, float topRadius, float height, uint32 sliceCount, uint32 stackCount, MeshData& meshData);
+
+	Vertex MidPoint(const Vertex& v0, const Vertex& v1);
+	void Subdivide(MeshData& meshData);
+
 	std::map<std::wstring, Ptr<CAsset>> m_AssetMap[(UINT)ASSET_TYPE::END];
+
+	std::unordered_map<std::wstring, MeshData> m_MeshDataMap;
 };
 
 template<typename T>

@@ -190,6 +190,9 @@
     <ClInclude Include="CCameraMoveScript.h">
       <Filter>07.Component\Script</Filter>
     </ClInclude>
+    <ClInclude Include="MeshData.h">
+      <Filter>08.Asset\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">

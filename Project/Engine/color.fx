@@ -11,15 +11,17 @@ cbuffer TRANSFORM : register(b0)
 struct VertexIn
 {
     float3 vPos : POSITION;
-    float4 vColor : COLOR;
+    float3 vNormal : NORMAL;
     float2 vUV : TEXCOORD;
+    float3 vTangentU : TANGENTU;
+    float4 vColor : COLOR;
 };
 
 struct VertexOut
 {
     float4 vPosition : SV_Position;
-    float4 vColor : COLOR;
     float2 vUV : TEXCOORD;
+    float4 vColor : COLOR;
 };
 
 VertexOut VS(VertexIn vin)

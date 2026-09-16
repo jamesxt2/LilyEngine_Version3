@@ -7,6 +7,8 @@
 #include "CRenderComponent.h"
 #include "CTransform.h"
 #include "CScript.h"
+#include "MeshData.h"
+#include "CDevice.h"
 
 CGameObject::CGameObject()
 	: m_arrComp{}, m_RenderComp(nullptr), m_Parent(nullptr), m_Dead(false)
@@ -69,9 +71,6 @@ void CGameObject::Tick()
 	{
 		m_vecChild[i]->Tick();
 	}
-
-	if (GetTransformComp())
-		GetTransformComp()->Bind();
 }
 
 void CGameObject::FinalTick()
@@ -94,7 +93,13 @@ void CGameObject::Render()
 {
 	if (m_RenderComp)
 	{
+		if (GetTransformComp())
+			GetTransformComp()->Bind();
+
 		m_RenderComp->Render();
+
+		if (m_SubMeshGeo)
+			CMDLIST->DrawIndexedInstanced(m_SubMeshGeo->IndexCount, 1, m_SubMeshGeo->StartIndexLocation, m_SubMeshGeo->BaseVertexLocation, 0);
 	}
 }
 

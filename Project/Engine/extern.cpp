@@ -3,7 +3,7 @@
 TTransform g_Trans = {};
 
 int g_NumFrameResources = 3;
-int g_MaxObjectCount = 10;
+int g_MaxObjectCount = 40;
 
 Vector3 XAxis(1.f, 0.f, 0.f);
 Vector3 YAxis(0.f, 1.f, 0.f);

@@ -29,11 +29,21 @@ void CMesh::CreateVertexBuffer(Vertex* vtxData, UINT vtxCount)
 	m_VertexBufferGPU = CreateDefaultBuffer(vtxData, m_VertexBufferByteSize, m_VertexBufferUploader);
 }
 
-void CMesh::CreateIndexBuffer(UINT* idxData, UINT idxCount)
+void CMesh::CreateIndexBuffer32(UINT* idxData, UINT idxCount)
 {
 	m_IndexCount = idxCount;
 	m_IndexFormat = DXGI_FORMAT_R32_UINT;
 	m_IndexBufferByteSize = idxCount * sizeof(UINT);
+	ThrowIfFailed(D3DCreateBlob(m_IndexBufferByteSize, &m_IndexBufferCPU));
+	CopyMemory(m_IndexBufferCPU->GetBufferPointer(), idxData, m_IndexBufferByteSize);
+	m_IndexBufferGPU = CreateDefaultBuffer(idxData, m_IndexBufferByteSize, m_IndexBufferUploader);
+}
+
+void CMesh::CreateIndexBuffer16(uint16* idxData, UINT idxCount)
+{
+	m_IndexCount = idxCount;
+	m_IndexFormat = DXGI_FORMAT_R16_UINT;
+	m_IndexBufferByteSize = idxCount * sizeof(uint16);
 	ThrowIfFailed(D3DCreateBlob(m_IndexBufferByteSize, &m_IndexBufferCPU));
 	CopyMemory(m_IndexBufferCPU->GetBufferPointer(), idxData, m_IndexBufferByteSize);
 	m_IndexBufferGPU = CreateDefaultBuffer(idxData, m_IndexBufferByteSize, m_IndexBufferUploader);
@@ -45,8 +55,6 @@ void CMesh::Render()
 
 	if (m_Shader != nullptr)
 		m_Shader->Bind();
-
-	CMDLIST->DrawIndexedInstanced(m_IndexCount, 1, 0, 0, 0);
 }
 
 void CMesh::Bind()
@@ -62,4 +70,9 @@ void CMesh::Bind()
 	ibv.Format = m_IndexFormat;
 	ibv.SizeInBytes = m_IndexBufferByteSize;
 	CMDLIST->IASetIndexBuffer(&ibv);
+}
+
+SubmeshGeometry* CMesh::GetSubGeo(const std::string& key)
+{
+	return &m_DrawArgs.find(key)->second;
 }
