@@ -193,6 +193,9 @@
     <ClInclude Include="MeshData.h">
       <Filter>08.Asset\Mesh</Filter>
     </ClInclude>
+    <ClInclude Include="Waves.h">
+      <Filter>08.Asset\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -278,6 +281,9 @@
     </ClCompile>
     <ClCompile Include="CCameraMoveScript.cpp">
       <Filter>07.Component\Script</Filter>
+    </ClCompile>
+    <ClCompile Include="Waves.cpp">
+      <Filter>08.Asset\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

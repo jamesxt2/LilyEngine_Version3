@@ -71,3 +71,11 @@ inline UINT CalcConstantBufferByteSize(UINT byteSize)
 	// 512
 	return (byteSize + 255) & ~255;
 }
+
+int Rand(int a, int b);
+
+// Returns random float in [0, 1).
+float RandF();
+
+// Returns random float in [a, b).
+float RandF(float a, float b);

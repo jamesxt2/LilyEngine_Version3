@@ -9,6 +9,7 @@ class CDevice : public CSingleton<CDevice>
 
 public:
 	int Init(HWND _MainWnd, POINT _RenderResolution);
+	void PostInit();
 
 	void OnResize(POINT newRenderResolution);
 
@@ -84,5 +85,7 @@ public:
 
 	inline Vector2 GetRenderResolution() const { return Vector2((float)m_RenderResolution.x, (float)m_RenderResolution.y); }
 	inline float GetAspectRatio() const { return (float)m_RenderResolution.x / (float)m_RenderResolution.y; }
+
+	inline FrameResource* GetCurrFrameResource() const { return m_CurrFrameResource; }
 };
 

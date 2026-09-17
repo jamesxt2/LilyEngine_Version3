@@ -2,6 +2,7 @@
 #include "CDevice.h"
 
 #include "CConstantBuffer.h"
+#include "CAssetMgr.h"
 
 CDevice::CDevice()
 	: m_MainWnd(nullptr), m_RenderResolution{},
@@ -105,9 +106,14 @@ int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
 	// Init and Create CB
 	/*************************************/
 	CConstantBuffer::Init(2);
-	BuildFrameResources();
+	
 
 	return S_OK;
+}
+
+void CDevice::PostInit()
+{
+	BuildFrameResources();
 }
 
 void CDevice::CreateCommandObjects()
@@ -208,6 +214,7 @@ void CDevice::BuildFrameResources()
 	{
 		m_FrameResources.push_back(std::make_unique<FrameResource>(m_d3dDevice.Get()));
 		m_FrameResources[i]->CreateCB(sizeof(TTransform), g_MaxObjectCount, CB_TYPE::TRANSFORM);
+		m_FrameResources[i]->CreateWavesVB(CAssetMgr::GetInst()->GetWavesVertexCount());
 	}
 	m_CurrFrameResource = m_FrameResources[0].get();
 }

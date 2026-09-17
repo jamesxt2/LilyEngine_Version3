@@ -4,6 +4,8 @@
 #include "CPathMgr.h"
 #include "assets.h"
 #include "MeshData.h"
+#include "Waves.h"
+
 
 class CAssetMgr : public CSingleton<CAssetMgr>
 {
@@ -11,6 +13,8 @@ class CAssetMgr : public CSingleton<CAssetMgr>
 
 public:
 	void Init();
+	void PostInit();
+	void Tick();
 
 	template<typename T>
 	Ptr<T> Load(const std::wstring& key, const std::wstring& relativePath);
@@ -76,6 +80,11 @@ private:
 	std::map<std::wstring, Ptr<CAsset>> m_AssetMap[(UINT)ASSET_TYPE::END];
 
 	std::unordered_map<std::wstring, MeshData> m_MeshDataMap;
+
+	Waves* m_Waves;
+
+public:
+	inline int GetWavesVertexCount() const { return m_Waves->VertexCount(); }
 };
 
 template<typename T>

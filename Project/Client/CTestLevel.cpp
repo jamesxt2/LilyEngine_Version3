@@ -42,99 +42,30 @@ void CTestLevel::CreateTestLevel()
 	pGrid->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
 	pGrid->GetTransformComp()->SetObjCBIndex(0);
 
-	pGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"DefaultGeoMesh"));
+	pGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"LandMesh"));
 	pGrid->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"ColorShader").Get());
 	pGrid->SetSubMeshGeo(pGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
 
 	pLevel->AddObject(pGrid);
 
-	CGameObject* pBox = new CGameObject;
-	pBox->SetName(L"Box");
-	pBox->AddComponent(new CTransform);
-	pBox->AddComponent(new CMeshRender);
 
-	pBox->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
-	pBox->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
-	pBox->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-	pBox->GetTransformComp()->SetObjCBIndex(1);
 
-	pBox->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"DefaultGeoMesh"));
-	pBox->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"ColorShader").Get());
-	pBox->SetSubMeshGeo(pBox->GetMeshRenderComp()->GetMesh()->GetSubGeo("box"));
+	CGameObject* pWave = new CGameObject;
+	pWave->SetName(L"Wave");
+	pWave->AddComponent(new CTransform);
+	pWave->AddComponent(new CMeshRender);
 
-	pLevel->AddObject(pBox);
+	pWave->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
+	pWave->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
+	pWave->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
+	pWave->GetTransformComp()->SetObjCBIndex(1);
 
-	for (int i = 0; i < 5; ++i)
-	{
-		// left cylinder
-		CGameObject* pCylinder = new CGameObject;
-		pCylinder->SetName(L"Cylinder");
-		pCylinder->AddComponent(new CTransform);
-		pCylinder->AddComponent(new CMeshRender);
+	pWave->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"WaveMesh"));
+	pWave->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"ColorShader").Get());
+	pWave->SetSubMeshGeo(pWave->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
 
-		pCylinder->GetTransformComp()->SetRelativePosition(-4.f, 1.5f, 6.f - 3 * i);
-		pCylinder->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
-		pCylinder->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-		pCylinder->GetTransformComp()->SetObjCBIndex(2 + 4 * i);
+	pLevel->AddObject(pWave);
 
-		pCylinder->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"DefaultGeoMesh"));
-		pCylinder->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"ColorShader").Get());
-		pCylinder->SetSubMeshGeo(pCylinder->GetMeshRenderComp()->GetMesh()->GetSubGeo("cylinder"));
-
-		pLevel->AddObject(pCylinder);
-
-		// right cylinder
-		CGameObject* pCylinder2 = new CGameObject;
-		pCylinder2->SetName(L"Cylinder");
-		pCylinder2->AddComponent(new CTransform);
-		pCylinder2->AddComponent(new CMeshRender);
-
-		pCylinder2->GetTransformComp()->SetRelativePosition(4.f, 1.5f, 6.f - 3 * i);
-		pCylinder2->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
-		pCylinder2->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-		pCylinder2->GetTransformComp()->SetObjCBIndex(2 + 4 * i + 1);
-
-		pCylinder2->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"DefaultGeoMesh"));
-		pCylinder2->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"ColorShader").Get());
-		pCylinder2->SetSubMeshGeo(pCylinder2->GetMeshRenderComp()->GetMesh()->GetSubGeo("cylinder"));
-
-		pLevel->AddObject(pCylinder2);
-
-		// left sphere
-		CGameObject* pSphere = new CGameObject;
-		pSphere->SetName(L"Cylinder");
-		pSphere->AddComponent(new CTransform);
-		pSphere->AddComponent(new CMeshRender);
-
-		pSphere->GetTransformComp()->SetRelativePosition(-4.f, 3.5f, 6.f - 3 * i);
-		pSphere->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
-		pSphere->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-		pSphere->GetTransformComp()->SetObjCBIndex(2 + 4 * i + 2);
-
-		pSphere->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"DefaultGeoMesh"));
-		pSphere->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"ColorShader").Get());
-		pSphere->SetSubMeshGeo(pSphere->GetMeshRenderComp()->GetMesh()->GetSubGeo("sphere"));
-
-		pLevel->AddObject(pSphere);
-
-		// right sphere
-		CGameObject* pSphere2 = new CGameObject;
-		pSphere2->SetName(L"Cylinder");
-		pSphere2->AddComponent(new CTransform);
-		pSphere2->AddComponent(new CMeshRender);
-
-		pSphere2->GetTransformComp()->SetRelativePosition(4.f, 3.5f, 6.f - 3 * i);
-		pSphere2->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
-		pSphere2->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-		pSphere2->GetTransformComp()->SetObjCBIndex(2 + 4 * i + 3);
-
-		pSphere2->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"DefaultGeoMesh"));
-		pSphere2->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"ColorShader").Get());
-		pSphere2->SetSubMeshGeo(pSphere2->GetMeshRenderComp()->GetMesh()->GetSubGeo("sphere"));
-
-		pLevel->AddObject(pSphere2);
-	}
-	
 
 	pLevel->ChangeState(LEVEL_STATE::PLAY);
 }

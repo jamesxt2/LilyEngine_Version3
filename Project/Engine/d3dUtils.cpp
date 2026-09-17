@@ -122,3 +122,17 @@ ComPtr<ID3D12Resource> CreateDefaultBuffer(const void* initData, UINT64 byteSize
 	return defaultBuffer;
 }
 
+int Rand(int a, int b)
+{
+	return a + rand() % ((b - a) + 1);
+}
+
+float RandF()
+{
+	return (float)(rand()) / (float)RAND_MAX;
+}
+
+float RandF(float a, float b)
+{
+	return a + RandF() * (b - a);
+}

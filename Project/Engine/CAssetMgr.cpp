@@ -4,8 +4,10 @@
 #include "d3dUtils.h"
 #include "CGraphicsShader.h"
 #include "CDevice.h"
+#include "CTimeMgr.h"
 
 CAssetMgr::CAssetMgr()
+	: m_Waves(nullptr)
 {
 }
 
@@ -30,110 +32,240 @@ void CAssetMgr::Init()
 	CDevice::GetInst()->Reset();
 	CreateDefaultMesh();
 	CDevice::GetInst()->Close();
+}
 
+void CAssetMgr::PostInit()
+{
 	CreateDefaultGraphicsShader();
+}
+
+void CAssetMgr::Tick()
+{
+	// Every quarter second, generate a random wave.
+	static float t_base = 0.0f;
+	
+	if ((CTimeMgr::GetInst()->TotalTime() - t_base) >= 0.25f)
+	{
+		t_base += 0.25f;
+		
+		int i = Rand(4, m_Waves->RowCount() - 5);
+		int j = Rand(4, m_Waves->ColumnCount() - 5);
+
+		float r = RandF(0.2f, 0.5f);
+
+		m_Waves->Disturb(i, j, r);
+	}
+
+	// Update the wave simulation.
+	m_Waves->Update(CTimeMgr::GetInst()->DeltaTime());
+
+	// Update the wave vertex buffer with the new solution.
+	auto currWavesVB = CDevice::GetInst()->GetCurrFrameResource()->m_WavesVB.get();
+	for (int i = 0; i < m_Waves->VertexCount(); ++i)
+	{
+		Vertex v;
+
+		v.Position = m_Waves->Position(i);
+		v.Color = XMFLOAT4(DirectX::Colors::Blue);
+
+		currWavesVB->CopyData(i, (const void*)&v);
+	}
+
+	// Set the dynamic VB of the wave renderitem to the current frame VB.
+	FindAsset<CMesh>(L"WaveMesh")->m_VertexBufferGPU = currWavesVB->Resource();
 }
 
 void CAssetMgr::CreateDefaultMesh()
 {
-	CreateBox(L"BoxMeshData", 1.5f, 0.5f, 1.5f, 3);
-	CreateGrid(L"GridMeshData", 20.f, 30.f, 60, 40);
-	CreateSphere(L"SphereMeshData", 0.5f, 20, 20);
-	CreateCylinder(L"CylinderMeshData", 0.5f, 0.3f, 3.f, 20, 20);
-
-	MeshData* box = &(m_MeshDataMap.find(L"BoxMeshData")->second);
-	MeshData* grid = &(m_MeshDataMap.find(L"GridMeshData")->second);
-	MeshData* sphere = &(m_MeshDataMap.find(L"SphereMeshData")->second);
-	MeshData* cylinder = &(m_MeshDataMap.find(L"CylinderMeshData")->second);
-
-	//
-	// We are concatenating all the geometry into one big vertex/index buffer.  So
-	// define the regions in the buffer each submesh covers.
-	//
-
-	// Cache the vertex offsets to each object in the concatenated vertex buffer.
-	UINT boxVertexOffset = 0;
-	UINT gridVertexOffset = (UINT)box->Vertices.size();
-	UINT sphereVertexOffset = gridVertexOffset + (UINT)grid->Vertices.size();
-	UINT cylinderVertexOffset = sphereVertexOffset + (UINT)sphere->Vertices.size();
-
-	UINT boxIndexOffset = 0;
-	UINT gridIndexOffset = (UINT)box->Indices32.size();
-	UINT sphereIndexOffset = gridIndexOffset + (UINT)grid->Indices32.size();
-	UINT cylinderIndexOffset = sphereIndexOffset + (UINT)sphere->Indices32.size();
-
-	// Define the SubmeshGeometry that cover different 
-	// regions of the vertex/index buffers.
-
-	SubmeshGeometry boxSubmesh;
-	boxSubmesh.IndexCount = (UINT)box->Indices32.size();
-	boxSubmesh.StartIndexLocation = boxIndexOffset;
-	boxSubmesh.BaseVertexLocation = boxVertexOffset;
-
-	SubmeshGeometry gridSubmesh;
-	gridSubmesh.IndexCount = (UINT)grid->Indices32.size();
-	gridSubmesh.StartIndexLocation = gridIndexOffset;
-	gridSubmesh.BaseVertexLocation = gridVertexOffset;
-
-	SubmeshGeometry sphereSubmesh;
-	sphereSubmesh.IndexCount = (UINT)sphere->Indices32.size();
-	sphereSubmesh.StartIndexLocation = sphereIndexOffset;
-	sphereSubmesh.BaseVertexLocation = sphereVertexOffset;
-
-	SubmeshGeometry cylinderSubmesh;
-	cylinderSubmesh.IndexCount = (UINT)cylinder->Indices32.size();
-	cylinderSubmesh.StartIndexLocation = cylinderIndexOffset;
-	cylinderSubmesh.BaseVertexLocation = cylinderVertexOffset;
-
-	//
-	// Extract the vertex elements we are interested in and pack the
-	// vertices of all the meshes into one vertex buffer.
-	//
-	auto totalVtxCount = box->Vertices.size() + grid->Vertices.size() + sphere->Vertices.size() + cylinder->Vertices.size();
-	std::vector<Vertex> vertices(totalVtxCount);
-
-	UINT k = 0;
-	
-	for (size_t i = 0; i < box->Vertices.size(); ++i, ++k)
+	/*
 	{
-		vertices[k].Position = box->Vertices[i].Position;
-		vertices[k].Color = Colors::DarkGreen;
+		CreateBox(L"BoxMeshData", 1.5f, 0.5f, 1.5f, 3);
+		CreateGrid(L"GridMeshData", 20.f, 30.f, 60, 40);
+		CreateSphere(L"SphereMeshData", 0.5f, 20, 20);
+		CreateCylinder(L"CylinderMeshData", 0.5f, 0.3f, 3.f, 20, 20);
+
+		MeshData* box = &(m_MeshDataMap.find(L"BoxMeshData")->second);
+		MeshData* grid = &(m_MeshDataMap.find(L"GridMeshData")->second);
+		MeshData* sphere = &(m_MeshDataMap.find(L"SphereMeshData")->second);
+		MeshData* cylinder = &(m_MeshDataMap.find(L"CylinderMeshData")->second);
+
+		//
+		// We are concatenating all the geometry into one big vertex/index buffer.  So
+		// define the regions in the buffer each submesh covers.
+		//
+
+		// Cache the vertex offsets to each object in the concatenated vertex buffer.
+		UINT boxVertexOffset = 0;
+		UINT gridVertexOffset = (UINT)box->Vertices.size();
+		UINT sphereVertexOffset = gridVertexOffset + (UINT)grid->Vertices.size();
+		UINT cylinderVertexOffset = sphereVertexOffset + (UINT)sphere->Vertices.size();
+
+		UINT boxIndexOffset = 0;
+		UINT gridIndexOffset = (UINT)box->Indices32.size();
+		UINT sphereIndexOffset = gridIndexOffset + (UINT)grid->Indices32.size();
+		UINT cylinderIndexOffset = sphereIndexOffset + (UINT)sphere->Indices32.size();
+
+		// Define the SubmeshGeometry that cover different 
+		// regions of the vertex/index buffers.
+
+		SubmeshGeometry boxSubmesh;
+		boxSubmesh.IndexCount = (UINT)box->Indices32.size();
+		boxSubmesh.StartIndexLocation = boxIndexOffset;
+		boxSubmesh.BaseVertexLocation = boxVertexOffset;
+
+		SubmeshGeometry gridSubmesh;
+		gridSubmesh.IndexCount = (UINT)grid->Indices32.size();
+		gridSubmesh.StartIndexLocation = gridIndexOffset;
+		gridSubmesh.BaseVertexLocation = gridVertexOffset;
+
+		SubmeshGeometry sphereSubmesh;
+		sphereSubmesh.IndexCount = (UINT)sphere->Indices32.size();
+		sphereSubmesh.StartIndexLocation = sphereIndexOffset;
+		sphereSubmesh.BaseVertexLocation = sphereVertexOffset;
+
+		SubmeshGeometry cylinderSubmesh;
+		cylinderSubmesh.IndexCount = (UINT)cylinder->Indices32.size();
+		cylinderSubmesh.StartIndexLocation = cylinderIndexOffset;
+		cylinderSubmesh.BaseVertexLocation = cylinderVertexOffset;
+
+		//
+		// Extract the vertex elements we are interested in and pack the
+		// vertices of all the meshes into one vertex buffer.
+		//
+		auto totalVtxCount = box->Vertices.size() + grid->Vertices.size() + sphere->Vertices.size() + cylinder->Vertices.size();
+		std::vector<Vertex> vertices(totalVtxCount);
+
+		UINT k = 0;
+
+		for (size_t i = 0; i < box->Vertices.size(); ++i, ++k)
+		{
+			vertices[k].Position = box->Vertices[i].Position;
+			vertices[k].Color = Colors::DarkGreen;
+		}
+		for (size_t i = 0; i < grid->Vertices.size(); ++i, ++k)
+		{
+			vertices[k].Position = grid->Vertices[i].Position;
+			vertices[k].Color = Colors::ForestGreen;
+		}
+		for (size_t i = 0; i < sphere->Vertices.size(); ++i, ++k)
+		{
+			vertices[k].Position = sphere->Vertices[i].Position;
+			vertices[k].Color = Colors::Crimson;
+		}
+		for (size_t i = 0; i < cylinder->Vertices.size(); ++i, ++k)
+		{
+			vertices[k].Position = cylinder->Vertices[i].Position;
+			vertices[k].Color = Colors::SteelBlue;
+		}
+
+		std::vector<uint16> indices;
+		indices.insert(indices.end(), std::begin(box->GetIndices16()), std::end(box->GetIndices16()));
+		indices.insert(indices.end(), std::begin(grid->GetIndices16()), std::end(grid->GetIndices16()));
+		indices.insert(indices.end(), std::begin(sphere->GetIndices16()), std::end(sphere->GetIndices16()));
+		indices.insert(indices.end(), std::begin(cylinder->GetIndices16()), std::end(cylinder->GetIndices16()));
+
+		const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+		const UINT ibByteSize = (UINT)indices.size() * sizeof(uint16);
+
+		Ptr<CMesh> pMesh = new CMesh;
+		pMesh->CreateVertexBuffer(vertices.data(), (UINT)vertices.size());
+		pMesh->CreateIndexBuffer16(indices.data(), (UINT)indices.size());
+
+		pMesh->m_DrawArgs.emplace("box", std::move(boxSubmesh));
+		pMesh->m_DrawArgs.emplace("grid", std::move(gridSubmesh));
+		pMesh->m_DrawArgs.emplace("sphere", std::move(sphereSubmesh));
+		pMesh->m_DrawArgs.emplace("cylinder", std::move(cylinderSubmesh));
+
+		AddAsset<CMesh>(L"DefaultGeoMesh", pMesh);
 	}
-	for (size_t i = 0; i < grid->Vertices.size(); ++i, ++k)
+	*/
+
+	CreateGrid(L"GridMeshData", 160.f, 160.f, 50, 50);
+	MeshData* pGridMeshData = &m_MeshDataMap.find(L"GridMeshData")->second;
+
+	std::vector<Vertex> vertices(pGridMeshData->Vertices.size());
+	for (size_t i = 0; i < pGridMeshData->Vertices.size(); ++i)
 	{
-		vertices[k].Position = grid->Vertices[i].Position;
-		vertices[k].Color = Colors::ForestGreen;
-	}
-	for (size_t i = 0; i < sphere->Vertices.size(); ++i, ++k)
-	{
-		vertices[k].Position = sphere->Vertices[i].Position;
-		vertices[k].Color = Colors::Crimson;
-	}
-	for (size_t i = 0; i < cylinder->Vertices.size(); ++i, ++k)
-	{
-		vertices[k].Position = cylinder->Vertices[i].Position;
-		vertices[k].Color = Colors::SteelBlue;
+		auto& p = pGridMeshData->Vertices[i].Position;
+		vertices[i].Position = p;
+		vertices[i].Position.y = 0.3f * (p.z * sinf(0.1f * p.x) + p.x * cosf(0.1f * p.z));
+
+		if (vertices[i].Position.y < -10.f)
+			vertices[i].Color = XMFLOAT4(1.f, 0.96f, 0.62f, 1.f);
+		else if (vertices[i].Position.y < 5.f)
+			vertices[i].Color = XMFLOAT4(0.48f, 0.77f, 0.46f, 1.f);
+		else if (vertices[i].Position.y < 12.f)
+			vertices[i].Color = XMFLOAT4(0.1f, 0.48f, 0.19f, 1.f);
+		else if (vertices[i].Position.y < 20.f)
+			vertices[i].Color = XMFLOAT4(0.45f, 0.39f, 0.34f, 1.f);
+		else
+			vertices[i].Color = XMFLOAT4(1.f, 1.f, 1.f, 1.f);
 	}
 
-	std::vector<uint16> indices;
-	indices.insert(indices.end(), std::begin(box->GetIndices16()), std::end(box->GetIndices16()));
-	indices.insert(indices.end(), std::begin(grid->GetIndices16()), std::end(grid->GetIndices16()));
-	indices.insert(indices.end(), std::begin(sphere->GetIndices16()), std::end(sphere->GetIndices16()));
-	indices.insert(indices.end(), std::begin(cylinder->GetIndices16()), std::end(cylinder->GetIndices16()));
-
-	const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
-	const UINT ibByteSize = (UINT)indices.size() * sizeof(uint16);
+	std::vector<uint16> indices = pGridMeshData->GetIndices16();
 
 	Ptr<CMesh> pMesh = new CMesh;
 	pMesh->CreateVertexBuffer(vertices.data(), (UINT)vertices.size());
 	pMesh->CreateIndexBuffer16(indices.data(), (UINT)indices.size());
 
-	pMesh->m_DrawArgs.emplace("box", std::move(boxSubmesh));
-	pMesh->m_DrawArgs.emplace("grid", std::move(gridSubmesh));
-	pMesh->m_DrawArgs.emplace("sphere", std::move(sphereSubmesh));
-	pMesh->m_DrawArgs.emplace("cylinder", std::move(cylinderSubmesh));
+	SubmeshGeometry submesh;
+	submesh.IndexCount = (UINT)indices.size();
+	submesh.StartIndexLocation = 0;
+	submesh.BaseVertexLocation = 0;
 
-	AddAsset<CMesh>(L"DefaultGeoMesh", pMesh);
+	pMesh->m_DrawArgs.emplace("grid", std::move(submesh));
+
+	AddAsset<CMesh>(L"LandMesh", pMesh);
+
+
+
+
+
+	m_Waves = new Waves(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
+
+	std::vector<uint16> indices2(3 * m_Waves->TriangleCount()); // 3 indices per face
+	assert(m_Waves->VertexCount() < 0x0000ffff);
+
+	// Iterate over each quad.
+	int m = m_Waves->RowCount();
+	int n = m_Waves->ColumnCount();
+	int k = 0;
+	for (int i = 0; i < m - 1; ++i)
+	{
+		for (int j = 0; j < n - 1; ++j)
+		{
+			indices2[k] = i * n + j;
+			indices2[k + 1] = i * n + j + 1;
+			indices2[k + 2] = (i + 1) * n + j;
+
+			indices2[k + 3] = (i + 1) * n + j;
+			indices2[k + 4] = i * n + j + 1;
+			indices2[k + 5] = (i + 1) * n + j + 1;
+
+			k += 6; // next quad
+		}
+	}
+
+	UINT vbByteSize = m_Waves->VertexCount() * sizeof(Vertex);
+
+	Ptr<CMesh> pWave = new CMesh;
+
+	// Set dynamically.
+	pWave->m_VertexBufferCPU = nullptr;
+	pWave->m_VertexBufferGPU = nullptr;
+
+	pWave->CreateIndexBuffer16(indices2.data(), (UINT)indices2.size());
+
+	pWave->m_VertexByteStride = sizeof(Vertex);
+	pWave->m_VertexBufferByteSize = vbByteSize;
+
+	submesh.IndexCount = (UINT)indices2.size();
+	submesh.StartIndexLocation = 0;
+	submesh.BaseVertexLocation = 0;
+
+	pWave->m_DrawArgs.emplace("grid", std::move(submesh));
+
+	AddAsset<CMesh>(L"WaveMesh", pWave);
 }
 
 void CAssetMgr::CreateDefaultGraphicsShader()
