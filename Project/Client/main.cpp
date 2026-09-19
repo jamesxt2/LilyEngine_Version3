@@ -53,7 +53,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return 0;
     }
 
-    CTestLevel::CreateTestLevel();
+    //CTestLevel::CreateTestLevel();
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_CLIENT));
 

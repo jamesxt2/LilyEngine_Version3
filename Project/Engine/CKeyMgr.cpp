@@ -39,7 +39,7 @@ void CKeyMgr::Tick()
 	// Key
 	for (size_t i = 0; i < m_VecKey.size(); ++i)
 	{
-		if (GetAsyncKeyState(g_KeyValue[i]) & 0x8000)
+		if (GetAsyncKeyState(g_KeyValue[i]) & 0x8001)
 		{
 			if (!m_VecKey[i].PrevPressed)
 				m_VecKey[i].State = KEY_STATE::TAP;

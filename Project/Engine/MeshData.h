@@ -1,8 +1,40 @@
 #pragma once
 
+struct VertexMesh
+{
+	Vector3 Position;
+	Vector3 Normal;
+	Vector2 TexCoord;
+	Vector3 TangentU;
+	Vector4 Color;
+
+	VertexMesh() {}
+	VertexMesh(
+		const Vector3& p,
+		const Vector3& n,
+		const Vector3& t,
+		const Vector2& uv) :
+		Position(p),
+		Normal(n),
+		TangentU(t),
+		TexCoord(uv) {
+	}
+	VertexMesh(
+		float px, float py, float pz,
+		float nx, float ny, float nz,
+		float tx, float ty, float tz,
+		float u, float v) :
+		Position(px, py, pz),
+		Normal(nx, ny, nz),
+		TangentU(tx, ty, tz),
+		TexCoord(u, v) {
+	}
+};
+
+
 struct MeshData
 {
-	std::vector<Vertex> Vertices;
+	std::vector<VertexMesh> Vertices;
 	std::vector<uint32> Indices32;
 
 	std::vector<uint16>& GetIndices16()

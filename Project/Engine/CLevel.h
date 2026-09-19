@@ -29,6 +29,9 @@ private:
 	std::vector<CGameObject*> m_vecParent;
 	std::vector<CGameObject*> m_vecObject;
 
+	float m_SunTheta = 1.25f * XM_PI;
+	float m_SunPhi = XM_PIDIV4;
+
 public:
 	inline LEVEL_STATE GetState() const { return m_State; }
 	void ChangeState(LEVEL_STATE nextState);

@@ -2,6 +2,9 @@
 #include "CLevel.h"
 
 #include "CGameObject.h"
+#include "CDevice.h"
+#include "CKeyMgr.h"
+#include "CTimeMgr.h"
 
 CLevel::CLevel()
 	: m_State(LEVEL_STATE::STOP)
@@ -21,10 +24,30 @@ void CLevel::Begin()
 
 void CLevel::Tick()
 {
+	if (KEY_PRESSED(KEY::LEFT))
+		m_SunTheta -= CTimeMgr::GetInst()->DeltaTime();
+	if (KEY_PRESSED(KEY::RIGHT))
+		m_SunTheta += CTimeMgr::GetInst()->DeltaTime();
+	if (KEY_PRESSED(KEY::UP))
+		m_SunPhi += CTimeMgr::GetInst()->DeltaTime();
+	if (KEY_PRESSED(KEY::DOWN))
+		m_SunPhi -= CTimeMgr::GetInst()->DeltaTime();
+
 	for (size_t i = 0; i < m_vecParent.size(); ++i)
 	{
 		m_vecParent[i]->Tick();
 	}
+
+	// global CB
+	g_Global.AmbientLight = Vector4(0.25f, 0.25f, 0.35f, 1.0f);
+
+	XMVECTOR lightDir = -SphericalToCartesian(1.0f, m_SunTheta, m_SunPhi);
+
+	g_Global.Lights[0].Direction = lightDir;
+	g_Global.Lights[0].Strength = Vector3(1.f, 1.f, 0.9f);
+
+	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(0, 2);
+	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->CopyData(0, &g_Global);
 }
 
 void CLevel::FinalTick()

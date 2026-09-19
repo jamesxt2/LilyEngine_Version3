@@ -18,9 +18,6 @@ public:
 	friend class Ptr<CAsset>;
 
 private:
-	virtual int Load(const std::wstring& filePath) = 0;
-	virtual int Save(const std::wstring& filePath) = 0;
-
 	std::wstring			m_Key;
 	std::wstring			m_RelativePath;
 	const ASSET_TYPE		m_Type;

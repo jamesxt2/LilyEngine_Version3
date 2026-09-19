@@ -31,6 +31,7 @@ void CAssetMgr::Init()
 {
 	CDevice::GetInst()->Reset();
 	CreateDefaultMesh();
+	CreateDefaultMaterial();
 	CDevice::GetInst()->Close();
 }
 
@@ -66,7 +67,7 @@ void CAssetMgr::Tick()
 		Vertex v;
 
 		v.Position = m_Waves->Position(i);
-		v.Color = XMFLOAT4(DirectX::Colors::Blue);
+		v.Normal = m_Waves->Normal(i);
 
 		currWavesVB->CopyData(i, (const void*)&v);
 	}
@@ -77,153 +78,169 @@ void CAssetMgr::Tick()
 
 void CAssetMgr::CreateDefaultMesh()
 {
-	/*
+	CreateSceneMeshes();
+	CreateWaveMeshes();
+	CreateSkullMesh();
+}
+
+void CAssetMgr::CreateSceneMeshes()
+{
+	/*********************************************************************/
+	// Scene
+	/*********************************************************************/
+	CreateBox(L"BoxMeshData", 1.5f, 0.5f, 1.5f, 3);
+	CreateGrid(L"GridMeshData", 20.f, 30.f, 60, 40);
+	CreateSphere(L"SphereMeshData", 0.5f, 20, 20);
+	CreateCylinder(L"CylinderMeshData", 0.5f, 0.3f, 3.f, 20, 20);
+
+	MeshData* box = &(m_MeshDataMap.find(L"BoxMeshData")->second);
+	MeshData* grid = &(m_MeshDataMap.find(L"GridMeshData")->second);
+	MeshData* sphere = &(m_MeshDataMap.find(L"SphereMeshData")->second);
+	MeshData* cylinder = &(m_MeshDataMap.find(L"CylinderMeshData")->second);
+
+	//
+	// We are concatenating all the geometry into one big vertex/index buffer.  So
+	// define the regions in the buffer each submesh covers.
+	//
+
+	// Cache the vertex offsets to each object in the concatenated vertex buffer.
+	UINT boxVertexOffset = 0;
+	UINT gridVertexOffset = (UINT)box->Vertices.size();
+	UINT sphereVertexOffset = gridVertexOffset + (UINT)grid->Vertices.size();
+	UINT cylinderVertexOffset = sphereVertexOffset + (UINT)sphere->Vertices.size();
+
+	UINT boxIndexOffset = 0;
+	UINT gridIndexOffset = (UINT)box->Indices32.size();
+	UINT sphereIndexOffset = gridIndexOffset + (UINT)grid->Indices32.size();
+	UINT cylinderIndexOffset = sphereIndexOffset + (UINT)sphere->Indices32.size();
+
+	// Define the SubmeshGeometry that cover different 
+	// regions of the vertex/index buffers.
+
+	SubmeshGeometry boxSubmesh;
+	boxSubmesh.IndexCount = (UINT)box->Indices32.size();
+	boxSubmesh.StartIndexLocation = boxIndexOffset;
+	boxSubmesh.BaseVertexLocation = boxVertexOffset;
+
+	SubmeshGeometry gridSubmesh;
+	gridSubmesh.IndexCount = (UINT)grid->Indices32.size();
+	gridSubmesh.StartIndexLocation = gridIndexOffset;
+	gridSubmesh.BaseVertexLocation = gridVertexOffset;
+
+	SubmeshGeometry sphereSubmesh;
+	sphereSubmesh.IndexCount = (UINT)sphere->Indices32.size();
+	sphereSubmesh.StartIndexLocation = sphereIndexOffset;
+	sphereSubmesh.BaseVertexLocation = sphereVertexOffset;
+
+	SubmeshGeometry cylinderSubmesh;
+	cylinderSubmesh.IndexCount = (UINT)cylinder->Indices32.size();
+	cylinderSubmesh.StartIndexLocation = cylinderIndexOffset;
+	cylinderSubmesh.BaseVertexLocation = cylinderVertexOffset;
+
+	//
+	// Extract the vertex elements we are interested in and pack the
+	// vertices of all the meshes into one vertex buffer.
+	//
+	auto totalVtxCount = box->Vertices.size() + grid->Vertices.size() + sphere->Vertices.size() + cylinder->Vertices.size();
+	std::vector<Vertex> vertices(totalVtxCount);
+
+	UINT k = 0;
+
+	for (size_t i = 0; i < box->Vertices.size(); ++i, ++k)
 	{
-		CreateBox(L"BoxMeshData", 1.5f, 0.5f, 1.5f, 3);
-		CreateGrid(L"GridMeshData", 20.f, 30.f, 60, 40);
-		CreateSphere(L"SphereMeshData", 0.5f, 20, 20);
-		CreateCylinder(L"CylinderMeshData", 0.5f, 0.3f, 3.f, 20, 20);
-
-		MeshData* box = &(m_MeshDataMap.find(L"BoxMeshData")->second);
-		MeshData* grid = &(m_MeshDataMap.find(L"GridMeshData")->second);
-		MeshData* sphere = &(m_MeshDataMap.find(L"SphereMeshData")->second);
-		MeshData* cylinder = &(m_MeshDataMap.find(L"CylinderMeshData")->second);
-
-		//
-		// We are concatenating all the geometry into one big vertex/index buffer.  So
-		// define the regions in the buffer each submesh covers.
-		//
-
-		// Cache the vertex offsets to each object in the concatenated vertex buffer.
-		UINT boxVertexOffset = 0;
-		UINT gridVertexOffset = (UINT)box->Vertices.size();
-		UINT sphereVertexOffset = gridVertexOffset + (UINT)grid->Vertices.size();
-		UINT cylinderVertexOffset = sphereVertexOffset + (UINT)sphere->Vertices.size();
-
-		UINT boxIndexOffset = 0;
-		UINT gridIndexOffset = (UINT)box->Indices32.size();
-		UINT sphereIndexOffset = gridIndexOffset + (UINT)grid->Indices32.size();
-		UINT cylinderIndexOffset = sphereIndexOffset + (UINT)sphere->Indices32.size();
-
-		// Define the SubmeshGeometry that cover different 
-		// regions of the vertex/index buffers.
-
-		SubmeshGeometry boxSubmesh;
-		boxSubmesh.IndexCount = (UINT)box->Indices32.size();
-		boxSubmesh.StartIndexLocation = boxIndexOffset;
-		boxSubmesh.BaseVertexLocation = boxVertexOffset;
-
-		SubmeshGeometry gridSubmesh;
-		gridSubmesh.IndexCount = (UINT)grid->Indices32.size();
-		gridSubmesh.StartIndexLocation = gridIndexOffset;
-		gridSubmesh.BaseVertexLocation = gridVertexOffset;
-
-		SubmeshGeometry sphereSubmesh;
-		sphereSubmesh.IndexCount = (UINT)sphere->Indices32.size();
-		sphereSubmesh.StartIndexLocation = sphereIndexOffset;
-		sphereSubmesh.BaseVertexLocation = sphereVertexOffset;
-
-		SubmeshGeometry cylinderSubmesh;
-		cylinderSubmesh.IndexCount = (UINT)cylinder->Indices32.size();
-		cylinderSubmesh.StartIndexLocation = cylinderIndexOffset;
-		cylinderSubmesh.BaseVertexLocation = cylinderVertexOffset;
-
-		//
-		// Extract the vertex elements we are interested in and pack the
-		// vertices of all the meshes into one vertex buffer.
-		//
-		auto totalVtxCount = box->Vertices.size() + grid->Vertices.size() + sphere->Vertices.size() + cylinder->Vertices.size();
-		std::vector<Vertex> vertices(totalVtxCount);
-
-		UINT k = 0;
-
-		for (size_t i = 0; i < box->Vertices.size(); ++i, ++k)
-		{
-			vertices[k].Position = box->Vertices[i].Position;
-			vertices[k].Color = Colors::DarkGreen;
-		}
-		for (size_t i = 0; i < grid->Vertices.size(); ++i, ++k)
-		{
-			vertices[k].Position = grid->Vertices[i].Position;
-			vertices[k].Color = Colors::ForestGreen;
-		}
-		for (size_t i = 0; i < sphere->Vertices.size(); ++i, ++k)
-		{
-			vertices[k].Position = sphere->Vertices[i].Position;
-			vertices[k].Color = Colors::Crimson;
-		}
-		for (size_t i = 0; i < cylinder->Vertices.size(); ++i, ++k)
-		{
-			vertices[k].Position = cylinder->Vertices[i].Position;
-			vertices[k].Color = Colors::SteelBlue;
-		}
-
-		std::vector<uint16> indices;
-		indices.insert(indices.end(), std::begin(box->GetIndices16()), std::end(box->GetIndices16()));
-		indices.insert(indices.end(), std::begin(grid->GetIndices16()), std::end(grid->GetIndices16()));
-		indices.insert(indices.end(), std::begin(sphere->GetIndices16()), std::end(sphere->GetIndices16()));
-		indices.insert(indices.end(), std::begin(cylinder->GetIndices16()), std::end(cylinder->GetIndices16()));
-
-		const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
-		const UINT ibByteSize = (UINT)indices.size() * sizeof(uint16);
-
-		Ptr<CMesh> pMesh = new CMesh;
-		pMesh->CreateVertexBuffer(vertices.data(), (UINT)vertices.size());
-		pMesh->CreateIndexBuffer16(indices.data(), (UINT)indices.size());
-
-		pMesh->m_DrawArgs.emplace("box", std::move(boxSubmesh));
-		pMesh->m_DrawArgs.emplace("grid", std::move(gridSubmesh));
-		pMesh->m_DrawArgs.emplace("sphere", std::move(sphereSubmesh));
-		pMesh->m_DrawArgs.emplace("cylinder", std::move(cylinderSubmesh));
-
-		AddAsset<CMesh>(L"DefaultGeoMesh", pMesh);
+		vertices[k].Position = box->Vertices[i].Position;
+		vertices[k].Normal = box->Vertices[i].Normal;
 	}
-	*/
-
-	CreateGrid(L"GridMeshData", 160.f, 160.f, 50, 50);
-	MeshData* pGridMeshData = &m_MeshDataMap.find(L"GridMeshData")->second;
-
-	std::vector<Vertex> vertices(pGridMeshData->Vertices.size());
-	for (size_t i = 0; i < pGridMeshData->Vertices.size(); ++i)
+	for (size_t i = 0; i < grid->Vertices.size(); ++i, ++k)
 	{
-		auto& p = pGridMeshData->Vertices[i].Position;
-		vertices[i].Position = p;
-		vertices[i].Position.y = 0.3f * (p.z * sinf(0.1f * p.x) + p.x * cosf(0.1f * p.z));
-
-		if (vertices[i].Position.y < -10.f)
-			vertices[i].Color = XMFLOAT4(1.f, 0.96f, 0.62f, 1.f);
-		else if (vertices[i].Position.y < 5.f)
-			vertices[i].Color = XMFLOAT4(0.48f, 0.77f, 0.46f, 1.f);
-		else if (vertices[i].Position.y < 12.f)
-			vertices[i].Color = XMFLOAT4(0.1f, 0.48f, 0.19f, 1.f);
-		else if (vertices[i].Position.y < 20.f)
-			vertices[i].Color = XMFLOAT4(0.45f, 0.39f, 0.34f, 1.f);
-		else
-			vertices[i].Color = XMFLOAT4(1.f, 1.f, 1.f, 1.f);
+		vertices[k].Position = grid->Vertices[i].Position;
+		vertices[k].Normal = grid->Vertices[i].Normal;
+	}
+	for (size_t i = 0; i < sphere->Vertices.size(); ++i, ++k)
+	{
+		vertices[k].Position = sphere->Vertices[i].Position;
+		vertices[k].Normal = sphere->Vertices[i].Normal;
+	}
+	for (size_t i = 0; i < cylinder->Vertices.size(); ++i, ++k)
+	{
+		vertices[k].Position = cylinder->Vertices[i].Position;
+		vertices[k].Normal = cylinder->Vertices[i].Normal;
 	}
 
-	std::vector<uint16> indices = pGridMeshData->GetIndices16();
+	std::vector<uint16> indices;
+	indices.insert(indices.end(), std::begin(box->GetIndices16()), std::end(box->GetIndices16()));
+	indices.insert(indices.end(), std::begin(grid->GetIndices16()), std::end(grid->GetIndices16()));
+	indices.insert(indices.end(), std::begin(sphere->GetIndices16()), std::end(sphere->GetIndices16()));
+	indices.insert(indices.end(), std::begin(cylinder->GetIndices16()), std::end(cylinder->GetIndices16()));
+
+	const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+	const UINT ibByteSize = (UINT)indices.size() * sizeof(uint16);
 
 	Ptr<CMesh> pMesh = new CMesh;
 	pMesh->CreateVertexBuffer(vertices.data(), (UINT)vertices.size());
 	pMesh->CreateIndexBuffer16(indices.data(), (UINT)indices.size());
 
-	SubmeshGeometry submesh;
-	submesh.IndexCount = (UINT)indices.size();
-	submesh.StartIndexLocation = 0;
-	submesh.BaseVertexLocation = 0;
+	pMesh->m_DrawArgs.emplace("box", std::move(boxSubmesh));
+	pMesh->m_DrawArgs.emplace("grid", std::move(gridSubmesh));
+	pMesh->m_DrawArgs.emplace("sphere", std::move(sphereSubmesh));
+	pMesh->m_DrawArgs.emplace("cylinder", std::move(cylinderSubmesh));
 
-	pMesh->m_DrawArgs.emplace("grid", std::move(submesh));
+	AddAsset<CMesh>(L"SceneGeoMesh", pMesh);
+	/*********************************************************************/
+	// Scene
+	/*********************************************************************/
+}
 
-	AddAsset<CMesh>(L"LandMesh", pMesh);
+void CAssetMgr::CreateWaveMeshes()
+{
+	/*********************************************************************/
+	// Wave Grid
+	/*********************************************************************/
+	CreateGrid(L"WaveGridMeshData", 160.f, 160.f, 50, 50);
+	MeshData* pWaveGridMeshData = &m_MeshDataMap.find(L"WaveGridMeshData")->second;
+
+	std::vector<Vertex> waveGridVertices(pWaveGridMeshData->Vertices.size());
+	for (size_t i = 0; i < pWaveGridMeshData->Vertices.size(); ++i)
+	{
+		auto& p = pWaveGridMeshData->Vertices[i].Position;
+		waveGridVertices[i].Position = p;
+		waveGridVertices[i].Position.y = 0.3f * (p.z * sinf(0.1f * p.x) + p.x * cosf(0.1f * p.z));
+
+		// n = (-df/dx, 1, -df/dz)
+		Vector3 n(
+			-0.03f * p.z * cosf(0.1f * p.x) - 0.3f * cosf(0.1f * p.z),
+			1.0f,
+			-0.3f * sinf(0.1f * p.x) + 0.03f * p.x * sinf(0.1f * p.z));
+		n.Normalize();
+
+		waveGridVertices[i].Normal = n;
+	}
+
+	std::vector<uint16> waveGridIndices = pWaveGridMeshData->GetIndices16();
+
+	Ptr<CMesh> pWaveGridMesh = new CMesh;
+	pWaveGridMesh->CreateVertexBuffer(waveGridVertices.data(), (UINT)waveGridVertices.size());
+	pWaveGridMesh->CreateIndexBuffer16(waveGridIndices.data(), (UINT)waveGridIndices.size());
+
+	SubmeshGeometry submeshWaveGrid;
+	submeshWaveGrid.IndexCount = (UINT)waveGridIndices.size();
+	submeshWaveGrid.StartIndexLocation = 0;
+	submeshWaveGrid.BaseVertexLocation = 0;
+
+	pWaveGridMesh->m_DrawArgs.emplace("grid", std::move(submeshWaveGrid));
+
+	AddAsset<CMesh>(L"LandMesh", pWaveGridMesh);
+	/*********************************************************************/
+	// Wave Grid
+	/*********************************************************************/
 
 
-
-
-
+	/*********************************************************************/
+	// Wave
+	/*********************************************************************/
 	m_Waves = new Waves(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 
-	std::vector<uint16> indices2(3 * m_Waves->TriangleCount()); // 3 indices per face
+	std::vector<uint16> waveIndices(3 * m_Waves->TriangleCount()); // 3 indices per face
 	assert(m_Waves->VertexCount() < 0x0000ffff);
 
 	// Iterate over each quad.
@@ -234,19 +251,19 @@ void CAssetMgr::CreateDefaultMesh()
 	{
 		for (int j = 0; j < n - 1; ++j)
 		{
-			indices2[k] = i * n + j;
-			indices2[k + 1] = i * n + j + 1;
-			indices2[k + 2] = (i + 1) * n + j;
+			waveIndices[k] = i * n + j;
+			waveIndices[k + 1] = i * n + j + 1;
+			waveIndices[k + 2] = (i + 1) * n + j;
 
-			indices2[k + 3] = (i + 1) * n + j;
-			indices2[k + 4] = i * n + j + 1;
-			indices2[k + 5] = (i + 1) * n + j + 1;
+			waveIndices[k + 3] = (i + 1) * n + j;
+			waveIndices[k + 4] = i * n + j + 1;
+			waveIndices[k + 5] = (i + 1) * n + j + 1;
 
 			k += 6; // next quad
 		}
 	}
 
-	UINT vbByteSize = m_Waves->VertexCount() * sizeof(Vertex);
+	UINT vbByteSizeWave = m_Waves->VertexCount() * sizeof(Vertex);
 
 	Ptr<CMesh> pWave = new CMesh;
 
@@ -254,18 +271,106 @@ void CAssetMgr::CreateDefaultMesh()
 	pWave->m_VertexBufferCPU = nullptr;
 	pWave->m_VertexBufferGPU = nullptr;
 
-	pWave->CreateIndexBuffer16(indices2.data(), (UINT)indices2.size());
+	pWave->CreateIndexBuffer16(waveIndices.data(), (UINT)waveIndices.size());
 
 	pWave->m_VertexByteStride = sizeof(Vertex);
-	pWave->m_VertexBufferByteSize = vbByteSize;
+	pWave->m_VertexBufferByteSize = vbByteSizeWave;
 
-	submesh.IndexCount = (UINT)indices2.size();
+	SubmeshGeometry submeshWave;
+	submeshWave.IndexCount = (UINT)waveIndices.size();
+	submeshWave.StartIndexLocation = 0;
+	submeshWave.BaseVertexLocation = 0;
+
+	pWave->m_DrawArgs.emplace("grid", std::move(submeshWave));
+
+	AddAsset<CMesh>(L"WaveMesh", pWave);
+	/*********************************************************************/
+	// Wave
+	/*********************************************************************/
+}
+
+void CAssetMgr::CreateSkullMesh()
+{
+	std::wstring strPath = CPathMgr::GetInst()->GetContentPath();
+	std::ifstream fin(strPath + L"models\\skull.txt");
+
+	if (!fin)
+	{
+		MessageBox(0, L"models\\skull.txt not found.", 0, 0);
+		return;
+	}
+
+	UINT vcount = 0;
+	UINT tcount = 0;
+	std::string ignore;
+
+	fin >> ignore >> vcount;
+	fin >> ignore >> tcount;
+	fin >> ignore >> ignore >> ignore >> ignore;
+
+	std::vector<Vertex> vertices(vcount);
+	for (UINT i = 0; i < vcount; ++i)
+	{
+		fin >> vertices[i].Position.x >> vertices[i].Position.y >> vertices[i].Position.z;
+		fin >> vertices[i].Normal.x >> vertices[i].Normal.y >> vertices[i].Normal.z;
+	}
+
+	fin >> ignore;
+	fin >> ignore;
+	fin >> ignore;
+
+	std::vector<uint32> indices(3 * tcount);
+	for (UINT i = 0; i < tcount; ++i)
+	{
+		fin >> indices[i * 3 + 0] >> indices[i * 3 + 1] >> indices[i * 3 + 2];
+	}
+
+	fin.close();
+
+	//
+	// Pack the indices of all the meshes into one index buffer.
+	//
+
+	const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+
+	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::int32_t);
+
+	Ptr<CMesh> pSkullMesh = new CMesh;
+	pSkullMesh->CreateVertexBuffer(vertices.data(), (UINT)vertices.size());
+	pSkullMesh->CreateIndexBuffer32(indices.data(), (UINT)indices.size());
+
+	SubmeshGeometry submesh;
+	submesh.IndexCount = (UINT)indices.size();
 	submesh.StartIndexLocation = 0;
 	submesh.BaseVertexLocation = 0;
 
-	pWave->m_DrawArgs.emplace("grid", std::move(submesh));
+	pSkullMesh->m_DrawArgs["skull"] = submesh;
 
-	AddAsset<CMesh>(L"WaveMesh", pWave);
+	AddAsset<CMesh>(L"SkullMesh", pSkullMesh);
+}
+
+void CAssetMgr::CreateDefaultMaterial()
+{
+	Ptr<CMaterial> pMaterial = new CMaterial;
+	pMaterial->m_DiffuseAlbedo = Vector4(0.2f, 0.6f, 0.2f, 1.f);
+	pMaterial->m_FresnelR0 = Vector3(0.01f, 0.01f, 0.01f);
+	pMaterial->m_Roughness = 0.125f;
+	pMaterial->m_MtrlCBIndex = 0;
+	AddAsset<CMaterial>(L"GrassMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_DiffuseAlbedo = Vector4(0.f, 0.2f, 0.6f, 1.f);
+	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
+	pMaterial->m_Roughness = 0.f;
+	pMaterial->m_MtrlCBIndex = 1;
+	AddAsset<CMaterial>(L"WaterMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	pMaterial->m_FresnelR0 = Vector3(0.05f, 0.05f, 0.05f);
+	pMaterial->m_Roughness = 0.3f;
+	pMaterial->m_MtrlCBIndex = 2;
+	AddAsset<CMaterial>(L"SkullMaterial", pMaterial);
 }
 
 void CAssetMgr::CreateDefaultGraphicsShader()
@@ -276,14 +381,13 @@ void CAssetMgr::CreateDefaultGraphicsShader()
 
 	// Std2DShader
 	pShader = new CGraphicsShader;;
-	pShader->BuildVertexShaderAndInputLayout(strPath + L"shader\\color.fx", "VS");
-	pShader->BuildPixelShader(strPath + L"shader\\color.fx", "PS");
-	pShader->BuildPSO();
+	pShader->BuildVertexShaderAndInputLayout(strPath + L"shader\\default.fx", "VS");
+	pShader->BuildPixelShader(strPath + L"shader\\default.fx", "PS");
 	//pShader->SetRSType(RS_TYPE::CULL_NONE);
 	//pShader->SetDSType(DS_TYPE::LESS);
 	//pShader->SetBSType(BS_TYPE::DEFAULT);
 
-	AddAsset<CGraphicsShader>(L"ColorShader", pShader);
+	AddAsset<CGraphicsShader>(L"DefaultShader", pShader);
 }
 
 
@@ -296,7 +400,7 @@ void CAssetMgr::CreateBox(const std::wstring& name, float width, float height, f
 	// Create the vertices.
 	//
 
-	Vertex v[24];
+	VertexMesh v[24];
 
 	float w2 = 0.5f * width;
 	float h2 = 0.5f * height;
@@ -304,40 +408,40 @@ void CAssetMgr::CreateBox(const std::wstring& name, float width, float height, f
 
 	// Position Normal TangentU TexCoord
 	// Fill in the front face vertex data.
-	v[0] = Vertex(-w2, -h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-	v[1] = Vertex(-w2, +h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-	v[2] = Vertex(+w2, +h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
-	v[3] = Vertex(+w2, -h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
+	v[0] = VertexMesh(-w2, -h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+	v[1] = VertexMesh(-w2, +h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+	v[2] = VertexMesh(+w2, +h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+	v[3] = VertexMesh(+w2, -h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
 
 	// Fill in the back face vertex data.
-	v[4] = Vertex(-w2, -h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
-	v[5] = Vertex(+w2, -h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-	v[6] = Vertex(+w2, +h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-	v[7] = Vertex(-w2, +h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+	v[4] = VertexMesh(-w2, -h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
+	v[5] = VertexMesh(+w2, -h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+	v[6] = VertexMesh(+w2, +h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+	v[7] = VertexMesh(-w2, +h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
 
 	// Fill in the top face vertex data.
-	v[8] = Vertex(-w2, +h2, -d2, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-	v[9] = Vertex(-w2, +h2, +d2, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-	v[10] = Vertex(+w2, +h2, +d2, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
-	v[11] = Vertex(+w2, +h2, -d2, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
+	v[8] = VertexMesh(-w2, +h2, -d2, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+	v[9] = VertexMesh(-w2, +h2, +d2, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+	v[10] = VertexMesh(+w2, +h2, +d2, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+	v[11] = VertexMesh(+w2, +h2, -d2, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
 
 	// Fill in the bottom face vertex data.
-	v[12] = Vertex(-w2, -h2, -d2, 0.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
-	v[13] = Vertex(+w2, -h2, -d2, 0.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-	v[14] = Vertex(+w2, -h2, +d2, 0.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-	v[15] = Vertex(-w2, -h2, +d2, 0.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+	v[12] = VertexMesh(-w2, -h2, -d2, 0.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
+	v[13] = VertexMesh(+w2, -h2, -d2, 0.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+	v[14] = VertexMesh(+w2, -h2, +d2, 0.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+	v[15] = VertexMesh(-w2, -h2, +d2, 0.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
 
 	// Fill in the left face vertex data.
-	v[16] = Vertex(-w2, -h2, +d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f);
-	v[17] = Vertex(-w2, +h2, +d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f);
-	v[18] = Vertex(-w2, +h2, -d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f);
-	v[19] = Vertex(-w2, -h2, -d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f);
+	v[16] = VertexMesh(-w2, -h2, +d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f);
+	v[17] = VertexMesh(-w2, +h2, +d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f);
+	v[18] = VertexMesh(-w2, +h2, -d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f);
+	v[19] = VertexMesh(-w2, -h2, -d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f);
 
 	// Fill in the right face vertex data.
-	v[20] = Vertex(+w2, -h2, -d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f);
-	v[21] = Vertex(+w2, +h2, -d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
-	v[22] = Vertex(+w2, +h2, +d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f);
-	v[23] = Vertex(+w2, -h2, +d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+	v[20] = VertexMesh(+w2, -h2, -d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f);
+	v[21] = VertexMesh(+w2, +h2, -d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+	v[22] = VertexMesh(+w2, +h2, +d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f);
+	v[23] = VertexMesh(+w2, -h2, +d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
 
 	// 0~23 [ , )
 	meshData.Vertices.assign(&v[0], &v[24]);
@@ -394,8 +498,8 @@ void CAssetMgr::CreateSphere(const std::wstring& name, float radius, uint32 slic
 	// Poles: note that there will be texture coordinate distortion as there is
 	// not a unique point on the texture map to assign to the pole when mapping
 	// a rectangular texture onto a sphere.
-	Vertex topVertex(0.0f, +radius, 0.0f, 0.0f, +1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-	Vertex bottomVertex(0.0f, -radius, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+	VertexMesh topVertex(0.0f, +radius, 0.0f, 0.0f, +1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+	VertexMesh bottomVertex(0.0f, -radius, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
 	meshData.Vertices.push_back(topVertex);
 
@@ -412,7 +516,7 @@ void CAssetMgr::CreateSphere(const std::wstring& name, float radius, uint32 slic
 		{
 			float theta = j * thetaStep;
 
-			Vertex v;
+			VertexMesh v;
 
 			// spherical to cartesian
 			v.Position.x = radius * sinf(phi) * cosf(theta);
@@ -584,7 +688,7 @@ void CAssetMgr::CreateCylinder(const std::wstring& name, float bottomRadius, flo
 		float dTheta = 2 * XM_PI / sliceCount;
 		for (uint32 j = 0; j <= sliceCount; ++j)
 		{
-			Vertex vertex;
+			VertexMesh vertex;
 			
 			float c = cosf(j * dTheta);
 			float s = sinf(j * dTheta);
@@ -675,11 +779,11 @@ void CAssetMgr::BuildCylinderTopCap(float bottomRadius, float topRadius, float h
 		float u = x / height + 0.5f;
 		float v = z / height + 0.5f;
 
-		meshData.Vertices.push_back(Vertex(x, y, z, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, u, v));
+		meshData.Vertices.push_back(VertexMesh(x, y, z, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, u, v));
 	}
 
 	// Cap center vertex.
-	meshData.Vertices.push_back(Vertex(0.0f, y, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.5f));
+	meshData.Vertices.push_back(VertexMesh(0.0f, y, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.5f));
 
 	// Index of center vertex.
 	uint32 centerIndex = (uint32)meshData.Vertices.size() - 1;
@@ -713,11 +817,11 @@ void CAssetMgr::BuildCylinderBottomCap(float bottomRadius, float topRadius, floa
 		float u = x / height + 0.5f;
 		float v = z / height + 0.5f;
 
-		meshData.Vertices.push_back(Vertex(x, y, z, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, u, v));
+		meshData.Vertices.push_back(VertexMesh(x, y, z, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, u, v));
 	}
 
 	// Cap center vertex.
-	meshData.Vertices.push_back(Vertex(0.0f, y, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.5f));
+	meshData.Vertices.push_back(VertexMesh(0.0f, y, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.5f));
 
 	// Cache the index of center vertex.
 	uint32 centerIndex = (uint32)meshData.Vertices.size() - 1;
@@ -803,25 +907,25 @@ void CAssetMgr::CreateQuad(const std::wstring& name, float x, float y, float w, 
 	meshData.Indices32.resize(6);
 
 	// Position coordinates specified in NDC space.
-	meshData.Vertices[0] = Vertex(
+	meshData.Vertices[0] = VertexMesh(
 		x, y - h, depth,
 		0.0f, 0.0f, -1.0f,
 		1.0f, 0.0f, 0.0f,
 		0.0f, 1.0f);
 
-	meshData.Vertices[1] = Vertex(
+	meshData.Vertices[1] = VertexMesh(
 		x, y, depth,
 		0.0f, 0.0f, -1.0f,
 		1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f);
 
-	meshData.Vertices[2] = Vertex(
+	meshData.Vertices[2] = VertexMesh(
 		x + w, y, depth,
 		0.0f, 0.0f, -1.0f,
 		1.0f, 0.0f, 0.0f,
 		1.0f, 0.0f);
 
-	meshData.Vertices[3] = Vertex(
+	meshData.Vertices[3] = VertexMesh(
 		x + w, y - h, depth,
 		0.0f, 0.0f, -1.0f,
 		1.0f, 0.0f, 0.0f,
@@ -838,7 +942,7 @@ void CAssetMgr::CreateQuad(const std::wstring& name, float x, float y, float w, 
 	m_MeshDataMap.emplace(name, std::move(meshData));
 }
 
-Vertex CAssetMgr::MidPoint(const Vertex& v0, const Vertex& v1)
+VertexMesh CAssetMgr::MidPoint(const VertexMesh& v0, const VertexMesh& v1)
 {
 	Vector3 p0 = v0.Position;
 	Vector3 p1 = v1.Position;
@@ -854,7 +958,7 @@ Vertex CAssetMgr::MidPoint(const Vertex& v0, const Vertex& v1)
 
 	// Compute the midpoints of all the attributes.  Vectors need to be normalized
 	// since linear interpolating can make them not unit length.  
-	Vertex v;
+	VertexMesh v;
 	v.Position = 0.5f * (p0 + p1);
 	v.Normal = (0.5f * (n0 + n1)).Normalize();
 	v.TangentU = (0.5f * (tan0 + tan1)).Normalize();
@@ -885,17 +989,17 @@ void CAssetMgr::Subdivide(MeshData& meshData)
 	uint32 numTris = (uint32)inputCopy.Indices32.size() / 3;
 	for (uint32 i = 0; i < numTris; ++i)
 	{
-		Vertex v0 = inputCopy.Vertices[inputCopy.Indices32[i * 3 + 0]];
-		Vertex v1 = inputCopy.Vertices[inputCopy.Indices32[i * 3 + 1]];
-		Vertex v2 = inputCopy.Vertices[inputCopy.Indices32[i * 3 + 2]];
+		VertexMesh v0 = inputCopy.Vertices[inputCopy.Indices32[i * 3 + 0]];
+		VertexMesh v1 = inputCopy.Vertices[inputCopy.Indices32[i * 3 + 1]];
+		VertexMesh v2 = inputCopy.Vertices[inputCopy.Indices32[i * 3 + 2]];
 
 		//
 		// Generate the midpoints.
 		//
 
-		Vertex m0 = MidPoint(v0, v1);
-		Vertex m1 = MidPoint(v1, v2);
-		Vertex m2 = MidPoint(v0, v2);
+		VertexMesh m0 = MidPoint(v0, v1);
+		VertexMesh m1 = MidPoint(v1, v2);
+		VertexMesh m2 = MidPoint(v0, v2);
 
 		//
 		// Add new geometry.

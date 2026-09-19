@@ -1,3 +1,6 @@
+#ifndef _COLOR
+#define _COLOR
+
 cbuffer TRANSFORM : register(b0)
 {
     row_major matrix g_matModel;
@@ -44,3 +47,4 @@ float4 PS(VertexOut pin) : SV_Target
     return pin.vColor;
 }
 
+#endif

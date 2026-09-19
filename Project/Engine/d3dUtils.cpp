@@ -136,3 +136,12 @@ float RandF(float a, float b)
 {
 	return a + RandF() * (b - a);
 }
+
+Vector4 SphericalToCartesian(float radius, float theta, float phi)
+{
+	return Vector4(
+		radius * sinf(phi) * cosf(theta),
+		radius * cosf(phi),
+		radius * sinf(phi) * sinf(theta),
+		1.0f);
+}

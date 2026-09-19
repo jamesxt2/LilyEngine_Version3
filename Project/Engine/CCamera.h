@@ -12,6 +12,7 @@ public:
 	CLONE(CCamera)
 
 	virtual void Begin() override;
+	virtual void Tick() override;
 	virtual void FinalTick() override;
 	void Render();
 
@@ -44,7 +45,7 @@ public:
 	inline void SetProjType(PROJ_TYPE type) { m_ProjType = type; }
 	inline PROJ_TYPE GetProjType() const { return m_ProjType; }
 
-	void SetCameraPriority(int priority);
+	void SetCameraPriority(int priority, const std::wstring& levelname);
 	inline int GetCameraPriority() const { return m_CamPriority; }
 
 	inline void SetFar(float _far) { m_Far = _far; }

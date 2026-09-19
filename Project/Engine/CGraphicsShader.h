@@ -7,20 +7,19 @@ public:
 	CGraphicsShader();
 	~CGraphicsShader();
 
-	virtual void Bind() override;
+	virtual void Bind(const std::string& PSOGroupKey) override;
 	void BuildVertexShaderAndInputLayout(const std::wstring& filename, const std::string& entrypoint);
 	void BuildPixelShader(const std::wstring& filename, const std::string& entrypoint);
 
-	void BuildPSO();
-
 private:
+	ComPtr<ID3DBlob>												m_vsByteCode;
+	ComPtr<ID3DBlob>												m_psByteCode;
 
+	std::vector<D3D12_INPUT_ELEMENT_DESC>							m_InputLayout;
 
-	ComPtr<ID3DBlob>							m_vsByteCode;
-	ComPtr<ID3DBlob>							m_psByteCode;
-
-	std::vector<D3D12_INPUT_ELEMENT_DESC>		m_InputLayout;
-
-	ComPtr<ID3D12PipelineState>					m_PSO;
+public:
+	inline ComPtr<ID3DBlob> GetVsByteCode() const { return m_vsByteCode; }
+	inline ComPtr<ID3DBlob> GetPsByteCode() const { return m_psByteCode; }
+	inline std::vector<D3D12_INPUT_ELEMENT_DESC>& GetInputLayout() { return m_InputLayout; }
 };
 

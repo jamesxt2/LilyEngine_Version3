@@ -12,6 +12,7 @@
 
 void CTestLevel::CreateTestLevel()
 {
+	/*
 	CLevel* pLevel = new CLevel;
 
 	CLevelMgr::GetInst()->ChangeLevel(pLevel);
@@ -67,5 +68,5 @@ void CTestLevel::CreateTestLevel()
 	pLevel->AddObject(pWave);
 
 
-	pLevel->ChangeState(LEVEL_STATE::PLAY);
+	pLevel->ChangeState(LEVEL_STATE::PLAY);*/
 }

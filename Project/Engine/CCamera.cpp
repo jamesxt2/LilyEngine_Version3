@@ -40,6 +40,11 @@ void CCamera::Begin()
 
 }
 
+void CCamera::Tick()
+{
+	g_Global.EyePosW = GetOwner()->GetTransformComp()->GetWorldPosition();
+}
+
 void CCamera::FinalTick()
 {
 	// View
@@ -74,15 +79,12 @@ void CCamera::Render()
 		m_IsDirty = false;
 	}
 
-	g_Trans.matView = m_matView;
-	g_Trans.matProj = m_matProj;
+	g_Trans.ViewProj = m_matView * m_matProj;
 
 	for (size_t i = 0; i < m_vecObjects.size(); ++i)
 	{
 		if (m_vecObjects[i]->GetRenderComp() == nullptr)
 			continue;
-		if (m_vecObjects[i]->GetTransformComp() != nullptr)
-			CDevice::GetInst()->GetConstBuffer(CB_TYPE::TRANSFORM)->Bind(m_vecObjects[i]->GetTransformComp()->GetObjCBIndex());
 		m_vecObjects[i]->Render();
 	}
 
@@ -107,9 +109,9 @@ void CCamera::SetDirty()
 	m_IsDirty = true;
 }
 
-void CCamera::SetCameraPriority(int priority)
+void CCamera::SetCameraPriority(int priority, const std::wstring& levelname)
 {
 	m_CamPriority = priority;
 
-	CRenderMgr::GetInst()->RegisterCamera(this, m_CamPriority);
+	CRenderMgr::GetInst()->RegisterLevelCamera(levelname, this, m_CamPriority);
 }

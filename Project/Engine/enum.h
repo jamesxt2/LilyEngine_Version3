@@ -45,8 +45,8 @@ enum class CB_TYPE
 {
 	TRANSFORM,
 	MATERIAL,
-	ANIMATION,
 	GLOBAL,
+	ANIMATION,
 
 	END
 };
@@ -77,4 +77,11 @@ enum class LEVEL_STATE
 	PLAY,
 	STOP,
 	PAUSE
+};
+
+// PSO
+enum class OBJ_PSO_TYPE
+{
+	COLOR_DEFAULT,
+	COLOR_WIREFRAME
 };

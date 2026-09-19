@@ -47,22 +47,36 @@ void CRenderMgr::Render()
 
 void CRenderMgr::Render_Play()
 {
-	for (size_t i = 0; i < m_vecCam.size(); ++i)
+	for (size_t i = 0; i < m_LevelCameraMap[m_CurrLevelName].size(); ++i)
 	{
-		if (m_vecCam[i] == nullptr)
+		if (m_LevelCameraMap[m_CurrLevelName][i] == nullptr)
 			continue;
-		m_vecCam[i]->Render();
+		m_LevelCameraMap[m_CurrLevelName][i]->Render();
 	}
 }
 
-void CRenderMgr::RegisterCamera(CCamera* camera, int priority)
+void CRenderMgr::RegisterLevelCamera(const std::wstring& levelname, CCamera* camera, int priority)
 {
-	if (priority >= m_vecCam.size())
-		m_vecCam.resize(priority + 1);
+	std::vector<CCamera*>& cameras = m_LevelCameraMap[levelname];
 
-	assert(!(m_vecCam[priority] && m_vecCam[priority] != camera));
+	if (priority >= cameras.size())
+		cameras.resize(priority + 1);
 
-	m_vecCam[priority] = camera;
+	assert(!(cameras[priority] && cameras[priority] != camera));
+
+	cameras[priority] = camera;
+}
+
+void CRenderMgr::SetCurrentLevel(const std::wstring& levalname)
+{
+	m_CurrLevelName = levalname;
+
+	for (size_t i = 0; i < m_LevelCameraMap[m_CurrLevelName].size(); ++i)
+	{
+		if (m_LevelCameraMap[m_CurrLevelName][i] == nullptr)
+			continue;
+		m_LevelCameraMap[m_CurrLevelName][i]->SetDirty();
+	}
 }
 
 void CRenderMgr::CopyRenderTarget()

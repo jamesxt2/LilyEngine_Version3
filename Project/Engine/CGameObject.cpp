@@ -93,13 +93,18 @@ void CGameObject::Render()
 {
 	if (m_RenderComp)
 	{
-		if (GetTransformComp())
+		if (GetTransformComp() != nullptr)
+		{
+			CDevice::GetInst()->GetConstBuffer(CB_TYPE::TRANSFORM)->Bind(GetTransformComp()->GetObjCBIndex(), 0);
 			GetTransformComp()->Bind();
+		}
 
 		m_RenderComp->Render();
 
 		if (m_SubMeshGeo)
 			CMDLIST->DrawIndexedInstanced(m_SubMeshGeo->IndexCount, 1, m_SubMeshGeo->StartIndexLocation, m_SubMeshGeo->BaseVertexLocation, 0);
+		else
+			CMDLIST->DrawIndexedInstanced(m_RenderComp->GetMesh()->GetIndexCount(), 1, 0, 0, 0);
 	}
 }
 

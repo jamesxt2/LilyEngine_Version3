@@ -13,9 +13,6 @@ public:
 	CLONE_DISABLE(CMesh)
 	friend class CAssetMgr;
 
-	virtual int Load(const std::wstring& filePath) override { return S_OK; }
-	virtual int Save(const std::wstring& filePath) override { return S_OK; }
-
 	void CreateVertexBuffer(Vertex* vtxData, UINT vtxCount);
 	void CreateIndexBuffer32(UINT* idxData, UINT idxCount);
 	void CreateIndexBuffer16(uint16* idxData, UINT idxCount);
@@ -49,5 +46,7 @@ private:
 public:
 	inline void SetShader(CGraphicsShader* shader) { m_Shader = shader; }
 	SubmeshGeometry* GetSubGeo(const std::string& key);
+
+	inline UINT GetIndexCount() const { return m_IndexCount; }
 };
 

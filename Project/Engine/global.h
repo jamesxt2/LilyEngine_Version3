@@ -27,6 +27,7 @@ using namespace DirectX::SimpleMath;
 #include <map>
 #include <memory>
 #include <ppl.h>
+#include <fstream>
 
 #include "d3dUtils.h"
 #include "define.h"

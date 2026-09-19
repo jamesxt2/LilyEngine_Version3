@@ -8,7 +8,8 @@ CDevice::CDevice()
 	: m_MainWnd(nullptr), m_RenderResolution{},
 	m_CurrentFence(0), m_RtvDescriptorSize(0),
 	m_DsvDescriptorSize(0), m_CbvUavDescriptorSize(0),
-	m_4xMsaaQuality(0), m_ScreenViewport(), m_ScissorRect{},
+	m_4xMsaaQuality(0), m_EnableMSAA(true),
+	m_ScreenViewport(), m_ScissorRect{},
 	m_CurrFrameResource(nullptr), m_CurrFrameResourceIndex(0)
 {
 
@@ -105,8 +106,8 @@ int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
 	/*************************************/
 	// Init and Create CB
 	/*************************************/
-	CConstantBuffer::Init(2);
-	
+	//CConstantBuffer::Init(3);
+	BuildRootSignature(3);
 
 	return S_OK;
 }
@@ -164,6 +165,16 @@ void CDevice::CreateRtvAndDsvDescriptorHeaps()
 	rtvHeapDesc.NodeMask = 0;
 	ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_RtvHeap)));
 
+	if (m_EnableMSAA)
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC msaRrtvHeapDesc;
+		msaRrtvHeapDesc.NumDescriptors = 1;
+		msaRrtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		msaRrtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		msaRrtvHeapDesc.NodeMask = 0;
+		ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(&msaRrtvHeapDesc, IID_PPV_ARGS(&m_MsaaRtvHeap)));
+	}
+
 	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
 	dsvHeapDesc.NumDescriptors = 1;
 	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
@@ -179,6 +190,9 @@ ID3D12Resource* CDevice::CurrentBackBuffer() const
 
 D3D12_CPU_DESCRIPTOR_HANDLE CDevice::CurrentBackBufferView() const
 {
+	if (m_EnableMSAA)
+		return CD3DX12_CPU_DESCRIPTOR_HANDLE(
+			m_MsaaRtvHeap->GetCPUDescriptorHandleForHeapStart());
 	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
 		m_RtvHeap->GetCPUDescriptorHandleForHeapStart(), m_CurrentBackBuffer,
 		m_RtvDescriptorSize);
@@ -207,6 +221,41 @@ void CDevice::FlushCommandQueue()
 	}
 }
 
+void CDevice::BuildRootSignature(UINT slotCount)
+{
+	// Root parameter can be a table, root descriptor or root constants.
+	std::vector<CD3DX12_ROOT_PARAMETER> slotRootParameters;
+
+	// Create root CBVs.
+	for (UINT i = 0; i < slotCount; ++i)
+	{
+		CD3DX12_ROOT_PARAMETER slotRootParameter;
+		slotRootParameter.InitAsConstantBufferView(i);
+		slotRootParameters.push_back(slotRootParameter);
+	}
+
+	// A root signature is an array of root parameters.
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc((UINT)slotRootParameters.size(), slotRootParameters.data(), 0, nullptr,
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+	ComPtr<ID3DBlob> serializedRootSig = nullptr;
+	ComPtr<ID3DBlob> errorBlob = nullptr;
+	HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+		serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+	if (errorBlob != nullptr)
+	{
+		::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+	}
+	ThrowIfFailed(hr);
+
+	ThrowIfFailed(DEVICE->CreateRootSignature(
+		0,
+		serializedRootSig->GetBufferPointer(),
+		serializedRootSig->GetBufferSize(),
+		IID_PPV_ARGS(m_RootSignature.GetAddressOf())));
+}
 
 void CDevice::BuildFrameResources()
 {
@@ -214,6 +263,8 @@ void CDevice::BuildFrameResources()
 	{
 		m_FrameResources.push_back(std::make_unique<FrameResource>(m_d3dDevice.Get()));
 		m_FrameResources[i]->CreateCB(sizeof(TTransform), g_MaxObjectCount, CB_TYPE::TRANSFORM);
+		m_FrameResources[i]->CreateCB(sizeof(TMaterial), CAssetMgr::GetInst()->GetAssetSize(ASSET_TYPE::MATERIAL), CB_TYPE::MATERIAL);
+		m_FrameResources[i]->CreateCB(sizeof(TGlobal), 1, CB_TYPE::GLOBAL);
 		m_FrameResources[i]->CreateWavesVB(CAssetMgr::GetInst()->GetWavesVertexCount());
 	}
 	m_CurrFrameResource = m_FrameResources[0].get();
@@ -257,6 +308,51 @@ void CDevice::OnResize(POINT newRenderResolution)
 	}
 
 	/*************************************************/
+	// Create MSAA Render Target
+	/*************************************************/
+	if (m_EnableMSAA)
+	{
+		m_MsaaRenderTarget.Reset();
+
+		D3D12_RESOURCE_DESC msaaDesc = {};
+		msaaDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		msaaDesc.Alignment = 0;
+		msaaDesc.Width = m_RenderResolution.x;
+		msaaDesc.Height = m_RenderResolution.y;
+		msaaDesc.DepthOrArraySize = 1;
+		msaaDesc.MipLevels = 1;
+		msaaDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		msaaDesc.SampleDesc.Count = m_EnableMSAA ? 4 : 1;
+		msaaDesc.SampleDesc.Quality = m_EnableMSAA ? (m_4xMsaaQuality - 1) : 0;
+		msaaDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		msaaDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+		D3D12_CLEAR_VALUE msaaClear = {};
+		msaaClear.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		msaaClear.Color[0] = m_ClearColor[0];
+		msaaClear.Color[1] = m_ClearColor[1];
+		msaaClear.Color[2] = m_ClearColor[2];
+		msaaClear.Color[3] = m_ClearColor[3];
+
+		CD3DX12_HEAP_PROPERTIES msaaHeapProps(D3D12_HEAP_TYPE_DEFAULT);
+		ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
+			&msaaHeapProps,
+			D3D12_HEAP_FLAG_NONE,
+			&msaaDesc,
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			&msaaClear,
+			IID_PPV_ARGS(&m_MsaaRenderTarget)
+		));
+
+		D3D12_RENDER_TARGET_VIEW_DESC msaaRtvDesc = {};
+		msaaRtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		msaaRtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
+		//msaaRtvDesc.Texture2DMS.UnusedField_NothingToDefine = 0;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE msaaRtvHandle(m_MsaaRtvHeap->GetCPUDescriptorHandleForHeapStart());
+		m_d3dDevice->CreateRenderTargetView(m_MsaaRenderTarget.Get(), &msaaRtvDesc, msaaRtvHandle);
+	}
+
+	/*************************************************/
 	// Create Depth/Stencil buffer and view
 	/*************************************************/
 	D3D12_RESOURCE_DESC dsDesc = {};
@@ -267,8 +363,8 @@ void CDevice::OnResize(POINT newRenderResolution)
 	dsDesc.DepthOrArraySize = 1;
 	dsDesc.MipLevels = 1;
 	dsDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-	dsDesc.SampleDesc.Count = 1;
-	dsDesc.SampleDesc.Quality = 0;
+	dsDesc.SampleDesc.Count = m_EnableMSAA ? 4 : 1;
+	dsDesc.SampleDesc.Quality = m_EnableMSAA ? (m_4xMsaaQuality - 1) : 0;
 	dsDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	dsDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
@@ -288,7 +384,7 @@ void CDevice::OnResize(POINT newRenderResolution)
 
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
 	dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	dsvDesc.ViewDimension = m_EnableMSAA ? D3D12_DSV_DIMENSION_TEXTURE2DMS : D3D12_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	dsvDesc.Texture2D.MipSlice = 0;
 	m_d3dDevice->CreateDepthStencilView(m_DepthStencilBuffer.Get(), &dsvDesc, DepthStencilView());
@@ -339,6 +435,7 @@ void CDevice::Update()
 	ThrowIfFailed(m_CommandList->Reset(m_CurrFrameResource->m_CmdListAlloc.Get(), nullptr));
 
 	//GetConstBuffer(CB_TYPE::TRANSFORM)->Bind();
+	m_CommandList->SetGraphicsRootSignature(m_RootSignature.Get());
 }
 
 void CDevice::ClearTargetAndPrepareRender(XMVECTORF32 color)
@@ -360,7 +457,7 @@ void CDevice::ClearTargetAndPrepareRender(XMVECTORF32 color)
 	m_CommandList->ResourceBarrier(1, &barrier);
 
 	// Clear the back buffer and depth buffer.
-	m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
+	m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), m_ClearColor, 0, nullptr);
 	m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 	// Specify the buffers we are going to render to.
@@ -372,10 +469,44 @@ void CDevice::ClearTargetAndPrepareRender(XMVECTORF32 color)
 
 void CDevice::ExecuteAndFinishDrawCall()
 {
-	// Indicate a state transition on the resource usage.
-	CD3DX12_RESOURCE_BARRIER barrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-	m_CommandList->ResourceBarrier(1, &barrier);
+	if (m_EnableMSAA)
+	{
+		// Back Buffer: RenderTarget -> ResolveDest
+		CD3DX12_RESOURCE_BARRIER toResolveDestBarrier(
+			CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_DEST));
+		m_CommandList->ResourceBarrier(1, &toResolveDestBarrier);
+
+		// MSAA texture: RenderTarget -> ResolveSource
+		CD3DX12_RESOURCE_BARRIER toResolveSrcBarrier(
+			CD3DX12_RESOURCE_BARRIER::Transition(m_MsaaRenderTarget.Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE));
+		m_CommandList->ResourceBarrier(1, &toResolveSrcBarrier);
+
+		// MSAA -> Back Buffer
+		m_CommandList->ResolveSubresource(
+			CurrentBackBuffer(), 0, m_MsaaRenderTarget.Get(),
+			0, DXGI_FORMAT_R8G8B8A8_UNORM
+		);
+
+		// MSAA texture: ResolveSource -> RenderTarget
+		CD3DX12_RESOURCE_BARRIER toRenderTargetBarrier(
+			CD3DX12_RESOURCE_BARRIER::Transition(m_MsaaRenderTarget.Get(),
+				D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET));
+		m_CommandList->ResourceBarrier(1, &toRenderTargetBarrier);
+
+		// Back Buffer: ResolveDest -> Present
+		CD3DX12_RESOURCE_BARRIER toPresentBarrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+			D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PRESENT));
+		m_CommandList->ResourceBarrier(1, &toPresentBarrier);
+	}
+	else
+	{
+		// Back Buffer: RenderTarget -> Present
+		CD3DX12_RESOURCE_BARRIER toPresentBarrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+		m_CommandList->ResourceBarrier(1, &toPresentBarrier);
+	}
 
 	// Done recording commands.
 	ThrowIfFailed(m_CommandList->Close());

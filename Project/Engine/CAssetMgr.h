@@ -69,12 +69,18 @@ public:
 private:
 
 	void CreateDefaultMesh();
+
+	void CreateSceneMeshes();
+	void CreateWaveMeshes();
+	void CreateSkullMesh();
+
+	void CreateDefaultMaterial();
 	void CreateDefaultGraphicsShader();
 
 	void BuildCylinderTopCap(float bottomRadius, float topRadius, float height, uint32 sliceCount, uint32 stackCount, MeshData& meshData);
 	void BuildCylinderBottomCap(float bottomRadius, float topRadius, float height, uint32 sliceCount, uint32 stackCount, MeshData& meshData);
 
-	Vertex MidPoint(const Vertex& v0, const Vertex& v1);
+	VertexMesh MidPoint(const VertexMesh& v0, const VertexMesh& v1);
 	void Subdivide(MeshData& meshData);
 
 	std::map<std::wstring, Ptr<CAsset>> m_AssetMap[(UINT)ASSET_TYPE::END];
@@ -85,6 +91,7 @@ private:
 
 public:
 	inline int GetWavesVertexCount() const { return m_Waves->VertexCount(); }
+	inline UINT GetAssetSize(ASSET_TYPE type) const { return (UINT)m_AssetMap[(UINT)type].size(); }
 };
 
 template<typename T>
@@ -94,6 +101,8 @@ inline ASSET_TYPE GetAssetType()
 		return ASSET_TYPE::MESH;
 	if constexpr(std::is_same_v<T, CGraphicsShader>)
 		return ASSET_TYPE::GRAPHICS_SHADER;
+	if constexpr (std::is_same_v<T, CMaterial>)
+		return ASSET_TYPE::MATERIAL;
 }
 
 template<typename T>

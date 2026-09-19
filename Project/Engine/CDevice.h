@@ -37,7 +37,7 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
 
-	
+	void BuildRootSignature(UINT slotCount);
 
 	void BuildFrameResources();
 
@@ -68,12 +68,20 @@ private:
 	ComPtr<ID3D12DescriptorHeap>					m_RtvHeap;
 	ComPtr<ID3D12DescriptorHeap>					m_DsvHeap;
 
+	ComPtr<ID3D12Resource>							m_MsaaRenderTarget;
+	ComPtr<ID3D12DescriptorHeap>					m_MsaaRtvHeap;
+	bool											m_EnableMSAA;
+
 	D3D12_VIEWPORT									m_ScreenViewport;
 	D3D12_RECT										m_ScissorRect;
 
 	std::vector<std::unique_ptr<FrameResource>>		m_FrameResources;
 	FrameResource*									m_CurrFrameResource;
 	int												m_CurrFrameResourceIndex;
+
+	ComPtr<ID3D12RootSignature>						m_RootSignature;
+
+	const float m_ClearColor[4] = { 0.69f, 0.77f, 0.87f, 1.0f };
 
 public:
 	inline ComPtr<ID3D12Device> GetDevice() const { return m_d3dDevice; }
@@ -87,5 +95,10 @@ public:
 	inline float GetAspectRatio() const { return (float)m_RenderResolution.x / (float)m_RenderResolution.y; }
 
 	inline FrameResource* GetCurrFrameResource() const { return m_CurrFrameResource; }
+
+	inline ComPtr<ID3D12RootSignature> GetRootSignature() const { return m_RootSignature; }
+
+	inline bool EnableMSAA() const { return m_EnableMSAA; }
+	inline UINT Get4xMSAAQuality() const { return m_4xMsaaQuality; }
 };
 

@@ -79,3 +79,5 @@ float RandF();
 
 // Returns random float in [a, b).
 float RandF(float a, float b);
+
+Vector4 SphericalToCartesian(float radius, float theta, float phi);

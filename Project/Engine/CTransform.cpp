@@ -68,7 +68,6 @@ void CTransform::FinalTick()
 		for (int i = 0; i < 3; ++i)
 			m_WorldDir[i] = m_RelativeDir[i];
 	}
-
 }
 
 void CTransform::Bind()
@@ -78,9 +77,8 @@ void CTransform::Bind()
 		// System memory -> GPU
 		std::shared_ptr<CConstantBuffer> pObjCB = CDevice::GetInst()->GetConstBuffer(CB_TYPE::TRANSFORM);
 
-		g_Trans.matModel = m_matWorld;
-		g_Trans.matMV = g_Trans.matModel * g_Trans.matView;
-		g_Trans.matMVP = g_Trans.matMV * g_Trans.matProj;
+		g_Trans.World = m_matWorld;
+		g_Trans.WorldInvTranspose = m_matWorld.Invert().Transpose();
 
 		pObjCB->CopyData(m_ObjCBIndex, &g_Trans);
 

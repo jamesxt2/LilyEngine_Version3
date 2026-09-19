@@ -52,9 +52,6 @@ void CMesh::CreateIndexBuffer16(uint16* idxData, UINT idxCount)
 void CMesh::Render()
 {
 	Bind();
-
-	if (m_Shader != nullptr)
-		m_Shader->Bind();
 }
 
 void CMesh::Bind()

@@ -83,6 +83,9 @@
     <Filter Include="07.Component\Script">
       <UniqueIdentifier>{687cca46-9bae-4636-b4ad-ff5b7c038e85}</UniqueIdentifier>
     </Filter>
+    <Filter Include="08.Asset\Material">
+      <UniqueIdentifier>{402eed1e-7854-4594-9fb4-2b3bc08aae01}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -196,6 +199,9 @@
     <ClInclude Include="Waves.h">
       <Filter>08.Asset\Mesh</Filter>
     </ClInclude>
+    <ClInclude Include="CMaterial.h">
+      <Filter>08.Asset\Material</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -285,9 +291,18 @@
     <ClCompile Include="Waves.cpp">
       <Filter>08.Asset\Mesh</Filter>
     </ClCompile>
+    <ClCompile Include="CMaterial.cpp">
+      <Filter>08.Asset\Material</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="color.fx">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="LightingUtils.fx">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="default.fx">
       <Filter>HLSL</Filter>
     </FxCompile>
   </ItemGroup>

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 TTransform g_Trans = {};
+TGlobal g_Global = {};
 
 int g_NumFrameResources = 3;
 int g_MaxObjectCount = 40;
