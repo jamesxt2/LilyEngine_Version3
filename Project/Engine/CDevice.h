@@ -25,7 +25,7 @@ public:
 
 	UINT											m_RtvDescriptorSize;
 	UINT											m_DsvDescriptorSize;
-	UINT											m_CbvUavDescriptorSize;
+	UINT											m_CbvSrvUavDescriptorSize;
 
 private:
 
@@ -37,7 +37,8 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
 
-	void BuildRootSignature(UINT slotCount);
+	void BuildRootSignature();
+	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
 
 	void BuildFrameResources();
 

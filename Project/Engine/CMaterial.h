@@ -1,6 +1,8 @@
 #pragma once
 #include "CAsset.h"
 
+#include "CTexture.h"
+
 class CMaterial : public CAsset
 {
 public:
@@ -18,9 +20,20 @@ private:
 	Vector3 m_FresnelR0;
 	float m_Roughness;
 
+	Ptr<CTexture> m_Texture;
+
+	Matrix m_MtrlTransform;
+
 	int m_NumFramesDirty = g_NumFrameResources;
 
 public:
 	inline int GetMtrlCBIndex() const { return m_MtrlCBIndex; }
+
+	void DecreaseNumFramesDirty() 
+	{
+		if (m_NumFramesDirty >= 0)
+			--m_NumFramesDirty; 
+	}
+	void ResetNumFramesDirty() { m_NumFramesDirty = g_NumFrameResources; }
 };
 

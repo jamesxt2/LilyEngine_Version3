@@ -18,6 +18,8 @@ public:
 
 	void CopyRenderTarget();
 
+	MulticastDelegate<> OnObjRenderFinish;
+
 private:
 	void Render_Play();
 

@@ -26,6 +26,8 @@ private:
 	UINT		m_NumFramesDirty = g_NumFrameResources;
 	int			m_ObjCBIndex = 0;
 
+	Matrix		m_matTexTransform;
+
 public:
 	inline Vector3 GetRelativePosition() const { return m_RelativePosition; }
 	inline Vector3 GetRelativeRotation() const { return m_RelativeRotation; }
@@ -55,5 +57,7 @@ public:
 	inline int GetObjCBIndex() const { return m_ObjCBIndex; }
 
 	inline void ResetDirty() { m_NumFramesDirty = g_NumFrameResources; }
+
+	inline void SetTexTransform(const Matrix& mat) { m_matTexTransform = mat; }
 };
 

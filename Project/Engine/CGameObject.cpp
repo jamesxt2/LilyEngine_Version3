@@ -95,7 +95,7 @@ void CGameObject::Render()
 	{
 		if (GetTransformComp() != nullptr)
 		{
-			CDevice::GetInst()->GetConstBuffer(CB_TYPE::TRANSFORM)->Bind(GetTransformComp()->GetObjCBIndex(), 0);
+			CDevice::GetInst()->GetConstBuffer(CB_TYPE::TRANSFORM)->Bind(GetTransformComp()->GetObjCBIndex(), 1);
 			GetTransformComp()->Bind();
 		}
 

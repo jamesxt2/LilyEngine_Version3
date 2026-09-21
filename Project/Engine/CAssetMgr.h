@@ -26,7 +26,7 @@ public:
 	void AddAsset(const std::wstring& key, Ptr<T> pAsset);
 
 	void GetAssetNames(ASSET_TYPE type, _Out_ std::vector<std::string>& vecNames);
-	inline const std::map<std::wstring, Ptr<CAsset>>& GetAssets(ASSET_TYPE type) const { return m_AssetMap[(UINT)type]; }
+	inline const std::unordered_map<std::wstring, Ptr<CAsset>>& GetAssets(ASSET_TYPE type) const { return m_AssetMap[(UINT)type]; }
 
 
 	///<summary>
@@ -68,11 +68,16 @@ public:
 
 private:
 
+	void UpdateWaves();
+	void AnimateMaterials();
+
 	void CreateDefaultMesh();
 
 	void CreateSceneMeshes();
 	void CreateWaveMeshes();
 	void CreateSkullMesh();
+
+	void CreateDefaultTexture();
 
 	void CreateDefaultMaterial();
 	void CreateDefaultGraphicsShader();
@@ -83,7 +88,7 @@ private:
 	VertexMesh MidPoint(const VertexMesh& v0, const VertexMesh& v1);
 	void Subdivide(MeshData& meshData);
 
-	std::map<std::wstring, Ptr<CAsset>> m_AssetMap[(UINT)ASSET_TYPE::END];
+	std::unordered_map<std::wstring, Ptr<CAsset>> m_AssetMap[(UINT)ASSET_TYPE::END];
 
 	std::unordered_map<std::wstring, MeshData> m_MeshDataMap;
 
@@ -103,6 +108,8 @@ inline ASSET_TYPE GetAssetType()
 		return ASSET_TYPE::GRAPHICS_SHADER;
 	if constexpr (std::is_same_v<T, CMaterial>)
 		return ASSET_TYPE::MATERIAL;
+	if constexpr (std::is_same_v<T, CTexture>)
+		return ASSET_TYPE::TEXTURE;
 }
 
 template<typename T>
@@ -141,7 +148,7 @@ inline Ptr<T> CAssetMgr::FindAsset(const std::wstring& key)
 {
 	ASSET_TYPE type = GetAssetType<T>();
 
-	std::map<std::wstring, Ptr<CAsset>>::iterator iter =
+	std::unordered_map<std::wstring, Ptr<CAsset>>::iterator iter =
 		m_AssetMap[(UINT)type].find(key);
 
 	if (iter == m_AssetMap[(UINT)type].end())

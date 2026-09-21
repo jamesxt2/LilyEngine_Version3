@@ -86,6 +86,12 @@
     <Filter Include="08.Asset\Material">
       <UniqueIdentifier>{402eed1e-7854-4594-9fb4-2b3bc08aae01}</UniqueIdentifier>
     </Filter>
+    <Filter Include="01.Basis\DDSTextureLoader">
+      <UniqueIdentifier>{7caba1de-9fee-4683-ad81-3996aff70c35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="08.Asset\Texture">
+      <UniqueIdentifier>{2a36b8e4-b6c9-4dd3-b835-98dca05e8705}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -202,6 +208,15 @@
     <ClInclude Include="CMaterial.h">
       <Filter>08.Asset\Material</Filter>
     </ClInclude>
+    <ClInclude Include="DDSTextureLoader.h">
+      <Filter>01.Basis\DDSTextureLoader</Filter>
+    </ClInclude>
+    <ClInclude Include="CTexture.h">
+      <Filter>08.Asset\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="delegate.h">
+      <Filter>01.Basis</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -293,6 +308,12 @@
     </ClCompile>
     <ClCompile Include="CMaterial.cpp">
       <Filter>08.Asset\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="DDSTextureLoader.cpp">
+      <Filter>01.Basis\DDSTextureLoader</Filter>
+    </ClCompile>
+    <ClCompile Include="CTexture.cpp">
+      <Filter>08.Asset\Texture</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

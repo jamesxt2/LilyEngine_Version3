@@ -4,6 +4,7 @@ struct Vertex
 {
 	Vector3 Position;
 	Vector3 Normal;
+	Vector2 TexCoord;
 };
 
 struct TTransform
@@ -11,6 +12,8 @@ struct TTransform
 	Matrix World;
 	Matrix WorldInvTranspose;
 	Matrix ViewProj;
+
+	Matrix TexTransform;
 };
 
 extern TTransform g_Trans;
@@ -20,6 +23,10 @@ struct TMaterial
 	Vector4 DiffuseAlbedo = { 1.f, 1.f, 1.f, 1.f };
 	Vector3 FresnelR0 = { 0.01f, 0.01f, 0.01f };
 	float Roughness = 0.25f;
+	int bUseTecture = 0;
+	Vector3 padding;
+
+	Matrix MtrlTransform;
 };
 
 struct TLight

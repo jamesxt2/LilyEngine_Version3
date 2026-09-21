@@ -39,14 +39,19 @@ void CLevel::Tick()
 	}
 
 	// global CB
-	g_Global.AmbientLight = Vector4(0.25f, 0.25f, 0.35f, 1.0f);
+	g_Global.AmbientLight = Vector4(0.35f, 0.35f, 0.45f, 1.0f);
 
 	XMVECTOR lightDir = -SphericalToCartesian(1.0f, m_SunTheta, m_SunPhi);
 
 	g_Global.Lights[0].Direction = lightDir;
 	g_Global.Lights[0].Strength = Vector3(1.f, 1.f, 0.9f);
 
-	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(0, 2);
+	lightDir = -SphericalToCartesian(1.0f, m_SunTheta + XM_PI, m_SunPhi);
+
+	g_Global.Lights[1].Direction = lightDir;
+	g_Global.Lights[1].Strength = Vector3(0.7f, 0.7f, 0.6f);
+
+	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(0, 3);
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->CopyData(0, &g_Global);
 }
 

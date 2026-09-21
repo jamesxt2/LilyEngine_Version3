@@ -22,7 +22,7 @@ void CMeshRender::Render()
 {
 	if (GetMesh() == nullptr || GetMaterial() == nullptr) return;
 
-	CDevice::GetInst()->GetConstBuffer(CB_TYPE::MATERIAL)->Bind(GetMaterial()->GetMtrlCBIndex(), 1);
+	CDevice::GetInst()->GetConstBuffer(CB_TYPE::MATERIAL)->Bind(GetMaterial()->GetMtrlCBIndex(), 2);
 	GetMaterial()->Bind();
 
 	GetMesh()->Render();

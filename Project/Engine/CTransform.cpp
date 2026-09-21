@@ -79,6 +79,7 @@ void CTransform::Bind()
 
 		g_Trans.World = m_matWorld;
 		g_Trans.WorldInvTranspose = m_matWorld.Invert().Transpose();
+		g_Trans.TexTransform = m_matTexTransform;
 
 		pObjCB->CopyData(m_ObjCBIndex, &g_Trans);
 

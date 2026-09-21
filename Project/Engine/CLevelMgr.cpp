@@ -89,22 +89,23 @@ void CLevelMgr::Init()
 
 	// object
 
-	CGameObject* pWaveGrid = new CGameObject;
-	pWaveGrid->SetName(L"WaveGrid");
-	pWaveGrid->AddComponent(new CTransform);
-	pWaveGrid->AddComponent(new CMeshRender);
+	CGameObject* pLandGrid = new CGameObject;
+	pLandGrid->SetName(L"WaveGrid");
+	pLandGrid->AddComponent(new CTransform);
+	pLandGrid->AddComponent(new CMeshRender);
 
-	pWaveGrid->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
-	pWaveGrid->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
-	pWaveGrid->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-	pWaveGrid->GetTransformComp()->SetObjCBIndex(0);
+	pLandGrid->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
+	pLandGrid->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
+	pLandGrid->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
+	pLandGrid->GetTransformComp()->SetObjCBIndex(0);
+	pLandGrid->GetTransformComp()->SetTexTransform(Matrix::CreateScale(5.f, 5.f, 1.f));
 
-	pWaveGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"LandMesh"));
-	pWaveGrid->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"GrassMaterial"));
-	pWaveGrid->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
-	pWaveGrid->SetSubMeshGeo(pWaveGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
+	pLandGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"LandMesh"));
+	pLandGrid->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"GrassMaterial"));
+	pLandGrid->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
+	pLandGrid->SetSubMeshGeo(pLandGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
 
-	pWaveLevel->AddObject(pWaveGrid);
+	pWaveLevel->AddObject(pLandGrid);
 
 
 
@@ -124,6 +125,23 @@ void CLevelMgr::Init()
 	pWave->SetSubMeshGeo(pWave->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
 
 	pWaveLevel->AddObject(pWave);
+
+	CGameObject* pWoodBox = new CGameObject;
+	pWoodBox->SetName(L"WoodBox");
+	pWoodBox->AddComponent(new CTransform);
+	pWoodBox->AddComponent(new CMeshRender);
+
+	pWoodBox->GetTransformComp()->SetRelativePosition(-6.f, 0.75f, -4.f);
+	pWoodBox->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
+	pWoodBox->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
+	pWoodBox->GetTransformComp()->SetObjCBIndex(2);
+
+	pWoodBox->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
+	pWoodBox->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WoodBoxMaterial"));
+	pWoodBox->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
+	pWoodBox->SetSubMeshGeo(pWoodBox->GetMeshRenderComp()->GetMesh()->GetSubGeo("box"));
+
+	pWaveLevel->AddObject(pWoodBox);
 
 	AddLevel(L"WaveLevel", pWaveLevel);
 
@@ -156,9 +174,10 @@ void CLevelMgr::Init()
 	pSceneGrid->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
 	pSceneGrid->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
 	pSceneGrid->GetTransformComp()->SetObjCBIndex(0);
+	pSceneGrid->GetTransformComp()->SetTexTransform(Matrix::CreateScale(5.f, 5.f, 1.f));
 
 	pSceneGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
-	pSceneGrid->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"GrassMaterial"));
+	pSceneGrid->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"TileMaterial"));
 	pSceneGrid->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
 	pSceneGrid->SetSubMeshGeo(pSceneGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
 
@@ -175,7 +194,7 @@ void CLevelMgr::Init()
 	pBox->GetTransformComp()->SetObjCBIndex(1);
 
 	pBox->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
-	pBox->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WaterMaterial"));
+	pBox->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WoodBoxMaterial"));
 	pBox->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
 	pBox->SetSubMeshGeo(pBox->GetMeshRenderComp()->GetMesh()->GetSubGeo("box"));
 
@@ -211,7 +230,7 @@ void CLevelMgr::Init()
 		pCylinder->GetTransformComp()->SetObjCBIndex(3 + 4 * i);
 
 		pCylinder->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
-		pCylinder->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"GrassMaterial"));
+		pCylinder->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
 		pCylinder->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
 		pCylinder->SetSubMeshGeo(pCylinder->GetMeshRenderComp()->GetMesh()->GetSubGeo("cylinder"));
 
@@ -229,7 +248,7 @@ void CLevelMgr::Init()
 		pCylinder2->GetTransformComp()->SetObjCBIndex(3 + 4 * i + 1);
 
 		pCylinder2->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
-		pCylinder2->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"GrassMaterial"));
+		pCylinder2->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
 		pCylinder2->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
 		pCylinder2->SetSubMeshGeo(pCylinder2->GetMeshRenderComp()->GetMesh()->GetSubGeo("cylinder"));
 
@@ -247,7 +266,7 @@ void CLevelMgr::Init()
 		pSphere->GetTransformComp()->SetObjCBIndex(3 + 4 * i + 2);
 
 		pSphere->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
-		pSphere->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WaterMaterial"));
+		pSphere->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"StoneMaterial"));
 		pSphere->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
 		pSphere->SetSubMeshGeo(pSphere->GetMeshRenderComp()->GetMesh()->GetSubGeo("sphere"));
 
@@ -265,7 +284,7 @@ void CLevelMgr::Init()
 		pSphere2->GetTransformComp()->SetObjCBIndex(3 + 4 * i + 3);
 
 		pSphere2->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
-		pSphere2->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WaterMaterial"));
+		pSphere2->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"StoneMaterial"));
 		pSphere2->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
 		pSphere2->SetSubMeshGeo(pSphere2->GetMeshRenderComp()->GetMesh()->GetSubGeo("sphere"));
 
@@ -284,11 +303,13 @@ void CLevelMgr::Tick()
 	{
 		ChangeLevel(L"WaveLevel");
 		CRenderMgr::GetInst()->SetCurrentLevel(L"WaveLevel");
+		OnLevelChange.Broadcast();
 	}
 	if (KEY_TAP(KEY::_2))
 	{
 		ChangeLevel(L"SceneLevel");
 		CRenderMgr::GetInst()->SetCurrentLevel(L"SceneLevel");
+		OnLevelChange.Broadcast();
 	}
 	if (KEY_TAP(KEY::_3))
 	{

@@ -14,6 +14,8 @@ public:
 
 	void ChangeLevel(const std::wstring& name);
 
+	MulticastDelegate<> OnLevelChange;
+
 private:
 
 	void BuildPSO();

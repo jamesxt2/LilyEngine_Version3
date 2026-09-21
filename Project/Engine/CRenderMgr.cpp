@@ -41,8 +41,9 @@ void CRenderMgr::Render()
 
 	(this->*Render_Func)();
 
-	CDevice::GetInst()->ExecuteAndFinishDrawCall();
+	OnObjRenderFinish.Broadcast();
 
+	CDevice::GetInst()->ExecuteAndFinishDrawCall();
 }
 
 void CRenderMgr::Render_Play()

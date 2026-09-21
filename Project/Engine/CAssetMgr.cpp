@@ -2,7 +2,6 @@
 #include "CAssetMgr.h"
 
 #include "d3dUtils.h"
-#include "CGraphicsShader.h"
 #include "CDevice.h"
 #include "CTimeMgr.h"
 
@@ -31,6 +30,7 @@ void CAssetMgr::Init()
 {
 	CDevice::GetInst()->Reset();
 	CreateDefaultMesh();
+	CreateDefaultTexture();
 	CreateDefaultMaterial();
 	CDevice::GetInst()->Close();
 }
@@ -42,13 +42,19 @@ void CAssetMgr::PostInit()
 
 void CAssetMgr::Tick()
 {
+	UpdateWaves();
+	AnimateMaterials();
+}
+
+void CAssetMgr::UpdateWaves()
+{
 	// Every quarter second, generate a random wave.
 	static float t_base = 0.0f;
-	
+
 	if ((CTimeMgr::GetInst()->TotalTime() - t_base) >= 0.25f)
 	{
 		t_base += 0.25f;
-		
+
 		int i = Rand(4, m_Waves->RowCount() - 5);
 		int j = Rand(4, m_Waves->ColumnCount() - 5);
 
@@ -68,12 +74,39 @@ void CAssetMgr::Tick()
 
 		v.Position = m_Waves->Position(i);
 		v.Normal = m_Waves->Normal(i);
+		
+		// Derive tex-coords from position by 
+		// mapping [-w/2,w/2] --> [0,1]
+		v.TexCoord.x = 0.5f + v.Position.x / m_Waves->Width();
+		v.TexCoord.y = 0.5f - v.Position.z / m_Waves->Depth();
 
 		currWavesVB->CopyData(i, (const void*)&v);
 	}
 
 	// Set the dynamic VB of the wave renderitem to the current frame VB.
 	FindAsset<CMesh>(L"WaveMesh")->m_VertexBufferGPU = currWavesVB->Resource();
+}
+
+void CAssetMgr::AnimateMaterials()
+{
+	Ptr<CMaterial> pWaterMtrl = FindAsset<CMaterial>(L"WaterMaterial");
+	if (pWaterMtrl == nullptr) return;
+
+	float tu = pWaterMtrl->m_MtrlTransform(3, 0);
+	float tv = pWaterMtrl->m_MtrlTransform(3, 1);
+
+	tu += 0.01f * CTimeMgr::GetInst()->DeltaTime();
+	tv += 0.002f * CTimeMgr::GetInst()->DeltaTime();
+
+	if (tu >= 1.f)
+		tu -= 1.f;
+	if (tv >= 1.f)
+		tv -= 1.f;
+
+	pWaterMtrl->m_MtrlTransform(3, 0) = tu;
+	pWaterMtrl->m_MtrlTransform(3, 1) = tv;
+
+	pWaterMtrl->m_NumFramesDirty = g_NumFrameResources;
 }
 
 void CAssetMgr::CreateDefaultMesh()
@@ -88,7 +121,7 @@ void CAssetMgr::CreateSceneMeshes()
 	/*********************************************************************/
 	// Scene
 	/*********************************************************************/
-	CreateBox(L"BoxMeshData", 1.5f, 0.5f, 1.5f, 3);
+	CreateBox(L"BoxMeshData", 1.5f, 1.5f, 1.5f, 3);
 	CreateGrid(L"GridMeshData", 20.f, 30.f, 60, 40);
 	CreateSphere(L"SphereMeshData", 0.5f, 20, 20);
 	CreateCylinder(L"CylinderMeshData", 0.5f, 0.3f, 3.f, 20, 20);
@@ -150,21 +183,25 @@ void CAssetMgr::CreateSceneMeshes()
 	{
 		vertices[k].Position = box->Vertices[i].Position;
 		vertices[k].Normal = box->Vertices[i].Normal;
+		vertices[k].TexCoord = box->Vertices[i].TexCoord;
 	}
 	for (size_t i = 0; i < grid->Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Position = grid->Vertices[i].Position;
 		vertices[k].Normal = grid->Vertices[i].Normal;
+		vertices[k].TexCoord = grid->Vertices[i].TexCoord;
 	}
 	for (size_t i = 0; i < sphere->Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Position = sphere->Vertices[i].Position;
 		vertices[k].Normal = sphere->Vertices[i].Normal;
+		vertices[k].TexCoord = sphere->Vertices[i].TexCoord;
 	}
 	for (size_t i = 0; i < cylinder->Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Position = cylinder->Vertices[i].Position;
 		vertices[k].Normal = cylinder->Vertices[i].Normal;
+		vertices[k].TexCoord = cylinder->Vertices[i].TexCoord;
 	}
 
 	std::vector<uint16> indices;
@@ -194,17 +231,17 @@ void CAssetMgr::CreateSceneMeshes()
 void CAssetMgr::CreateWaveMeshes()
 {
 	/*********************************************************************/
-	// Wave Grid
+	// Land Grid
 	/*********************************************************************/
 	CreateGrid(L"WaveGridMeshData", 160.f, 160.f, 50, 50);
-	MeshData* pWaveGridMeshData = &m_MeshDataMap.find(L"WaveGridMeshData")->second;
+	MeshData* pLandGridMeshData = &m_MeshDataMap.find(L"WaveGridMeshData")->second;
 
-	std::vector<Vertex> waveGridVertices(pWaveGridMeshData->Vertices.size());
-	for (size_t i = 0; i < pWaveGridMeshData->Vertices.size(); ++i)
+	std::vector<Vertex> landGridVertices(pLandGridMeshData->Vertices.size());
+	for (size_t i = 0; i < pLandGridMeshData->Vertices.size(); ++i)
 	{
-		auto& p = pWaveGridMeshData->Vertices[i].Position;
-		waveGridVertices[i].Position = p;
-		waveGridVertices[i].Position.y = 0.3f * (p.z * sinf(0.1f * p.x) + p.x * cosf(0.1f * p.z));
+		auto& p = pLandGridMeshData->Vertices[i].Position;
+		landGridVertices[i].Position = p;
+		landGridVertices[i].Position.y = 0.3f * (p.z * sinf(0.1f * p.x) + p.x * cosf(0.1f * p.z));
 
 		// n = (-df/dx, 1, -df/dz)
 		Vector3 n(
@@ -212,26 +249,27 @@ void CAssetMgr::CreateWaveMeshes()
 			1.0f,
 			-0.3f * sinf(0.1f * p.x) + 0.03f * p.x * sinf(0.1f * p.z));
 		n.Normalize();
+		landGridVertices[i].Normal = n;
 
-		waveGridVertices[i].Normal = n;
+		landGridVertices[i].TexCoord = pLandGridMeshData->Vertices[i].TexCoord;
 	}
 
-	std::vector<uint16> waveGridIndices = pWaveGridMeshData->GetIndices16();
+	std::vector<uint16> waveGridIndices = pLandGridMeshData->GetIndices16();
 
-	Ptr<CMesh> pWaveGridMesh = new CMesh;
-	pWaveGridMesh->CreateVertexBuffer(waveGridVertices.data(), (UINT)waveGridVertices.size());
-	pWaveGridMesh->CreateIndexBuffer16(waveGridIndices.data(), (UINT)waveGridIndices.size());
+	Ptr<CMesh> pLandGridMesh = new CMesh;
+	pLandGridMesh->CreateVertexBuffer(landGridVertices.data(), (UINT)landGridVertices.size());
+	pLandGridMesh->CreateIndexBuffer16(waveGridIndices.data(), (UINT)waveGridIndices.size());
 
-	SubmeshGeometry submeshWaveGrid;
-	submeshWaveGrid.IndexCount = (UINT)waveGridIndices.size();
-	submeshWaveGrid.StartIndexLocation = 0;
-	submeshWaveGrid.BaseVertexLocation = 0;
+	SubmeshGeometry submeshLandGrid;
+	submeshLandGrid.IndexCount = (UINT)waveGridIndices.size();
+	submeshLandGrid.StartIndexLocation = 0;
+	submeshLandGrid.BaseVertexLocation = 0;
 
-	pWaveGridMesh->m_DrawArgs.emplace("grid", std::move(submeshWaveGrid));
+	pLandGridMesh->m_DrawArgs.emplace("grid", std::move(submeshLandGrid));
 
-	AddAsset<CMesh>(L"LandMesh", pWaveGridMesh);
+	AddAsset<CMesh>(L"LandMesh", pLandGridMesh);
 	/*********************************************************************/
-	// Wave Grid
+	// Land Grid
 	/*********************************************************************/
 
 
@@ -349,6 +387,33 @@ void CAssetMgr::CreateSkullMesh()
 	AddAsset<CMesh>(L"SkullMesh", pSkullMesh);
 }
 
+void CAssetMgr::CreateDefaultTexture()
+{
+	Ptr<CTexture> pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\WoodCrate01.dds", 0);
+	AddAsset<CTexture>(L"WoodCrate01Texure", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\grass.dds", 1);
+	AddAsset<CTexture>(L"GrassTexure", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\water1.dds", 2);
+	AddAsset<CTexture>(L"Water1Texure", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\bricks.dds", 3);
+	AddAsset<CTexture>(L"BricksTexture", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\stone.dds", 4);
+	AddAsset<CTexture>(L"StoneTexture", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\tile.dds", 5);
+	AddAsset<CTexture>(L"TileTexture", pTexture);
+}
+
 void CAssetMgr::CreateDefaultMaterial()
 {
 	Ptr<CMaterial> pMaterial = new CMaterial;
@@ -356,21 +421,69 @@ void CAssetMgr::CreateDefaultMaterial()
 	pMaterial->m_FresnelR0 = Vector3(0.01f, 0.01f, 0.01f);
 	pMaterial->m_Roughness = 0.125f;
 	pMaterial->m_MtrlCBIndex = 0;
-	AddAsset<CMaterial>(L"GrassMaterial", pMaterial);
+	AddAsset<CMaterial>(L"GreenMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
 	pMaterial->m_DiffuseAlbedo = Vector4(0.f, 0.2f, 0.6f, 1.f);
 	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
 	pMaterial->m_Roughness = 0.f;
 	pMaterial->m_MtrlCBIndex = 1;
-	AddAsset<CMaterial>(L"WaterMaterial", pMaterial);
+	AddAsset<CMaterial>(L"BlueMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-	pMaterial->m_FresnelR0 = Vector3(0.05f, 0.05f, 0.05f);
+	pMaterial->m_FresnelR0 = Vector3(0.03f, 0.03f, 0.03f);
 	pMaterial->m_Roughness = 0.3f;
 	pMaterial->m_MtrlCBIndex = 2;
 	AddAsset<CMaterial>(L"SkullMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 3;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
+	pMaterial->m_Roughness = 0.25f;
+	pMaterial->m_Texture = FindAsset<CTexture>(L"WoodCrate01Texure");
+	AddAsset<CMaterial>(L"WoodBoxMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 4;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	pMaterial->m_FresnelR0 = Vector3(0.01f, 0.01f, 0.01f);
+	pMaterial->m_Roughness = 0.125f;
+	pMaterial->m_Texture = FindAsset<CTexture>(L"GrassTexure");
+	AddAsset<CMaterial>(L"GrassMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 5;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	pMaterial->m_FresnelR0 = Vector3(0.2f, 0.2f, 0.2f);
+	pMaterial->m_Roughness = 0.f;
+	pMaterial->m_Texture = FindAsset<CTexture>(L"Water1Texure");
+	AddAsset<CMaterial>(L"WaterMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 6;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	pMaterial->m_FresnelR0 = Vector3(0.08f, 0.08f, 0.08f);
+	pMaterial->m_Roughness = 0.01f;
+	pMaterial->m_Texture = FindAsset<CTexture>(L"BricksTexture");
+	AddAsset<CMaterial>(L"BricksMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 7;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	pMaterial->m_FresnelR0 = Vector3(0.05f, 0.05f, 0.05f);
+	pMaterial->m_Roughness = 0.3f;
+	pMaterial->m_Texture = FindAsset<CTexture>(L"StoneTexture");
+	AddAsset<CMaterial>(L"StoneMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 8;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	pMaterial->m_FresnelR0 = Vector3(0.02f, 0.02f, 0.02f);
+	pMaterial->m_Roughness = 0.3f;
+	pMaterial->m_Texture = FindAsset<CTexture>(L"TileTexture");
+	AddAsset<CMaterial>(L"TileMaterial", pMaterial);
 }
 
 void CAssetMgr::CreateDefaultGraphicsShader()
@@ -867,6 +980,9 @@ void CAssetMgr::CreateGrid(const std::wstring& name, float width, float depth, u
 			meshData.Vertices[i * n + j].TangentU = Vector3(1.0f, 0.0f, 0.0f);
 
 			// Stretch texture over grid.
+			meshData.Vertices[i * n + j].TexCoord.x = j * du;
+			meshData.Vertices[i * n + j].TexCoord.y = i * dv;
+
 			meshData.Vertices[i * n + j].TexCoord.x = j * du;
 			meshData.Vertices[i * n + j].TexCoord.y = i * dv;
 		}

@@ -28,11 +28,15 @@ using namespace DirectX::SimpleMath;
 #include <memory>
 #include <ppl.h>
 #include <fstream>
+#include <assert.h>
+#include <array>
 
 #include "d3dUtils.h"
 #include "define.h"
 #include "ptr.h"
 #include "enum.h"
 #include "struct.h"
+#include "delegate.h"
 #include "UploadBuffer.h"
 #include "FrameResource.h"
+#include "DDSTextureLoader.h"
