@@ -14,7 +14,7 @@ CTexture::CTexture()
 	if (m_SrvDescriptorHeap == nullptr)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-		srvHeapDesc.NumDescriptors = 6;
+		srvHeapDesc.NumDescriptors = 7;
 		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(DEVICE->CreateDescriptorHeap(

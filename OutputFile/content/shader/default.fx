@@ -49,9 +49,14 @@ cbuffer MATERIAL : register(b1)
 cbuffer GLOBAL : register(b2)
 {
     float3 g_EyePosW;
-    float padding_Global;
+    float padding_Global1;
     float4 g_AmbientLight;
     Light g_Lights[MaxLights];
+    
+    float4 g_FogColor;
+    float g_FogStart;
+    float g_FogRange;
+    float2 padding_Global2;
 }
 
 struct VertexIn
@@ -93,9 +98,18 @@ float4 PS(VertexOut pin) : SV_Target
         (g_DiffuseMap.Sample(g_SamAnisotropicWrap, pin.TexCoord) * g_DiffuseAlbedo) 
         : g_DiffuseAlbedo;
     
+#ifdef ALPHA_TEST
+	// Discard pixel if texture alpha < 0.1.  We do this test as soon 
+	// as possible in the shader so that we can potentially exit the
+	// shader early, thereby skipping the rest of the shader code.
+	clip(diffuseAlbedo.a - 0.1f);
+#endif
+    
     pin.NormalW = normalize(pin.NormalW);
     
-    float3 toEyeW = normalize(g_EyePosW - pin.PosW);
+    float3 toEyeW = g_EyePosW - pin.PosW;
+    float distToEye = length(toEyeW);
+    toEyeW /= distToEye;
     
     // indirect light
     float4 ambient = g_AmbientLight * diffuseAlbedo;
@@ -107,6 +121,11 @@ float4 PS(VertexOut pin) : SV_Target
     float4 directLight = ComputeLighting(g_Lights, mat, pin.PosW, pin.NormalW, toEyeW, shadowFactor);
 
     float4 litColor = ambient + directLight;
+    
+#ifdef FOG
+    float fogAmount = saturate((distToEye - g_FogStart) / g_FogRange);
+    litColor = lerp(litColor, g_FogColor, fogAmount);
+#endif
     
     litColor.a = diffuseAlbedo.a;
     

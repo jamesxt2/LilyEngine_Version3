@@ -412,6 +412,10 @@ void CAssetMgr::CreateDefaultTexture()
 	pTexture = new CTexture;
 	pTexture->CreateFromFile(L"textures\\tile.dds", 5);
 	AddAsset<CTexture>(L"TileTexture", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\WireFence.dds", 6);
+	AddAsset<CTexture>(L"WireFenceTexture", pTexture);
 }
 
 void CAssetMgr::CreateDefaultMaterial()
@@ -448,21 +452,29 @@ void CAssetMgr::CreateDefaultMaterial()
 	pMaterial = new CMaterial;
 	pMaterial->m_MtrlCBIndex = 4;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
+	pMaterial->m_Roughness = 0.25f;
+	pMaterial->m_Texture = FindAsset<CTexture>(L"WireFenceTexture");
+	AddAsset<CMaterial>(L"WireFenceBoxMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 5;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.01f, 0.01f, 0.01f);
 	pMaterial->m_Roughness = 0.125f;
 	pMaterial->m_Texture = FindAsset<CTexture>(L"GrassTexure");
 	AddAsset<CMaterial>(L"GrassMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 5;
-	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	pMaterial->m_MtrlCBIndex = 6;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 0.5f);
 	pMaterial->m_FresnelR0 = Vector3(0.2f, 0.2f, 0.2f);
 	pMaterial->m_Roughness = 0.f;
 	pMaterial->m_Texture = FindAsset<CTexture>(L"Water1Texure");
 	AddAsset<CMaterial>(L"WaterMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 6;
+	pMaterial->m_MtrlCBIndex = 7;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.08f, 0.08f, 0.08f);
 	pMaterial->m_Roughness = 0.01f;
@@ -470,7 +482,7 @@ void CAssetMgr::CreateDefaultMaterial()
 	AddAsset<CMaterial>(L"BricksMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 7;
+	pMaterial->m_MtrlCBIndex = 8;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.05f, 0.05f, 0.05f);
 	pMaterial->m_Roughness = 0.3f;
@@ -478,7 +490,7 @@ void CAssetMgr::CreateDefaultMaterial()
 	AddAsset<CMaterial>(L"StoneMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 8;
+	pMaterial->m_MtrlCBIndex = 9;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.02f, 0.02f, 0.02f);
 	pMaterial->m_Roughness = 0.3f;
@@ -492,15 +504,28 @@ void CAssetMgr::CreateDefaultGraphicsShader()
 
 	Ptr<CGraphicsShader> pShader = nullptr;
 
-	// Std2DShader
+	const D3D_SHADER_MACRO opaqueDefines[] =
+	{
+		"FOG", "1",
+		NULL, NULL
+	};
 	pShader = new CGraphicsShader;;
-	pShader->BuildVertexShaderAndInputLayout(strPath + L"shader\\default.fx", "VS");
-	pShader->BuildPixelShader(strPath + L"shader\\default.fx", "PS");
-	//pShader->SetRSType(RS_TYPE::CULL_NONE);
-	//pShader->SetDSType(DS_TYPE::LESS);
-	//pShader->SetBSType(BS_TYPE::DEFAULT);
+	pShader->BuildVertexShaderAndInputLayout(strPath + L"shader\\default.fx", opaqueDefines, "VS");
+	pShader->BuildPixelShader(strPath + L"shader\\default.fx", opaqueDefines, "PS");
 
 	AddAsset<CGraphicsShader>(L"DefaultShader", pShader);
+
+	const D3D_SHADER_MACRO alphaTestDefines[] =
+	{
+		"FOG", "1",
+		"ALPHA_TEST", "1",
+		NULL, NULL
+	};
+	pShader = new CGraphicsShader;
+	pShader->BuildVertexShaderAndInputLayout(strPath + L"shader\\default.fx", alphaTestDefines, "VS");
+	pShader->BuildPixelShader(strPath + L"shader\\default.fx", alphaTestDefines, "PS");
+
+	AddAsset<CGraphicsShader>(L"AlphaTestedShader", pShader);
 }
 
 

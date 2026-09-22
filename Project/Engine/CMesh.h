@@ -1,7 +1,6 @@
 #pragma once
 #include "CAsset.h"
 
-#include "CGraphicsShader.h"
 #include "MeshData.h"
 
 class CMesh : public CAsset
@@ -23,8 +22,6 @@ private:
 
 	void Bind();
 
-	CGraphicsShader* m_Shader;
-
 	// Vertex
 	ComPtr<ID3DBlob>						m_VertexBufferCPU;
 	ComPtr<ID3D12Resource>					m_VertexBufferGPU;
@@ -44,7 +41,6 @@ private:
 	std::unordered_map<std::string, SubmeshGeometry> m_DrawArgs;
 
 public:
-	inline void SetShader(CGraphicsShader* shader) { m_Shader = shader; }
 	SubmeshGeometry* GetSubGeo(const std::string& key);
 
 	inline UINT GetIndexCount() const { return m_IndexCount; }

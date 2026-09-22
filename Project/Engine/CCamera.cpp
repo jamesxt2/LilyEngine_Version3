@@ -7,6 +7,7 @@
 #include "CRenderMgr.h"
 #include "CLevelMgr.h"
 #include "CLevel.h"
+#include "CRenderComponent.h"
 
 CCamera::CCamera()
 	: CComponent(COMPONENT_TYPE::CAMERA),
@@ -71,7 +72,7 @@ void CCamera::FinalTick()
 
 void CCamera::Render()
 {
-	m_vecObjects = CLevelMgr::GetInst()->GetCurrentLevel()->GetObjects();
+	SortObjects();
 
 	if (m_IsDirty)
 	{
@@ -81,26 +82,48 @@ void CCamera::Render()
 
 	g_Trans.ViewProj = m_matView * m_matProj;
 
-	for (size_t i = 0; i < m_vecObjects.size(); ++i)
+	for (const auto& obj : m_vecObjects[(UINT)OBJ_PSO_TYPE::PSO_DEFAULT])
 	{
-		if (m_vecObjects[i]->GetRenderComp() == nullptr)
-			continue;
-		m_vecObjects[i]->Render();
+		CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_DEFAULT);
+		obj->Render();
 	}
 
-	m_vecObjects.clear();
+	for (const auto& obj : m_vecObjects[(UINT)OBJ_PSO_TYPE::PSO_ALPHA_TESTED])
+	{
+		CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_ALPHA_TESTED);
+		obj->Render();
+	}
+
+	for (const auto& obj : m_vecObjects[(UINT)OBJ_PSO_TYPE::PSO_TRANSPARENT])
+	{
+		CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_TRANSPARENT);
+		obj->Render();
+	}
+
+	for (auto& obj : m_vecObjects)
+		obj.clear();
+}
+
+void CCamera::SortObjects()
+{
+	const std::vector<CGameObject*>& rawObjs = CLevelMgr::GetInst()->GetCurrentLevel()->GetObjects();
+	for (const auto& obj : rawObjs)
+	{
+		if (obj->GetRenderComp() == nullptr || obj->GetRenderComp()->GetObjPSOType() == OBJ_PSO_TYPE::PSO_NONE)
+			continue;
+		m_vecObjects[(UINT)obj->GetRenderComp()->GetObjPSOType()].push_back(obj);
+	}
 }
 
 void CCamera::MarkDirty()
 {
-	for (size_t i = 0; i < m_vecObjects.size(); ++i)
+	for (UINT i = 0; i < (UINT)OBJ_PSO_TYPE::PSO_NONE; ++i)
 	{
-		if (m_vecObjects[i] == nullptr)
-			continue;
-		if (m_vecObjects[i]->GetRenderComp() == nullptr)
-			continue;
-		if (m_vecObjects[i]->GetTransformComp() != nullptr)
-			m_vecObjects[i]->GetTransformComp()->ResetDirty();
+		for (const auto& obj : m_vecObjects[i])
+		{
+			if (obj->GetTransformComp() != nullptr)
+				obj->GetTransformComp()->ResetDirty();
+		}
 	}
 }
 

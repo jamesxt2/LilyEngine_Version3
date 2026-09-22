@@ -51,6 +51,10 @@ void CLevel::Tick()
 	g_Global.Lights[1].Direction = lightDir;
 	g_Global.Lights[1].Strength = Vector3(0.7f, 0.7f, 0.6f);
 
+	g_Global.FogColor = Vector4(0.7f, 0.7f, 0.7f, 1.0f);
+	g_Global.FogStart = 5.f;
+	g_Global.FogRange = 150.f;
+
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(0, 3);
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->CopyData(0, &g_Global);
 }

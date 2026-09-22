@@ -16,6 +16,8 @@ public:
 
 	MulticastDelegate<> OnLevelChange;
 
+	void SetCMDPSO(OBJ_PSO_TYPE type);
+
 private:
 
 	void BuildPSO();

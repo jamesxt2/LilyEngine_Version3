@@ -8,8 +8,8 @@ public:
 	~CGraphicsShader();
 
 	virtual void Bind(const std::string& PSOGroupKey) override;
-	void BuildVertexShaderAndInputLayout(const std::wstring& filename, const std::string& entrypoint);
-	void BuildPixelShader(const std::wstring& filename, const std::string& entrypoint);
+	void BuildVertexShaderAndInputLayout(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint);
+	void BuildPixelShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint);
 
 private:
 	ComPtr<ID3DBlob>												m_vsByteCode;

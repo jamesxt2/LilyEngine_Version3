@@ -30,13 +30,6 @@ void CRenderMgr::Render()
 {
 	if (!CLevelMgr::GetInst()->GetCurrentLevel()) return;
 
-	// Output Merge Set Render Targets
-	//Ptr<CTexture> pRTTex = CAssetMgr::GetInst()->FindAsset<CTexture>(L"RenderTargetTex");
-	//Ptr<CTexture> pDSTex = CAssetMgr::GetInst()->FindAsset<CTexture>(L"DepthStencilTex");
-	//CONTEXT->OMSetRenderTargets(1, pRTTex->GetRTV().GetAddressOf(), pDSTex->GetDSV().Get());
-
-	// Target Clear
-	//float ClearColor[4] = { 0.3f, 0.3f, 0.3f, 1.f };
 	CDevice::GetInst()->ClearTargetAndPrepareRender(Colors::LightSteelBlue);
 
 	(this->*Render_Func)();

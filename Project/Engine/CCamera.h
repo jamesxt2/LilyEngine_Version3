@@ -20,6 +20,9 @@ public:
 
 private:
 
+	void SortObjects();
+	std::vector<CGameObject*> m_vecObjects[(UINT)OBJ_PSO_TYPE::PSO_NONE];
+
 	void MarkDirty();
 
 	PROJ_TYPE		m_ProjType;
@@ -36,8 +39,6 @@ private:
 
 	Matrix			m_matView;
 	Matrix			m_matProj;
-
-	std::vector<CGameObject*> m_vecObjects;
 
 	bool			m_IsDirty;
 

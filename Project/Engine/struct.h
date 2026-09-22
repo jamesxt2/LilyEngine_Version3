@@ -44,8 +44,13 @@ struct TLight
 struct TGlobal
 {
 	Vector3 EyePosW;
-	float padding;
+	float padding1;
 	Vector4 AmbientLight;
 	TLight Lights[MaxLights];
+
+	Vector4 FogColor;
+	float FogStart;
+	float FogRange;
+	Vector2 padding2;
 };
 extern TGlobal g_Global;

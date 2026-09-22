@@ -14,7 +14,7 @@
 #include "CConstantBuffer.h"
 
 CLevelMgr::CLevelMgr()
-	: m_CurLevel(nullptr), m_CurrPSOType(OBJ_PSO_TYPE::COLOR_DEFAULT)
+	: m_CurLevel(nullptr), m_CurrPSOType(OBJ_PSO_TYPE::PSO_DEFAULT)
 {
 }
 
@@ -59,10 +59,42 @@ void CLevelMgr::BuildPSO()
 	psoDesc.SampleDesc.Quality = CDevice::GetInst()->EnableMSAA() ? CDevice::GetInst()->Get4xMSAAQuality() - 1 : 0;
 	psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::COLOR_DEFAULT])));
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_DEFAULT])));
 
 	psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::COLOR_WIREFRAME])));
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_WIREFRAME])));
+
+	psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+	D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc;
+	transparencyBlendDesc.BlendEnable = true;
+	transparencyBlendDesc.LogicOpEnable = false;
+	transparencyBlendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+	transparencyBlendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+	transparencyBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
+	transparencyBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
+	transparencyBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
+	transparencyBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+	transparencyBlendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
+	transparencyBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+	psoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_TRANSPARENT])));
+
+
+	shader = CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"AlphaTestedShader");
+	//psoDesc.InputLayout = { shader->GetInputLayout().data(), (UINT)shader->GetInputLayout().size() };
+	//psoDesc.VS =
+	//{
+	//	reinterpret_cast<BYTE*>(shader->GetVsByteCode()->GetBufferPointer()),
+	//	shader->GetVsByteCode()->GetBufferSize()
+	//};
+	psoDesc.PS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetPsByteCode()->GetBufferPointer()),
+		shader->GetPsByteCode()->GetBufferSize()
+	};
+	psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_ALPHA_TESTED])));
 }
 
 
@@ -102,7 +134,7 @@ void CLevelMgr::Init()
 
 	pLandGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"LandMesh"));
 	pLandGrid->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"GrassMaterial"));
-	pLandGrid->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
+	pLandGrid->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
 	pLandGrid->SetSubMeshGeo(pLandGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
 
 	pWaveLevel->AddObject(pLandGrid);
@@ -121,7 +153,7 @@ void CLevelMgr::Init()
 
 	pWave->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"WaveMesh"));
 	pWave->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WaterMaterial"));
-	pWave->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
+	pWave->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_TRANSPARENT);
 	pWave->SetSubMeshGeo(pWave->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
 
 	pWaveLevel->AddObject(pWave);
@@ -137,8 +169,8 @@ void CLevelMgr::Init()
 	pWoodBox->GetTransformComp()->SetObjCBIndex(2);
 
 	pWoodBox->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
-	pWoodBox->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WoodBoxMaterial"));
-	pWoodBox->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
+	pWoodBox->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WireFenceBoxMaterial"));
+	pWoodBox->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_ALPHA_TESTED);
 	pWoodBox->SetSubMeshGeo(pWoodBox->GetMeshRenderComp()->GetMesh()->GetSubGeo("box"));
 
 	pWaveLevel->AddObject(pWoodBox);
@@ -178,7 +210,7 @@ void CLevelMgr::Init()
 
 	pSceneGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 	pSceneGrid->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"TileMaterial"));
-	pSceneGrid->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
+	pSceneGrid->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
 	pSceneGrid->SetSubMeshGeo(pSceneGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
 
 	pSceneLevel->AddObject(pSceneGrid);
@@ -195,7 +227,7 @@ void CLevelMgr::Init()
 
 	pBox->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 	pBox->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WoodBoxMaterial"));
-	pBox->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
+	pBox->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
 	pBox->SetSubMeshGeo(pBox->GetMeshRenderComp()->GetMesh()->GetSubGeo("box"));
 
 	pSceneLevel->AddObject(pBox);
@@ -212,7 +244,7 @@ void CLevelMgr::Init()
 
 	pSkull->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SkullMesh"));
 	pSkull->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"SkullMaterial"));
-	pSkull->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
+	pSkull->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
 
 	pSceneLevel->AddObject(pSkull);
 
@@ -231,7 +263,7 @@ void CLevelMgr::Init()
 
 		pCylinder->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pCylinder->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
-		pCylinder->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
+		pCylinder->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
 		pCylinder->SetSubMeshGeo(pCylinder->GetMeshRenderComp()->GetMesh()->GetSubGeo("cylinder"));
 
 		pSceneLevel->AddObject(pCylinder);
@@ -249,7 +281,7 @@ void CLevelMgr::Init()
 
 		pCylinder2->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pCylinder2->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
-		pCylinder2->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
+		pCylinder2->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
 		pCylinder2->SetSubMeshGeo(pCylinder2->GetMeshRenderComp()->GetMesh()->GetSubGeo("cylinder"));
 
 		pSceneLevel->AddObject(pCylinder2);
@@ -267,7 +299,7 @@ void CLevelMgr::Init()
 
 		pSphere->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pSphere->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"StoneMaterial"));
-		pSphere->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
+		pSphere->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
 		pSphere->SetSubMeshGeo(pSphere->GetMeshRenderComp()->GetMesh()->GetSubGeo("sphere"));
 
 		pSceneLevel->AddObject(pSphere);
@@ -285,7 +317,7 @@ void CLevelMgr::Init()
 
 		pSphere2->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pSphere2->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"StoneMaterial"));
-		pSphere2->GetMeshRenderComp()->GetMesh()->SetShader(CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader").Get());
+		pSphere2->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
 		pSphere2->SetSubMeshGeo(pSphere2->GetMeshRenderComp()->GetMesh()->GetSubGeo("sphere"));
 
 		pSceneLevel->AddObject(pSphere2);
@@ -313,10 +345,10 @@ void CLevelMgr::Tick()
 	}
 	if (KEY_TAP(KEY::_3))
 	{
-		if (m_CurrPSOType == OBJ_PSO_TYPE::COLOR_DEFAULT)
-			m_CurrPSOType = OBJ_PSO_TYPE::COLOR_WIREFRAME;
+		if (m_CurrPSOType == OBJ_PSO_TYPE::PSO_DEFAULT)
+			m_CurrPSOType = OBJ_PSO_TYPE::PSO_WIREFRAME;
 		else
-			m_CurrPSOType = OBJ_PSO_TYPE::COLOR_DEFAULT;
+			m_CurrPSOType = OBJ_PSO_TYPE::PSO_DEFAULT;
 	}
 
 	if (m_CurLevel != nullptr)
@@ -329,7 +361,12 @@ void CLevelMgr::Tick()
 
 	CMDLIST->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	CMDLIST->SetPipelineState(m_PSOGroup[m_CurrPSOType].Get());
+	//CMDLIST->SetPipelineState(m_PSOGroup[m_CurrPSOType].Get());
+}
+
+void CLevelMgr::SetCMDPSO(OBJ_PSO_TYPE type)
+{
+	CMDLIST->SetPipelineState(m_PSOGroup[type].Get());
 }
 
 void CLevelMgr::ChangeLevel(const std::wstring& name)
@@ -345,4 +382,6 @@ void CLevelMgr::ChangeLevel(const std::wstring& name)
 	iter->second->ChangeState(LEVEL_STATE::PLAY);
 	CRenderMgr::GetInst()->SetCurrentLevel(name);
 }
+
+
 
