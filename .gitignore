@@ -1,11 +1,12 @@
 # Directories
 .vs/
 OutputFile/bin/
+OutputFile/content/shader
 Project/Engine/x64/
 Project/Client/x64/
 Project/Scripts/x64/
-External/include/Engine
-External/library/Engine
+External/Include/Engine
+External/Library/Engine
 
 # Files
 *.user

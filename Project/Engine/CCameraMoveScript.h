@@ -5,6 +5,7 @@ class CCameraMoveScript : public CScript
 {
 public:
 	CCameraMoveScript();
+	CCameraMoveScript(const CCameraMoveScript& _other);
 	~CCameraMoveScript();
 	CLONE(CCameraMoveScript)
 

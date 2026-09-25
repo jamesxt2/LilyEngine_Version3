@@ -19,16 +19,14 @@ void CGraphicsShader::Bind(const std::string& PSOGroupKey)
     
 }
 
-void CGraphicsShader::BuildVertexShaderAndInputLayout(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint)
+void CGraphicsShader::BuildVertexShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint)
 {
     m_vsByteCode = CompileShader(filename, defines, entrypoint, "vs_5_0");
+}
 
-    m_InputLayout =
-    {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-    };
+void CGraphicsShader::BuildGeometryShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint)
+{
+    m_gsByteCode = CompileShader(filename, defines, entrypoint, "gs_5_0");
 }
 
 void CGraphicsShader::BuildPixelShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint)

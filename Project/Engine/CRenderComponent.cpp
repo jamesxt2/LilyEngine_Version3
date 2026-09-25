@@ -8,7 +8,9 @@ CRenderComponent::CRenderComponent(COMPONENT_TYPE type)
 
 CRenderComponent::CRenderComponent(const CRenderComponent& other)
 	: CComponent(other),
-	m_Mesh(other.m_Mesh), m_PSOType(other.m_PSOType)
+	m_Mesh(other.m_Mesh),
+	m_Material(other.m_Material),
+	m_PSOType(other.m_PSOType)
 {
 	
 }

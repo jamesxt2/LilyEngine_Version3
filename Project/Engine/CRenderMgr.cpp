@@ -73,8 +73,3 @@ void CRenderMgr::SetCurrentLevel(const std::wstring& levalname)
 	}
 }
 
-void CRenderMgr::CopyRenderTarget()
-{
-	//Ptr<CTexture> pRenderTargetTex = CAssetMgr::GetInst()->FindAsset<CTexture>(L"RenderTargetTex");
-	//CONTEXT->CopyResource(m_RenderTargetCopyTex->GetTex2D().Get(), pRenderTargetTex->GetTex2D().Get());
-}

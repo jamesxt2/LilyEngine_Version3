@@ -5,6 +5,7 @@ class CScript : public CComponent
 {
 public:
 	CScript();
+	CScript(const CScript& _other);
 	~CScript();
 
 	virtual void Tick() = 0;

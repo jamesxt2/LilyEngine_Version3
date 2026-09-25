@@ -5,6 +5,7 @@ class CTransform : public CComponent
 {
 public:
 	CTransform();
+	CTransform(const CTransform& _other);
 	~CTransform();
 	CLONE(CTransform)
 
@@ -57,6 +58,7 @@ public:
 	inline int GetObjCBIndex() const { return m_ObjCBIndex; }
 
 	inline void ResetDirty() { m_NumFramesDirty = g_NumFrameResources; }
+	inline void DecreaseNumFramesDirty() { --m_NumFramesDirty; }
 
 	inline void SetTexTransform(const Matrix& mat) { m_matTexTransform = mat; }
 };

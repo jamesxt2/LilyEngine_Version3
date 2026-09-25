@@ -12,7 +12,10 @@ public:
 	CLONE_DISABLE(CMesh)
 	friend class CAssetMgr;
 
-	void CreateVertexBuffer(Vertex* vtxData, UINT vtxCount);
+	template<typename T>
+	void CreateVertexBuffer(T* vtxData, UINT vtxCount);
+
+
 	void CreateIndexBuffer32(UINT* idxData, UINT idxCount);
 	void CreateIndexBuffer16(uint16* idxData, UINT idxCount);
 
@@ -46,3 +49,12 @@ public:
 	inline UINT GetIndexCount() const { return m_IndexCount; }
 };
 
+template<typename T>
+inline void CMesh::CreateVertexBuffer(T* vtxData, UINT vtxCount)
+{
+	m_VertexByteStride = sizeof(T);
+	m_VertexBufferByteSize = vtxCount * m_VertexByteStride;
+	ThrowIfFailed(D3DCreateBlob(m_VertexBufferByteSize, &m_VertexBufferCPU));
+	CopyMemory(m_VertexBufferCPU->GetBufferPointer(), vtxData, m_VertexBufferByteSize);
+	m_VertexBufferGPU = CreateDefaultBuffer(vtxData, m_VertexBufferByteSize, m_VertexBufferUploader);
+}

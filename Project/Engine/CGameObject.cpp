@@ -11,12 +11,12 @@
 #include "CDevice.h"
 
 CGameObject::CGameObject()
-	: m_arrComp{}, m_RenderComp(nullptr), m_Parent(nullptr), m_Dead(false)
+	: m_arrComp{}, m_RenderComp(nullptr), m_Parent(nullptr), m_Dead(false), m_SubMeshGeo(nullptr)
 {
 }
 
 CGameObject::CGameObject(const CGameObject& other)
-	: CEntity(other), m_RenderComp(nullptr), m_arrComp{}, m_Parent(nullptr), m_Dead(false)
+	: CEntity(other), m_RenderComp(nullptr), m_arrComp{}, m_Parent(nullptr), m_Dead(false), m_SubMeshGeo(other.m_SubMeshGeo)
 {
 	for (UINT i = 0; i < (UINT)COMPONENT_TYPE::END; ++i)
 	{

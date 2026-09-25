@@ -10,7 +10,7 @@ public:
 	friend class CAssetMgr;
 	CLONE_DISABLE(CTexture)
 
-	void CreateFromFile(const std::wstring& filename, INT descriptorOffset);
+	void CreateFromFile(const std::wstring& filename, INT descriptorOffset, bool isTextureArray = false);
 
 	void Bind();
 

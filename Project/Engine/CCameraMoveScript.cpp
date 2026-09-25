@@ -12,6 +12,12 @@ CCameraMoveScript::CCameraMoveScript()
 {
 }
 
+CCameraMoveScript::CCameraMoveScript(const CCameraMoveScript& _other)
+	: CScript(_other),
+	m_Speed(_other.m_Speed)
+{
+}
+
 CCameraMoveScript::~CCameraMoveScript()
 {
 }

@@ -82,48 +82,80 @@ void CCamera::Render()
 
 	g_Trans.ViewProj = m_matView * m_matProj;
 
-	for (const auto& obj : m_vecObjects[(UINT)OBJ_PSO_TYPE::PSO_DEFAULT])
-	{
-		CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_DEFAULT);
+	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_DEFAULT);
+	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_DEFAULT])
 		obj->Render();
-	}
 
-	for (const auto& obj : m_vecObjects[(UINT)OBJ_PSO_TYPE::PSO_ALPHA_TESTED])
-	{
-		CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_ALPHA_TESTED);
+	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_ALPHA_TESTED);
+	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_ALPHA_TESTED])
 		obj->Render();
-	}
 
-	for (const auto& obj : m_vecObjects[(UINT)OBJ_PSO_TYPE::PSO_TRANSPARENT])
-	{
-		CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_TRANSPARENT);
+	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_BILLBOARD);
+	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_BILLBOARD])
 		obj->Render();
-	}
 
-	for (auto& obj : m_vecObjects)
-		obj.clear();
+	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	// the mirror area's pixel's stencils are set to 1
+	CMDLIST->OMSetStencilRef(1);
+	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_MIRRORS);
+	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_MIRRORS])
+		obj->Render();
+
+	// stencil still 1 for mirror, 0 for other, if 1, render to the mirror area
+	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(1, 3);
+	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_REFLECTIONS);
+	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_REFLECTIONS])
+		obj->Render();
+
+	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(0, 3);
+	CMDLIST->OMSetStencilRef(0);
+	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_TRANSPARENT);
+	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_TRANSPARENT])
+		obj->Render();
+
+	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_SHADOW);
+	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_SHADOW])
+		obj->Render();
+
+	for (auto& obj : m_SortedObjs)
+		obj.second.clear();
 }
 
 void CCamera::SortObjects()
 {
-	const std::vector<CGameObject*>& rawObjs = CLevelMgr::GetInst()->GetCurrentLevel()->GetObjects();
-	for (const auto& obj : rawObjs)
+	m_vecObjs = CLevelMgr::GetInst()->GetCurrentLevel()->GetObjects();
+	for (const auto& obj : m_vecObjs)
 	{
-		if (obj->GetRenderComp() == nullptr || obj->GetRenderComp()->GetObjPSOType() == OBJ_PSO_TYPE::PSO_NONE)
+		if (obj->GetRenderComp() == nullptr)
 			continue;
-		m_vecObjects[(UINT)obj->GetRenderComp()->GetObjPSOType()].push_back(obj);
+		OBJ_PSO_TYPE type = obj->GetRenderComp()->GetObjPSOType();
+		if ((uint32)(OBJ_PSO_TYPE::PSO_DEFAULT & type))
+			m_SortedObjs[OBJ_PSO_TYPE::PSO_DEFAULT].push_back(obj);
+		if ((uint32)(OBJ_PSO_TYPE::PSO_ALPHA_TESTED & type))
+			m_SortedObjs[OBJ_PSO_TYPE::PSO_ALPHA_TESTED].push_back(obj);
+		if ((uint32)(OBJ_PSO_TYPE::PSO_MIRRORS & type))
+			m_SortedObjs[OBJ_PSO_TYPE::PSO_MIRRORS].push_back(obj);
+		if ((uint32)(OBJ_PSO_TYPE::PSO_REFLECTIONS & type))
+			m_SortedObjs[OBJ_PSO_TYPE::PSO_REFLECTIONS].push_back(obj);
+		if ((uint32)(OBJ_PSO_TYPE::PSO_TRANSPARENT & type))
+			m_SortedObjs[OBJ_PSO_TYPE::PSO_TRANSPARENT].push_back(obj);
+		if ((uint32)(OBJ_PSO_TYPE::PSO_WIREFRAME & type))
+			m_SortedObjs[OBJ_PSO_TYPE::PSO_WIREFRAME].push_back(obj);
+		if ((uint32)(OBJ_PSO_TYPE::PSO_SHADOW & type))
+			m_SortedObjs[OBJ_PSO_TYPE::PSO_SHADOW].push_back(obj);
+		if ((uint32)(OBJ_PSO_TYPE::PSO_BILLBOARD & type))
+			m_SortedObjs[OBJ_PSO_TYPE::PSO_BILLBOARD].push_back(obj);
 	}
 }
 
 void CCamera::MarkDirty()
 {
-	for (UINT i = 0; i < (UINT)OBJ_PSO_TYPE::PSO_NONE; ++i)
+	for (const auto& obj : m_vecObjs)
 	{
-		for (const auto& obj : m_vecObjects[i])
-		{
-			if (obj->GetTransformComp() != nullptr)
-				obj->GetTransformComp()->ResetDirty();
-		}
+		if (obj->GetTransformComp() != nullptr)
+			obj->GetTransformComp()->ResetDirty();
 	}
 }
 

@@ -326,5 +326,8 @@
     <FxCompile Include="default.fx">
       <Filter>HLSL</Filter>
     </FxCompile>
+    <FxCompile Include="billboard.fx">
+      <Filter>HLSL</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

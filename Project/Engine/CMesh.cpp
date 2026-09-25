@@ -20,15 +20,6 @@ CMesh::~CMesh()
 
 }
 
-void CMesh::CreateVertexBuffer(Vertex* vtxData, UINT vtxCount)
-{
-	m_VertexByteStride = sizeof(Vertex);
-	m_VertexBufferByteSize = vtxCount * m_VertexByteStride;
-	ThrowIfFailed(D3DCreateBlob(m_VertexBufferByteSize, &m_VertexBufferCPU));
-	CopyMemory(m_VertexBufferCPU->GetBufferPointer(), vtxData, m_VertexBufferByteSize);
-	m_VertexBufferGPU = CreateDefaultBuffer(vtxData, m_VertexBufferByteSize, m_VertexBufferUploader);
-}
-
 void CMesh::CreateIndexBuffer32(UINT* idxData, UINT idxCount)
 {
 	m_IndexCount = idxCount;

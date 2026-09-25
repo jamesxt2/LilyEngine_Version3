@@ -80,12 +80,44 @@ enum class LEVEL_STATE
 };
 
 // PSO
-enum class OBJ_PSO_TYPE
+enum class OBJ_PSO_TYPE : uint32
 {
-	PSO_DEFAULT,
-	PSO_WIREFRAME,
-	PSO_TRANSPARENT,
-	PSO_ALPHA_TESTED,
+	PSO_NONE = 0,
+	PSO_DEFAULT = 1 << 0,
+	PSO_WIREFRAME = 1 << 1,
+	PSO_TRANSPARENT = 1 << 2,
+	PSO_ALPHA_TESTED = 1 << 3,
+	PSO_MIRRORS = 1 << 4,
+	PSO_REFLECTIONS = 1 << 5,
+	PSO_SHADOW = 1 << 6,
+	PSO_BILLBOARD = 1 << 7,
 
-	PSO_NONE
+	//ALL = PSO_DEFAULT | PSO_WIREFRAME | PSO_TRANSPARENT | PSO_ALPHA_TESTED | PSO_MIRRORS | PSO_REFLECTIONS
 };
+
+inline OBJ_PSO_TYPE operator|(OBJ_PSO_TYPE a, OBJ_PSO_TYPE b)
+{
+	return static_cast<OBJ_PSO_TYPE>(static_cast<uint32>(a) | static_cast<uint32>(b));
+}
+
+inline OBJ_PSO_TYPE operator&(OBJ_PSO_TYPE a, OBJ_PSO_TYPE b)
+{
+	return static_cast<OBJ_PSO_TYPE>(static_cast<uint32>(a) & static_cast<uint32>(b));
+}
+
+inline OBJ_PSO_TYPE operator~(OBJ_PSO_TYPE a)
+{
+	return static_cast<OBJ_PSO_TYPE>(~static_cast<uint32>(a));
+}
+
+inline OBJ_PSO_TYPE operator|=(OBJ_PSO_TYPE& a, OBJ_PSO_TYPE b)
+{
+	a = a | b;
+	return a;
+}
+
+inline OBJ_PSO_TYPE operator&=(OBJ_PSO_TYPE& a, OBJ_PSO_TYPE b)
+{
+	a = a & b;
+	return a;
+}

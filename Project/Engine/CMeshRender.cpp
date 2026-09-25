@@ -10,6 +10,11 @@ CMeshRender::CMeshRender()
 {
 }
 
+CMeshRender::CMeshRender(const CMeshRender& _other)
+	: CRenderComponent(_other)
+{
+}
+
 CMeshRender::~CMeshRender()
 {
 }

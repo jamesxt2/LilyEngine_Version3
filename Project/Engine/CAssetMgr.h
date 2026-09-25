@@ -29,6 +29,8 @@ public:
 	inline const std::unordered_map<std::wstring, Ptr<CAsset>>& GetAssets(ASSET_TYPE type) const { return m_AssetMap[(UINT)type]; }
 
 
+private:
+
 	///<summary>
 	/// Creates a box centered at the origin with the given dimensions, where each
 	/// face has m rows and n columns of vertices.
@@ -65,9 +67,6 @@ public:
 	///</summary>
 	void CreateQuad(const std::wstring& name, float x, float y, float w, float h, float depth);
 
-
-private:
-
 	void UpdateWaves();
 	void AnimateMaterials();
 
@@ -76,6 +75,8 @@ private:
 	void CreateSceneMeshes();
 	void CreateWaveMeshes();
 	void CreateSkullMesh();
+	void CreateRoomMeshes();
+	void CreateBillboardMesh();
 
 	void CreateDefaultTexture();
 

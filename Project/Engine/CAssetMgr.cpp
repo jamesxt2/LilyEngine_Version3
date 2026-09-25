@@ -114,6 +114,8 @@ void CAssetMgr::CreateDefaultMesh()
 	CreateSceneMeshes();
 	CreateWaveMeshes();
 	CreateSkullMesh();
+	CreateRoomMeshes();
+	CreateBillboardMesh();
 }
 
 void CAssetMgr::CreateSceneMeshes()
@@ -209,9 +211,6 @@ void CAssetMgr::CreateSceneMeshes()
 	indices.insert(indices.end(), std::begin(grid->GetIndices16()), std::end(grid->GetIndices16()));
 	indices.insert(indices.end(), std::begin(sphere->GetIndices16()), std::end(sphere->GetIndices16()));
 	indices.insert(indices.end(), std::begin(cylinder->GetIndices16()), std::end(cylinder->GetIndices16()));
-
-	const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
-	const UINT ibByteSize = (UINT)indices.size() * sizeof(uint16);
 
 	Ptr<CMesh> pMesh = new CMesh;
 	pMesh->CreateVertexBuffer(vertices.data(), (UINT)vertices.size());
@@ -387,6 +386,137 @@ void CAssetMgr::CreateSkullMesh()
 	AddAsset<CMesh>(L"SkullMesh", pSkullMesh);
 }
 
+void CAssetMgr::CreateRoomMeshes()
+{
+	// Create and specify geometry.  For this sample we draw a floor
+	// and a wall with a mirror on it.  We put the floor, wall, and
+	// mirror geometry in one vertex buffer.
+	//
+	//   |--------------|
+	//   |              |
+	//   |----|----|----|
+	//   |Wall|Mirr|Wall|
+	//   |    | or |    |
+	//   /--------------/
+	//  /   Floor      /
+	// /--------------/
+
+	std::array<Vertex, 20> vertices =
+	{
+		// Floor: Observe we tile texture coordinates.
+		Vertex(-3.5f, 0.0f, -10.0f, 0.0f, 1.0f, 0.0f, 0.0f, 4.0f), // 0 
+		Vertex(-3.5f, 0.0f,   0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f),
+		Vertex(7.5f, 0.0f,   0.0f, 0.0f, 1.0f, 0.0f, 4.0f, 0.0f),
+		Vertex(7.5f, 0.0f, -10.0f, 0.0f, 1.0f, 0.0f, 4.0f, 4.0f),
+
+		// Wall: Observe we tile texture coordinates, and that we
+		// leave a gap in the middle for the mirror.
+		Vertex(-3.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 2.0f), // 4
+		Vertex(-3.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f),
+		Vertex(-2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.5f, 0.0f),
+		Vertex(-2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.5f, 2.0f),
+
+		Vertex(2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 2.0f), // 8 
+		Vertex(2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f),
+		Vertex(7.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 2.0f, 0.0f),
+		Vertex(7.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 2.0f, 2.0f),
+
+		Vertex(-3.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f), // 12
+		Vertex(-3.5f, 6.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f),
+		Vertex(7.5f, 6.0f, 0.0f, 0.0f, 0.0f, -1.0f, 6.0f, 0.0f),
+		Vertex(7.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 6.0f, 1.0f),
+
+		// Mirror
+		Vertex(-2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f), // 16
+		Vertex(-2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f),
+		Vertex(2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f),
+		Vertex(2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f)
+	};
+
+	std::array<uint16, 30> indices =
+	{
+		// Floor
+		0, 1, 2,
+		0, 2, 3,
+
+		// Walls
+		4, 5, 6,
+		4, 6, 7,
+
+		8, 9, 10,
+		8, 10, 11,
+
+		12, 13, 14,
+		12, 14, 15,
+
+		// Mirror
+		16, 17, 18,
+		16, 18, 19
+	};
+
+	SubmeshGeometry floorSubmesh;
+	floorSubmesh.IndexCount = 6;
+	floorSubmesh.StartIndexLocation = 0;
+	floorSubmesh.BaseVertexLocation = 0;
+
+	SubmeshGeometry wallSubmesh;
+	wallSubmesh.IndexCount = 18;
+	wallSubmesh.StartIndexLocation = 6;
+	wallSubmesh.BaseVertexLocation = 0;
+
+	SubmeshGeometry mirrorSubmesh;
+	mirrorSubmesh.IndexCount = 6;
+	mirrorSubmesh.StartIndexLocation = 24;
+	mirrorSubmesh.BaseVertexLocation = 0;
+
+	Ptr<CMesh> pMesh = new CMesh;
+	pMesh->CreateVertexBuffer(vertices.data(), (UINT)vertices.size());
+	pMesh->CreateIndexBuffer16(indices.data(), (UINT)indices.size());
+
+	pMesh->m_DrawArgs.emplace("floor", std::move(floorSubmesh));
+	pMesh->m_DrawArgs.emplace("wall", std::move(wallSubmesh));
+	pMesh->m_DrawArgs.emplace("mirror", std::move(mirrorSubmesh));
+	
+	AddAsset<CMesh>(L"RoomMesh", pMesh);
+}
+
+void CAssetMgr::CreateBillboardMesh()
+{
+	static const int treeCount = 16;
+	std::array<BillboardVertex, 16> vertices;
+	for (UINT i = 0; i < treeCount; ++i)
+	{
+		float x = RandF(-45.0f, 45.0f);
+		float z = RandF(-45.0f, 45.0f);
+		float y = 0.3f * (z * sinf(0.1f * x) + x * cosf(0.1f * z));
+
+		// Move tree slightly above land height.
+		y += 8.0f;
+
+		vertices[i].Position = Vector3(x, y, z);
+		vertices[i].Size = Vector2(20.0f, 20.0f);
+	}
+
+	std::array<uint16, 16> indices =
+	{
+		0, 1, 2, 3, 4, 5, 6, 7,
+		8, 9, 10, 11, 12, 13, 14, 15
+	};
+
+	Ptr<CMesh> pMesh = new CMesh;
+	pMesh->CreateVertexBuffer(vertices.data(), (UINT)vertices.size());
+	pMesh->CreateIndexBuffer16(indices.data(), (UINT)indices.size());
+
+	SubmeshGeometry submesh;
+	submesh.IndexCount = (UINT)indices.size();
+	submesh.StartIndexLocation = 0;
+	submesh.BaseVertexLocation = 0;
+
+	pMesh->m_DrawArgs["points"] = submesh;
+
+	AddAsset<CMesh>(L"TreeBillboardsMesh", pMesh);
+}
+
 void CAssetMgr::CreateDefaultTexture()
 {
 	Ptr<CTexture> pTexture = new CTexture;
@@ -416,6 +546,14 @@ void CAssetMgr::CreateDefaultTexture()
 	pTexture = new CTexture;
 	pTexture->CreateFromFile(L"textures\\WireFence.dds", 6);
 	AddAsset<CTexture>(L"WireFenceTexture", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\ice.dds", 7);
+	AddAsset<CTexture>(L"IceTexture", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\treeArray2.dds", 8, true);
+	AddAsset<CTexture>(L"TreeArrayTexture", pTexture);
 }
 
 void CAssetMgr::CreateDefaultMaterial()
@@ -496,6 +634,29 @@ void CAssetMgr::CreateDefaultMaterial()
 	pMaterial->m_Roughness = 0.3f;
 	pMaterial->m_Texture = FindAsset<CTexture>(L"TileTexture");
 	AddAsset<CMaterial>(L"TileMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 10;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.f, 1.f, 1.f, 0.3f);
+	pMaterial->m_FresnelR0 = Vector3(0.1f);
+	pMaterial->m_Roughness = 0.5f;
+	pMaterial->m_Texture = FindAsset<CTexture>(L"IceTexture");
+	AddAsset<CMaterial>(L"MirrorMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 11;
+	pMaterial->m_DiffuseAlbedo = Vector4(0.f, 0.f, 0.f, 0.5f);
+	pMaterial->m_FresnelR0 = Vector3(0.001f);
+	pMaterial->m_Roughness = 0.f;
+	AddAsset<CMaterial>(L"ShadowMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 12;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.f, 1.f, 1.f, 1.f);
+	pMaterial->m_FresnelR0 = Vector3(0.01f);
+	pMaterial->m_Roughness = 0.125f;
+	pMaterial->m_Texture = FindAsset<CTexture>(L"TreeArrayTexture");
+	AddAsset<CMaterial>(L"TreeBillboardMaterial", pMaterial);
 }
 
 void CAssetMgr::CreateDefaultGraphicsShader()
@@ -510,7 +671,12 @@ void CAssetMgr::CreateDefaultGraphicsShader()
 		NULL, NULL
 	};
 	pShader = new CGraphicsShader;;
-	pShader->BuildVertexShaderAndInputLayout(strPath + L"shader\\default.fx", opaqueDefines, "VS");
+	pShader->BuildVertexShader(strPath + L"shader\\default.fx", nullptr, "VS");
+	pShader->m_InputLayout = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
 	pShader->BuildPixelShader(strPath + L"shader\\default.fx", opaqueDefines, "PS");
 
 	AddAsset<CGraphicsShader>(L"DefaultShader", pShader);
@@ -522,10 +688,26 @@ void CAssetMgr::CreateDefaultGraphicsShader()
 		NULL, NULL
 	};
 	pShader = new CGraphicsShader;
-	pShader->BuildVertexShaderAndInputLayout(strPath + L"shader\\default.fx", alphaTestDefines, "VS");
+	pShader->BuildVertexShader(strPath + L"shader\\default.fx", nullptr, "VS");
+	pShader->m_InputLayout = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
 	pShader->BuildPixelShader(strPath + L"shader\\default.fx", alphaTestDefines, "PS");
 
 	AddAsset<CGraphicsShader>(L"AlphaTestedShader", pShader);
+
+	pShader = new CGraphicsShader;
+	pShader->BuildVertexShader(strPath + L"shader\\billboard.fx", nullptr, "VS");
+	pShader->m_InputLayout = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "SIZE", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	};
+	pShader->BuildGeometryShader(strPath + L"shader\\billboard.fx", nullptr, "GS");
+	pShader->BuildPixelShader(strPath + L"shader\\billboard.fx", alphaTestDefines, "PS");
+
+	AddAsset<CGraphicsShader>(L"BillboardShader", pShader);
 }
 
 

@@ -325,7 +325,7 @@ void CDevice::BuildFrameResources()
 		m_FrameResources.push_back(std::make_unique<FrameResource>(m_d3dDevice.Get()));
 		m_FrameResources[i]->CreateCB(sizeof(TTransform), g_MaxObjectCount, CB_TYPE::TRANSFORM);
 		m_FrameResources[i]->CreateCB(sizeof(TMaterial), CAssetMgr::GetInst()->GetAssetSize(ASSET_TYPE::MATERIAL), CB_TYPE::MATERIAL);
-		m_FrameResources[i]->CreateCB(sizeof(TGlobal), 1, CB_TYPE::GLOBAL);
+		m_FrameResources[i]->CreateCB(sizeof(TGlobal), 2, CB_TYPE::GLOBAL);
 		m_FrameResources[i]->CreateWavesVB(CAssetMgr::GetInst()->GetWavesVertexCount());
 	}
 	m_CurrFrameResource = m_FrameResources[0].get();

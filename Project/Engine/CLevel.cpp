@@ -57,6 +57,22 @@ void CLevel::Tick()
 
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(0, 3);
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->CopyData(0, &g_Global);
+
+	TGlobal globalReflected = g_Global;
+
+	Plane mirrorPlane(0.0f, 0.0f, 1.0f, 0.0f); // xy plane
+	Matrix R = Matrix::CreateReflection(mirrorPlane);
+
+	// Reflect the lighting.
+	for (int i = 0; i < 2; ++i)
+	{
+		Vector3 lightDir = g_Global.Lights[i].Direction;
+		Vector3 reflectedLightDir = Vector3::TransformNormal(lightDir, R);
+		globalReflected.Lights[i].Direction = reflectedLightDir;
+	}
+
+	// Reflected pass stored in index 1
+	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->CopyData(1, &globalReflected);
 }
 
 void CLevel::FinalTick()

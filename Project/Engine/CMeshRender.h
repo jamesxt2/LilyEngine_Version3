@@ -5,6 +5,7 @@ class CMeshRender : public CRenderComponent
 {
 public:
 	CMeshRender();
+	CMeshRender(const CMeshRender& _other);
 	~CMeshRender();
 	CLONE(CMeshRender)
 

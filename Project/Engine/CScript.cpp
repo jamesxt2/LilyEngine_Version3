@@ -7,6 +7,11 @@ CScript::CScript()
 {
 }
 
+CScript::CScript(const CScript& _other)
+	: CComponent(_other)
+{
+}
+
 CScript::~CScript()
 {
 }

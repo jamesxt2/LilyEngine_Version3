@@ -5,6 +5,18 @@ struct Vertex
 	Vector3 Position;
 	Vector3 Normal;
 	Vector2 TexCoord;
+
+	Vertex() = default;
+
+	Vertex(float px, float py, float pz, float nx, float ny, float nz, float u, float v)
+		: Position(px, py, pz), Normal(nx, ny, nz), TexCoord(u, v)
+	{ }
+};
+
+struct BillboardVertex
+{
+	Vector3 Position;
+	Vector2 Size;
 };
 
 struct TTransform

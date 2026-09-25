@@ -21,7 +21,8 @@ public:
 private:
 
 	void SortObjects();
-	std::vector<CGameObject*> m_vecObjects[(UINT)OBJ_PSO_TYPE::PSO_NONE];
+	std::vector<CGameObject*> m_vecObjs;
+	std::unordered_map<OBJ_PSO_TYPE, std::vector<CGameObject*>> m_SortedObjs;
 
 	void MarkDirty();
 
