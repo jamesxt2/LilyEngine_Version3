@@ -4,3 +4,4 @@
 #include "CGraphicsShader.h"
 #include "CMaterial.h"
 #include "CTexture.h"
+#include "CComputeShader.h"

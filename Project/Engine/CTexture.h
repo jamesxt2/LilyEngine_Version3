@@ -19,8 +19,6 @@ private:
 	ComPtr<ID3D12Resource>					m_Resource;
 	ComPtr<ID3D12Resource>					m_UploadHeap;
 
-	static ComPtr<ID3D12DescriptorHeap>		m_SrvDescriptorHeap;
-
 	INT										m_DescriptorHeapOffsetSize;
 };
 

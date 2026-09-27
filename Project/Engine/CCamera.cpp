@@ -5,6 +5,7 @@
 #include "CGameObject.h"
 #include "CTransform.h"
 #include "CRenderMgr.h"
+#include "CAssetMgr.h"
 #include "CLevelMgr.h"
 #include "CLevel.h"
 #include "CRenderComponent.h"
@@ -83,39 +84,39 @@ void CCamera::Render()
 	g_Trans.ViewProj = m_matView * m_matProj;
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_DEFAULT);
+	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_DEFAULT);
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_DEFAULT])
 		obj->Render();
 
-	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_ALPHA_TESTED);
+	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_ALPHA_TESTED);
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_ALPHA_TESTED])
 		obj->Render();
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
-	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_BILLBOARD);
+	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_BILLBOARD);
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_BILLBOARD])
 		obj->Render();
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	// the mirror area's pixel's stencils are set to 1
 	CMDLIST->OMSetStencilRef(1);
-	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_MIRRORS);
+	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_MIRRORS);
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_MIRRORS])
 		obj->Render();
 
 	// stencil still 1 for mirror, 0 for other, if 1, render to the mirror area
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(1, 3);
-	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_REFLECTIONS);
+	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_REFLECTIONS);
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_REFLECTIONS])
 		obj->Render();
 
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(0, 3);
 	CMDLIST->OMSetStencilRef(0);
-	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_TRANSPARENT);
+	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_TRANSPARENT);
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_TRANSPARENT])
 		obj->Render();
 
-	CLevelMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_SHADOW);
+	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_SHADOW);
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_SHADOW])
 		obj->Render();
 
@@ -147,6 +148,8 @@ void CCamera::SortObjects()
 			m_SortedObjs[OBJ_PSO_TYPE::PSO_SHADOW].push_back(obj);
 		if ((uint32)(OBJ_PSO_TYPE::PSO_BILLBOARD & type))
 			m_SortedObjs[OBJ_PSO_TYPE::PSO_BILLBOARD].push_back(obj);
+		if ((uint32)(OBJ_PSO_TYPE::PSO_HORIZONTAL_BLUR & type))
+			m_SortedObjs[OBJ_PSO_TYPE::PSO_HORIZONTAL_BLUR].push_back(obj);
 	}
 }
 

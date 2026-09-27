@@ -4,10 +4,13 @@
 #include "d3dUtils.h"
 #include "CDevice.h"
 #include "CTimeMgr.h"
+#include "BlurFilter.h"
 
 CAssetMgr::CAssetMgr()
-	: m_Waves(nullptr)
+	: m_Waves(nullptr), m_BlurFilter(nullptr),
+	m_CbvSrvUavDescriptorHeap(nullptr), m_TextureDescriptorCount(0)
 {
+	
 }
 
 CAssetMgr::~CAssetMgr()
@@ -29,16 +32,40 @@ void CAssetMgr::GetAssetNames(ASSET_TYPE type, _Out_ std::vector<std::string>& v
 void CAssetMgr::Init()
 {
 	CDevice::GetInst()->Reset();
-	CreateDefaultMesh();
-	CreateDefaultTexture();
-	CreateDefaultMaterial();
+	BuildDescriptorHeaps();
+	CreateMeshes();
+	CreateTextures();
+	CreateMaterials();
 	CDevice::GetInst()->Close();
 }
 
 void CAssetMgr::PostInit()
 {
-	CreateDefaultGraphicsShader();
+	CreateGraphicsShaders();
+	CreateComputeShaders();
+	BuildPSO();
 }
+
+void CAssetMgr::BuildDescriptorHeaps()
+{
+	m_BlurFilter = std::make_unique<BlurFilter>();
+
+	const int textureDescriptorsCount = 9;
+	const int blurDescriptorCount = 4;
+
+	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+	srvHeapDesc.NumDescriptors = textureDescriptorsCount + blurDescriptorCount;
+	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	ThrowIfFailed(DEVICE->CreateDescriptorHeap(
+		&srvHeapDesc, IID_PPV_ARGS(&m_CbvSrvUavDescriptorHeap)));
+
+	m_BlurFilter->BuildDescriptors(
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(m_CbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), textureDescriptorsCount, CDevice::GetInst()->m_CbvSrvUavDescriptorSize),
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(m_CbvSrvUavDescriptorHeap->GetGPUDescriptorHandleForHeapStart(), textureDescriptorsCount, CDevice::GetInst()->m_CbvSrvUavDescriptorSize),
+		CDevice::GetInst()->m_CbvSrvUavDescriptorSize);
+}
+
 
 void CAssetMgr::Tick()
 {
@@ -109,7 +136,7 @@ void CAssetMgr::AnimateMaterials()
 	pWaterMtrl->m_NumFramesDirty = g_NumFrameResources;
 }
 
-void CAssetMgr::CreateDefaultMesh()
+void CAssetMgr::CreateMeshes()
 {
 	CreateSceneMeshes();
 	CreateWaveMeshes();
@@ -275,7 +302,7 @@ void CAssetMgr::CreateWaveMeshes()
 	/*********************************************************************/
 	// Wave
 	/*********************************************************************/
-	m_Waves = new Waves(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
+	m_Waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 
 	std::vector<uint16> waveIndices(3 * m_Waves->TriangleCount()); // 3 indices per face
 	assert(m_Waves->VertexCount() < 0x0000ffff);
@@ -517,46 +544,46 @@ void CAssetMgr::CreateBillboardMesh()
 	AddAsset<CMesh>(L"TreeBillboardsMesh", pMesh);
 }
 
-void CAssetMgr::CreateDefaultTexture()
+void CAssetMgr::CreateTextures()
 {
 	Ptr<CTexture> pTexture = new CTexture;
-	pTexture->CreateFromFile(L"textures\\WoodCrate01.dds", 0);
+	pTexture->CreateFromFile(L"textures\\WoodCrate01.dds", m_TextureDescriptorCount++);
 	AddAsset<CTexture>(L"WoodCrate01Texure", pTexture);
 
 	pTexture = new CTexture;
-	pTexture->CreateFromFile(L"textures\\grass.dds", 1);
+	pTexture->CreateFromFile(L"textures\\grass.dds", m_TextureDescriptorCount++);
 	AddAsset<CTexture>(L"GrassTexure", pTexture);
 
 	pTexture = new CTexture;
-	pTexture->CreateFromFile(L"textures\\water1.dds", 2);
+	pTexture->CreateFromFile(L"textures\\water1.dds", m_TextureDescriptorCount++);
 	AddAsset<CTexture>(L"Water1Texure", pTexture);
 
 	pTexture = new CTexture;
-	pTexture->CreateFromFile(L"textures\\bricks.dds", 3);
+	pTexture->CreateFromFile(L"textures\\bricks.dds", m_TextureDescriptorCount++);
 	AddAsset<CTexture>(L"BricksTexture", pTexture);
 
 	pTexture = new CTexture;
-	pTexture->CreateFromFile(L"textures\\stone.dds", 4);
+	pTexture->CreateFromFile(L"textures\\stone.dds", m_TextureDescriptorCount++);
 	AddAsset<CTexture>(L"StoneTexture", pTexture);
 
 	pTexture = new CTexture;
-	pTexture->CreateFromFile(L"textures\\tile.dds", 5);
+	pTexture->CreateFromFile(L"textures\\tile.dds", m_TextureDescriptorCount++);
 	AddAsset<CTexture>(L"TileTexture", pTexture);
 
 	pTexture = new CTexture;
-	pTexture->CreateFromFile(L"textures\\WireFence.dds", 6);
+	pTexture->CreateFromFile(L"textures\\WireFence.dds", m_TextureDescriptorCount++);
 	AddAsset<CTexture>(L"WireFenceTexture", pTexture);
 
 	pTexture = new CTexture;
-	pTexture->CreateFromFile(L"textures\\ice.dds", 7);
+	pTexture->CreateFromFile(L"textures\\ice.dds", m_TextureDescriptorCount++);
 	AddAsset<CTexture>(L"IceTexture", pTexture);
 
 	pTexture = new CTexture;
-	pTexture->CreateFromFile(L"textures\\treeArray2.dds", 8, true);
+	pTexture->CreateFromFile(L"textures\\treeArray2.dds", m_TextureDescriptorCount++, true);
 	AddAsset<CTexture>(L"TreeArrayTexture", pTexture);
 }
 
-void CAssetMgr::CreateDefaultMaterial()
+void CAssetMgr::CreateMaterials()
 {
 	Ptr<CMaterial> pMaterial = new CMaterial;
 	pMaterial->m_DiffuseAlbedo = Vector4(0.2f, 0.6f, 0.2f, 1.f);
@@ -659,7 +686,7 @@ void CAssetMgr::CreateDefaultMaterial()
 	AddAsset<CMaterial>(L"TreeBillboardMaterial", pMaterial);
 }
 
-void CAssetMgr::CreateDefaultGraphicsShader()
+void CAssetMgr::CreateGraphicsShaders()
 {
 	std::wstring strPath = CPathMgr::GetInst()->GetContentPath();
 
@@ -670,7 +697,7 @@ void CAssetMgr::CreateDefaultGraphicsShader()
 		"FOG", "1",
 		NULL, NULL
 	};
-	pShader = new CGraphicsShader;;
+	pShader = new CGraphicsShader;
 	pShader->BuildVertexShader(strPath + L"shader\\default.fx", nullptr, "VS");
 	pShader->m_InputLayout = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -708,6 +735,21 @@ void CAssetMgr::CreateDefaultGraphicsShader()
 	pShader->BuildPixelShader(strPath + L"shader\\billboard.fx", alphaTestDefines, "PS");
 
 	AddAsset<CGraphicsShader>(L"BillboardShader", pShader);
+}
+
+void CAssetMgr::CreateComputeShaders()
+{
+	std::wstring strPath = CPathMgr::GetInst()->GetContentPath();
+
+	Ptr<CComputeShader> pShader = new CComputeShader;
+	pShader->BuildComputeShader(strPath + L"shader\\blur.fx", nullptr, "HorzBlurCS");
+
+	AddAsset<CComputeShader>(L"HorzBlurCS", pShader);
+
+	pShader = new CComputeShader;
+	pShader->BuildComputeShader(strPath + L"shader\\blur.fx", nullptr, "VertBlurCS");
+
+	AddAsset<CComputeShader>(L"VertBlurCS", pShader);
 }
 
 
@@ -1351,4 +1393,199 @@ void CAssetMgr::Subdivide(MeshData& meshData)
 		meshData.Indices32.push_back(i * 6 + 1);
 		meshData.Indices32.push_back(i * 6 + 4);
 	}
+}
+
+void CAssetMgr::BuildPSO()
+{
+	ComPtr<ID3D12RootSignature> rootSignature(CDevice::GetInst()->GetRootSignature());
+	ComPtr<ID3D12RootSignature> postProcessRootSignature(CDevice::GetInst()->GetPostProcessRootSignature());
+
+	assert(rootSignature);
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
+	ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+	Ptr<CGraphicsShader> shader = CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader");
+	psoDesc.InputLayout = { shader->GetInputLayout().data(), (UINT)shader->GetInputLayout().size() };
+	psoDesc.pRootSignature = rootSignature.Get();
+	psoDesc.VS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetVsByteCode()->GetBufferPointer()),
+		shader->GetVsByteCode()->GetBufferSize()
+	};
+	psoDesc.PS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetPsByteCode()->GetBufferPointer()),
+		shader->GetPsByteCode()->GetBufferSize()
+	};
+	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	psoDesc.SampleMask = UINT_MAX;
+	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	psoDesc.NumRenderTargets = 1;
+	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	psoDesc.SampleDesc.Count = CDevice::GetInst()->EnableMSAA() ? 4 : 1;
+	psoDesc.SampleDesc.Quality = CDevice::GetInst()->EnableMSAA() ? CDevice::GetInst()->Get4xMSAAQuality() - 1 : 0;
+	psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_DEFAULT])));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC wireframePSODesc = psoDesc;
+	wireframePSODesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&wireframePSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_WIREFRAME])));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC transparencyPSODesc = psoDesc;
+	D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc;
+	transparencyBlendDesc.BlendEnable = true;
+	transparencyBlendDesc.LogicOpEnable = false;
+	transparencyBlendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+	transparencyBlendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+	transparencyBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
+	transparencyBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
+	transparencyBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
+	transparencyBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+	transparencyBlendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
+	transparencyBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+	transparencyPSODesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&transparencyPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_TRANSPARENT])));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC alphatestedPSODesc = transparencyPSODesc;
+	shader = CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"AlphaTestedShader");
+	//psoDesc.InputLayout = { shader->GetInputLayout().data(), (UINT)shader->GetInputLayout().size() };
+	//psoDesc.VS =
+	//{
+	//	reinterpret_cast<BYTE*>(shader->GetVsByteCode()->GetBufferPointer()),
+	//	shader->GetVsByteCode()->GetBufferSize()
+	//};
+	alphatestedPSODesc.PS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetPsByteCode()->GetBufferPointer()),
+		shader->GetPsByteCode()->GetBufferSize()
+	};
+	alphatestedPSODesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&alphatestedPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_ALPHA_TESTED])));
+
+	// Mirror PSO
+	CD3DX12_BLEND_DESC mirrorBlendState(D3D12_DEFAULT);
+	mirrorBlendState.RenderTarget[0].RenderTargetWriteMask = 0;
+
+	D3D12_DEPTH_STENCIL_DESC mirrorDSS;
+	mirrorDSS.DepthEnable = true;
+	mirrorDSS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	mirrorDSS.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	mirrorDSS.StencilEnable = true;
+	mirrorDSS.StencilReadMask = 0xff;
+	mirrorDSS.StencilWriteMask = 0xff;
+
+	mirrorDSS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	mirrorDSS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	mirrorDSS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+	mirrorDSS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+
+	mirrorDSS.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	mirrorDSS.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	mirrorDSS.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+	mirrorDSS.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC markMirrorPSODesc = psoDesc;
+	markMirrorPSODesc.BlendState = mirrorBlendState;
+	markMirrorPSODesc.DepthStencilState = mirrorDSS;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&markMirrorPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_MIRRORS])));
+
+	D3D12_DEPTH_STENCIL_DESC reflectionsDSS;
+	reflectionsDSS.DepthEnable = true;
+	reflectionsDSS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	reflectionsDSS.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	reflectionsDSS.StencilEnable = true;
+	reflectionsDSS.StencilReadMask = 0xff;
+	reflectionsDSS.StencilWriteMask = 0xff;
+
+	reflectionsDSS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	reflectionsDSS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	reflectionsDSS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	reflectionsDSS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
+
+	reflectionsDSS.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	reflectionsDSS.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	reflectionsDSS.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	reflectionsDSS.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC drawReflectionPSODesc = psoDesc;
+	drawReflectionPSODesc.DepthStencilState = reflectionsDSS;
+	drawReflectionPSODesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+	drawReflectionPSODesc.RasterizerState.FrontCounterClockwise = true;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&drawReflectionPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_REFLECTIONS])));
+
+	D3D12_DEPTH_STENCIL_DESC shadowDSS;
+	shadowDSS.DepthEnable = true;
+	shadowDSS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	shadowDSS.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	shadowDSS.StencilEnable = true;
+	shadowDSS.StencilReadMask = 0xff;
+	shadowDSS.StencilWriteMask = 0xff;
+
+	shadowDSS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	shadowDSS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	shadowDSS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_INCR;
+	shadowDSS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
+
+	// We are not rendering backfacing polygons, so these settings do not matter.
+	shadowDSS.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	shadowDSS.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	shadowDSS.BackFace.StencilPassOp = D3D12_STENCIL_OP_INCR;
+	shadowDSS.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC shadowPSODesc = transparencyPSODesc;
+	shadowPSODesc.DepthStencilState = shadowDSS;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&shadowPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_SHADOW])));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC billboardPSODesc = psoDesc;
+	shader = CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"BillboardShader");
+	billboardPSODesc.VS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetVsByteCode()->GetBufferPointer()),
+		shader->GetVsByteCode()->GetBufferSize()
+	};
+	billboardPSODesc.InputLayout = { shader->GetInputLayout().data(), (UINT)shader->GetInputLayout().size() };
+	billboardPSODesc.GS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetGsByteCode()->GetBufferPointer()),
+		shader->GetGsByteCode()->GetBufferSize()
+	};
+	billboardPSODesc.PS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetPsByteCode()->GetBufferPointer()),
+		shader->GetPsByteCode()->GetBufferSize()
+	};
+	billboardPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&billboardPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_BILLBOARD])));
+
+	// CS
+	D3D12_COMPUTE_PIPELINE_STATE_DESC horzBlurPSODesc = {};
+	horzBlurPSODesc.pRootSignature = postProcessRootSignature.Get();
+	Ptr<CComputeShader> pCS = CAssetMgr::GetInst()->FindAsset<CComputeShader>(L"HorzBlurCS");
+	horzBlurPSODesc.CS =
+	{
+		reinterpret_cast<BYTE*>(pCS->GetCsByteCode()->GetBufferPointer()),
+		pCS->GetCsByteCode()->GetBufferSize()
+	};
+	horzBlurPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(DEVICE->CreateComputePipelineState(&horzBlurPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_HORIZONTAL_BLUR])));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC vertBlurPSODesc = {};
+	vertBlurPSODesc.pRootSignature = postProcessRootSignature.Get();
+	pCS = CAssetMgr::GetInst()->FindAsset<CComputeShader>(L"VertBlurCS");
+	vertBlurPSODesc.CS =
+	{
+		reinterpret_cast<BYTE*>(pCS->GetCsByteCode()->GetBufferPointer()),
+		pCS->GetCsByteCode()->GetBufferSize()
+	};
+	vertBlurPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(DEVICE->CreateComputePipelineState(&vertBlurPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_VERTICAL_BLUR])));
+}
+
+void CAssetMgr::SetCMDPSO(OBJ_PSO_TYPE type)
+{
+	CMDLIST->SetPipelineState(m_PSOGroup[type].Get());
 }

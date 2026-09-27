@@ -5,18 +5,12 @@
 #include "CConstantBuffer.h"
 
 CGraphicsShader::CGraphicsShader()
-    : CShader(ASSET_TYPE::GRAPHICS_SHADER), 
-    m_vsByteCode(nullptr), m_psByteCode(nullptr)
+    : CShader(ASSET_TYPE::GRAPHICS_SHADER)
 {
 }
 
 CGraphicsShader::~CGraphicsShader()
 {
-}
-
-void CGraphicsShader::Bind(const std::string& PSOGroupKey)
-{
-    
 }
 
 void CGraphicsShader::BuildVertexShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint)

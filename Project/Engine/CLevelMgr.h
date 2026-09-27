@@ -16,18 +16,10 @@ public:
 
 	MulticastDelegate<> OnLevelChange;
 
-	void SetCMDPSO(OBJ_PSO_TYPE type);
-
 private:
-
-	void BuildPSO();
 
 	CLevel* m_CurLevel;
 	std::unordered_map<std::wstring, CLevel*> m_LevelMap;
-
-	std::unordered_map<OBJ_PSO_TYPE, ComPtr<ID3D12PipelineState>>	m_PSOGroup;
-
-	OBJ_PSO_TYPE m_CurrPSOType;
 
 public:
 	inline CLevel* GetCurrentLevel() const { return m_CurLevel; }

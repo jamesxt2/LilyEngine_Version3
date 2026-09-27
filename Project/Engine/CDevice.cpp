@@ -3,9 +3,10 @@
 
 #include "CConstantBuffer.h"
 #include "CAssetMgr.h"
+#include "BlurFilter.h"
 
 CDevice::CDevice()
-	: m_MainWnd(nullptr), m_RenderResolution{},
+	: m_MainWnd(nullptr), m_RenderResolution{}, m_Format(DXGI_FORMAT_R8G8B8A8_UNORM),
 	m_CurrentFence(0), m_RtvDescriptorSize(0),
 	m_DsvDescriptorSize(0), m_CbvSrvUavDescriptorSize(0),
 	m_4xMsaaQuality(0), m_EnableMSAA(true),
@@ -108,6 +109,7 @@ int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
 	/*************************************/
 	//CConstantBuffer::Init(3);
 	BuildRootSignature();
+	BuildPostProcessRootSignature();
 
 	return S_OK;
 }
@@ -259,6 +261,42 @@ void CDevice::BuildRootSignature()
 		serializedRootSig->GetBufferPointer(),
 		serializedRootSig->GetBufferSize(),
 		IID_PPV_ARGS(m_RootSignature.GetAddressOf())));
+}
+
+void CDevice::BuildPostProcessRootSignature()
+{
+	CD3DX12_DESCRIPTOR_RANGE srvTable;
+	srvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+	CD3DX12_DESCRIPTOR_RANGE uavTable;
+	uavTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+
+	CD3DX12_ROOT_PARAMETER slotRootParameter[3];
+
+	slotRootParameter[0].InitAsConstants(14, 0);
+	slotRootParameter[1].InitAsDescriptorTable(1, &srvTable);
+	slotRootParameter[2].InitAsDescriptorTable(1, &uavTable);
+
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, slotRootParameter,
+		0, nullptr,
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	ComPtr<ID3DBlob> serializedRootSig = nullptr;
+	ComPtr<ID3DBlob> errorBlob = nullptr;
+	HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+		serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+	if (errorBlob != nullptr)
+	{
+		::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+	}
+	ThrowIfFailed(hr);
+
+	ThrowIfFailed(DEVICE->CreateRootSignature(
+		0,
+		serializedRootSig->GetBufferPointer(),
+		serializedRootSig->GetBufferSize(),
+		IID_PPV_ARGS(m_PostProcessRootSignature.GetAddressOf())));
 }
 
 std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> CDevice::GetStaticSamplers()
@@ -475,6 +513,8 @@ void CDevice::OnResize(POINT newRenderResolution)
 	m_ScreenViewport.MaxDepth = 1.0f;
 
 	m_ScissorRect = { 0, 0, m_RenderResolution.x, m_RenderResolution.y };
+
+	OnWindowResize.Broadcast(m_RenderResolution.x, m_RenderResolution.y);
 }
 
 void CDevice::Update()
@@ -526,6 +566,8 @@ void CDevice::ClearTargetAndPrepareRender(XMVECTORF32 color)
 	D3D12_CPU_DESCRIPTOR_HANDLE DSV = DepthStencilView();
 	m_CommandList->OMSetRenderTargets(1, &CurrBBV, true, &DSV);
 
+	ID3D12DescriptorHeap* descriptorHeaps[] = { CAssetMgr::GetInst()->GetDescriptorHeap().Get() };
+	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 }
 
 void CDevice::ExecuteAndFinishDrawCall()
@@ -556,18 +598,18 @@ void CDevice::ExecuteAndFinishDrawCall()
 				D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET));
 		m_CommandList->ResourceBarrier(1, &toRenderTargetBarrier);
 
-		// Back Buffer: ResolveDest -> Present
-		CD3DX12_RESOURCE_BARRIER toPresentBarrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-			D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_PRESENT));
-		m_CommandList->ResourceBarrier(1, &toPresentBarrier);
+		// Back Buffer: ResolveDest -> Render Target
+		CD3DX12_RESOURCE_BARRIER toRTBarrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+			D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET));
+		m_CommandList->ResourceBarrier(1, &toRTBarrier);
 	}
-	else
-	{
-		// Back Buffer: RenderTarget -> Present
-		CD3DX12_RESOURCE_BARRIER toPresentBarrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-		m_CommandList->ResourceBarrier(1, &toPresentBarrier);
-	}
+
+	CAssetMgr::GetInst()->ExecuteBlur(CurrentBackBuffer(), 4);
+
+	// Back Buffer: RenderTarget -> Present
+	CD3DX12_RESOURCE_BARRIER toPresentBarrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	m_CommandList->ResourceBarrier(1, &toPresentBarrier);
 
 	// Done recording commands.
 	ThrowIfFailed(m_CommandList->Close());

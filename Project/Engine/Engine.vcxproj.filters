@@ -92,6 +92,12 @@
     <Filter Include="08.Asset\Texture">
       <UniqueIdentifier>{2a36b8e4-b6c9-4dd3-b835-98dca05e8705}</UniqueIdentifier>
     </Filter>
+    <Filter Include="08.Asset\Shader\ComputeShader">
+      <UniqueIdentifier>{d8e5d576-be79-430d-9c87-432a9f0e4f94}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="08.Asset\Shader\ComputeShader\Filter">
+      <UniqueIdentifier>{56b396f1-db77-4bfe-bee0-8a5095c489fa}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -217,6 +223,12 @@
     <ClInclude Include="delegate.h">
       <Filter>01.Basis</Filter>
     </ClInclude>
+    <ClInclude Include="CComputeShader.h">
+      <Filter>08.Asset\Shader\ComputeShader</Filter>
+    </ClInclude>
+    <ClInclude Include="BlurFilter.h">
+      <Filter>08.Asset\Shader\ComputeShader\Filter</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -315,6 +327,12 @@
     <ClCompile Include="CTexture.cpp">
       <Filter>08.Asset\Texture</Filter>
     </ClCompile>
+    <ClCompile Include="CComputeShader.cpp">
+      <Filter>08.Asset\Shader\ComputeShader</Filter>
+    </ClCompile>
+    <ClCompile Include="BlurFilter.cpp">
+      <Filter>08.Asset\Shader\ComputeShader\Filter</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="color.fx">
@@ -327,6 +345,9 @@
       <Filter>HLSL</Filter>
     </FxCompile>
     <FxCompile Include="billboard.fx">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="blur.fx">
       <Filter>HLSL</Filter>
     </FxCompile>
   </ItemGroup>

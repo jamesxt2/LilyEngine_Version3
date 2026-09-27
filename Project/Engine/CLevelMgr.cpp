@@ -14,7 +14,7 @@
 #include "CConstantBuffer.h"
 
 CLevelMgr::CLevelMgr()
-	: m_CurLevel(nullptr), m_CurrPSOType(OBJ_PSO_TYPE::PSO_DEFAULT)
+	: m_CurLevel(nullptr)
 {
 }
 
@@ -27,178 +27,9 @@ CLevelMgr::~CLevelMgr()
 	}
 }
 
-void CLevelMgr::BuildPSO()
-{
-	ComPtr<ID3D12RootSignature> rootSignature(CDevice::GetInst()->GetRootSignature());
-
-	assert(rootSignature);
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
-	ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	Ptr<CGraphicsShader> shader = CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader");
-	psoDesc.InputLayout = { shader->GetInputLayout().data(), (UINT)shader->GetInputLayout().size()};
-	psoDesc.pRootSignature = rootSignature.Get();
-	psoDesc.VS =
-	{
-		reinterpret_cast<BYTE*>(shader->GetVsByteCode()->GetBufferPointer()),
-		shader->GetVsByteCode()->GetBufferSize()
-	};
-	psoDesc.PS =
-	{
-		reinterpret_cast<BYTE*>(shader->GetPsByteCode()->GetBufferPointer()),
-		shader->GetPsByteCode()->GetBufferSize()
-	};
-	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	psoDesc.SampleMask = UINT_MAX;
-	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	psoDesc.NumRenderTargets = 1;
-	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	psoDesc.SampleDesc.Count = CDevice::GetInst()->EnableMSAA() ? 4 : 1;
-	psoDesc.SampleDesc.Quality = CDevice::GetInst()->EnableMSAA() ? CDevice::GetInst()->Get4xMSAAQuality() - 1 : 0;
-	psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_DEFAULT])));
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC wireframePSODesc = psoDesc;
-	wireframePSODesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&wireframePSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_WIREFRAME])));
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC transparencyPSODesc = psoDesc;
-	D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc;
-	transparencyBlendDesc.BlendEnable = true;
-	transparencyBlendDesc.LogicOpEnable = false;
-	transparencyBlendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
-	transparencyBlendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-	transparencyBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
-	transparencyBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
-	transparencyBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
-	transparencyBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-	transparencyBlendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
-	transparencyBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
-	transparencyPSODesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&transparencyPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_TRANSPARENT])));
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC alphatestedPSODesc = transparencyPSODesc;
-	shader = CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"AlphaTestedShader");
-	//psoDesc.InputLayout = { shader->GetInputLayout().data(), (UINT)shader->GetInputLayout().size() };
-	//psoDesc.VS =
-	//{
-	//	reinterpret_cast<BYTE*>(shader->GetVsByteCode()->GetBufferPointer()),
-	//	shader->GetVsByteCode()->GetBufferSize()
-	//};
-	alphatestedPSODesc.PS =
-	{
-		reinterpret_cast<BYTE*>(shader->GetPsByteCode()->GetBufferPointer()),
-		shader->GetPsByteCode()->GetBufferSize()
-	};
-	alphatestedPSODesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&alphatestedPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_ALPHA_TESTED])));
-
-	// Mirror PSO
-	CD3DX12_BLEND_DESC mirrorBlendState(D3D12_DEFAULT);
-	mirrorBlendState.RenderTarget[0].RenderTargetWriteMask = 0;
-
-	D3D12_DEPTH_STENCIL_DESC mirrorDSS;
-	mirrorDSS.DepthEnable = true;
-	mirrorDSS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-	mirrorDSS.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	mirrorDSS.StencilEnable = true;
-	mirrorDSS.StencilReadMask = 0xff;
-	mirrorDSS.StencilWriteMask = 0xff;
-
-	mirrorDSS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	mirrorDSS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	mirrorDSS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
-	mirrorDSS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-
-	mirrorDSS.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	mirrorDSS.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	mirrorDSS.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
-	mirrorDSS.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC markMirrorPSODesc = psoDesc;
-	markMirrorPSODesc.BlendState = mirrorBlendState;
-	markMirrorPSODesc.DepthStencilState = mirrorDSS;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&markMirrorPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_MIRRORS])));
-
-	D3D12_DEPTH_STENCIL_DESC reflectionsDSS;
-	reflectionsDSS.DepthEnable = true;
-	reflectionsDSS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	reflectionsDSS.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	reflectionsDSS.StencilEnable = true;
-	reflectionsDSS.StencilReadMask = 0xff;
-	reflectionsDSS.StencilWriteMask = 0xff;
-
-	reflectionsDSS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	reflectionsDSS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	reflectionsDSS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	reflectionsDSS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
-
-	reflectionsDSS.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	reflectionsDSS.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	reflectionsDSS.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	reflectionsDSS.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC drawReflectionPSODesc = psoDesc;
-	drawReflectionPSODesc.DepthStencilState = reflectionsDSS;
-	drawReflectionPSODesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
-	drawReflectionPSODesc.RasterizerState.FrontCounterClockwise = true;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&drawReflectionPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_REFLECTIONS])));
-
-	D3D12_DEPTH_STENCIL_DESC shadowDSS;
-	shadowDSS.DepthEnable = true;
-	shadowDSS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	shadowDSS.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	shadowDSS.StencilEnable = true;
-	shadowDSS.StencilReadMask = 0xff;
-	shadowDSS.StencilWriteMask = 0xff;
-
-	shadowDSS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	shadowDSS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	shadowDSS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_INCR;
-	shadowDSS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
-
-	// We are not rendering backfacing polygons, so these settings do not matter.
-	shadowDSS.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	shadowDSS.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	shadowDSS.BackFace.StencilPassOp = D3D12_STENCIL_OP_INCR;
-	shadowDSS.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC shadowPSODesc = transparencyPSODesc;
-	shadowPSODesc.DepthStencilState = shadowDSS;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&shadowPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_SHADOW])));
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC billboardPSODesc = psoDesc;
-	shader = CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"BillboardShader");
-	billboardPSODesc.VS =
-	{
-		reinterpret_cast<BYTE*>(shader->GetVsByteCode()->GetBufferPointer()),
-		shader->GetVsByteCode()->GetBufferSize()
-	};
-	billboardPSODesc.InputLayout = { shader->GetInputLayout().data(), (UINT)shader->GetInputLayout().size() };
-	billboardPSODesc.GS =
-	{
-		reinterpret_cast<BYTE*>(shader->GetGsByteCode()->GetBufferPointer()),
-		shader->GetGsByteCode()->GetBufferSize()
-	};
-	billboardPSODesc.PS =
-	{
-		reinterpret_cast<BYTE*>(shader->GetPsByteCode()->GetBufferPointer()),
-		shader->GetPsByteCode()->GetBufferSize()
-	};
-	billboardPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&billboardPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_BILLBOARD])));
-}
-
-
 
 void CLevelMgr::Init()
 {
-	BuildPSO();
-
 	/******************************************************************/
 	// Wave Level
 	/******************************************************************/
@@ -587,11 +418,6 @@ void CLevelMgr::Tick()
 	//CMDLIST->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	//CMDLIST->SetPipelineState(m_PSOGroup[m_CurrPSOType].Get());
-}
-
-void CLevelMgr::SetCMDPSO(OBJ_PSO_TYPE type)
-{
-	CMDLIST->SetPipelineState(m_PSOGroup[type].Get());
 }
 
 void CLevelMgr::ChangeLevel(const std::wstring& name)

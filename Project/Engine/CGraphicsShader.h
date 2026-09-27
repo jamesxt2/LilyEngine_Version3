@@ -7,7 +7,6 @@ public:
 	CGraphicsShader();
 	~CGraphicsShader();
 
-	virtual void Bind(const std::string& PSOGroupKey) override;
 	void BuildVertexShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint);
 	void BuildGeometryShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint);
 	void BuildPixelShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint);

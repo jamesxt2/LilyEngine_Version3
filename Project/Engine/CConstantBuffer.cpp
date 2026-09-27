@@ -60,40 +60,10 @@ void CConstantBuffer::Create(UINT elementByteSize, UINT elementCount, CB_TYPE ty
 	));
 
 	ThrowIfFailed(m_UploadBuffer->Map(0, nullptr, reinterpret_cast<void**>(&m_MappedData)));
-	/*
-	for (int frameIndex = 0; frameIndex < g_NumFrameResources; ++frameIndex)
-	{
-		for (UINT i = 0; i < elementCount; ++i)
-		{
-			D3D12_GPU_VIRTUAL_ADDRESS cbAddress = m_UploadBuffer->GetGPUVirtualAddress();
-			cbAddress += i * m_ElementByteSize;
-
-			int heapIndex = frameIndex * elementCount + i;
-			auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_CbvHeap->GetCPUDescriptorHandleForHeapStart());
-			handle.Offset(heapIndex, CDevice::GetInst()->m_CbvUavDescriptorSize);
-
-			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
-			cbvDesc.BufferLocation = cbAddress;
-			cbvDesc.SizeInBytes = m_ElementByteSize;
-
-			DEVICE->CreateConstantBufferView(&cbvDesc, handle);
-		}
-	}
-	*/
 }
 
 void CConstantBuffer::Bind(int CBIndex, int slot)
 {
-	//ID3D12DescriptorHeap* descriptorHeaps[] = { m_CbvHeap.Get() };
-	//CMDLIST->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
-
-	//CMDLIST->SetGraphicsRootSignature(m_RootSignature.Get());
-
-	//auto handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
-	//	m_CbvHeap->GetGPUDescriptorHandleForHeapStart(), ObjCBIndex, CDevice::GetInst()->m_CbvUavDescriptorSize
-	//);
-	//CMDLIST->SetGraphicsRootDescriptorTable(slot, handle);
-
 	D3D12_GPU_VIRTUAL_ADDRESS CBAddress = m_UploadBuffer->GetGPUVirtualAddress() + m_ElementByteSize * CBIndex;
 	CMDLIST->SetGraphicsRootConstantBufferView(slot, CBAddress);
 }
@@ -101,9 +71,4 @@ void CConstantBuffer::Bind(int CBIndex, int slot)
 void CConstantBuffer::CopyData(int elementIndex, const void* data)
 {
 	memcpy(&m_MappedData[elementIndex * m_ElementByteSize], data, m_BufferSize);
-}
-
-void CConstantBuffer::Init(UINT cbvSlotNums)
-{
-	//BuildCbvDescriptorHeap();
 }

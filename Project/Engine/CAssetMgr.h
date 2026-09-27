@@ -5,7 +5,7 @@
 #include "assets.h"
 #include "MeshData.h"
 #include "Waves.h"
-
+#include "BlurFilter.h"
 
 class CAssetMgr : public CSingleton<CAssetMgr>
 {
@@ -28,6 +28,7 @@ public:
 	void GetAssetNames(ASSET_TYPE type, _Out_ std::vector<std::string>& vecNames);
 	inline const std::unordered_map<std::wstring, Ptr<CAsset>>& GetAssets(ASSET_TYPE type) const { return m_AssetMap[(UINT)type]; }
 
+	void SetCMDPSO(OBJ_PSO_TYPE type);
 
 private:
 
@@ -70,7 +71,7 @@ private:
 	void UpdateWaves();
 	void AnimateMaterials();
 
-	void CreateDefaultMesh();
+	void CreateMeshes();
 
 	void CreateSceneMeshes();
 	void CreateWaveMeshes();
@@ -78,10 +79,12 @@ private:
 	void CreateRoomMeshes();
 	void CreateBillboardMesh();
 
-	void CreateDefaultTexture();
+	void CreateTextures();
 
-	void CreateDefaultMaterial();
-	void CreateDefaultGraphicsShader();
+	void CreateMaterials();
+
+	void CreateGraphicsShaders();
+	void CreateComputeShaders();
 
 	void BuildCylinderTopCap(float bottomRadius, float topRadius, float height, uint32 sliceCount, uint32 stackCount, MeshData& meshData);
 	void BuildCylinderBottomCap(float bottomRadius, float topRadius, float height, uint32 sliceCount, uint32 stackCount, MeshData& meshData);
@@ -93,11 +96,23 @@ private:
 
 	std::unordered_map<std::wstring, MeshData> m_MeshDataMap;
 
-	Waves* m_Waves;
+	void BuildPSO();
+	std::unordered_map<OBJ_PSO_TYPE, ComPtr<ID3D12PipelineState>>	m_PSOGroup;
+
+	std::unique_ptr<Waves> m_Waves;
+
+	std::unique_ptr<BlurFilter> m_BlurFilter;
+	ComPtr<ID3D12DescriptorHeap>		m_CbvSrvUavDescriptorHeap;
+	UINT								m_TextureDescriptorCount;
+	void BuildDescriptorHeaps();
 
 public:
 	inline int GetWavesVertexCount() const { return m_Waves->VertexCount(); }
 	inline UINT GetAssetSize(ASSET_TYPE type) const { return (UINT)m_AssetMap[(UINT)type].size(); }
+
+	inline void ExecuteBlur(ID3D12Resource* input, int blurCount) const { m_BlurFilter->Execute(input, blurCount); }
+
+	inline ComPtr<ID3D12DescriptorHeap> GetDescriptorHeap() const { return m_CbvSrvUavDescriptorHeap; }
 };
 
 template<typename T>
@@ -111,6 +126,8 @@ inline ASSET_TYPE GetAssetType()
 		return ASSET_TYPE::MATERIAL;
 	if constexpr (std::is_same_v<T, CTexture>)
 		return ASSET_TYPE::TEXTURE;
+	if constexpr (std::is_same_v<T, CComputeShader>)
+		return ASSET_TYPE::COMPUTE_SHADER;
 }
 
 template<typename T>

@@ -14,8 +14,6 @@ public:
 	void Bind(int CBIndex, int slot);
 	void CopyData(int elementIndex, const void* data);
 
-	static void Init(UINT cbvSlotNums);
-
 	static void BuildCbvDescriptorHeap();
 
 

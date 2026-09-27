@@ -12,6 +12,7 @@ public:
 	void PostInit();
 
 	void OnResize(POINT newRenderResolution);
+	MulticastDelegate<UINT, UINT> OnWindowResize;
 
 	void Update();
 
@@ -38,6 +39,8 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
 
 	void BuildRootSignature();
+	void BuildPostProcessRootSignature();
+
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
 
 	void BuildFrameResources();
@@ -45,6 +48,7 @@ private:
 
 	HWND											m_MainWnd;
 	POINT											m_RenderResolution;
+	DXGI_FORMAT										m_Format;
 
 	ComPtr<ID3D12Device>							m_d3dDevice;
 	ComPtr<IDXGIFactory4>							m_dxgiFactory;
@@ -81,6 +85,7 @@ private:
 	int												m_CurrFrameResourceIndex;
 
 	ComPtr<ID3D12RootSignature>						m_RootSignature;
+	ComPtr<ID3D12RootSignature>						m_PostProcessRootSignature;
 
 	const float m_ClearColor[4] = { 0.69f, 0.77f, 0.87f, 1.0f };
 
@@ -92,13 +97,16 @@ public:
 		return m_CurrFrameResource->GetConstantBuffer(type);
 	}
 
+	inline DXGI_FORMAT GetFormat() const { return m_Format; }
+
 	inline Vector2 GetRenderResolution() const { return Vector2((float)m_RenderResolution.x, (float)m_RenderResolution.y); }
 	inline float GetAspectRatio() const { return (float)m_RenderResolution.x / (float)m_RenderResolution.y; }
 
 	inline FrameResource* GetCurrFrameResource() const { return m_CurrFrameResource; }
 
 	inline ComPtr<ID3D12RootSignature> GetRootSignature() const { return m_RootSignature; }
-
+	inline ComPtr<ID3D12RootSignature> GetPostProcessRootSignature() const { return m_PostProcessRootSignature; }
+	
 	inline bool EnableMSAA() const { return m_EnableMSAA; }
 	inline UINT Get4xMSAAQuality() const { return m_4xMsaaQuality; }
 };
