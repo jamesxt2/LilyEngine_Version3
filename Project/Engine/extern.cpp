@@ -1,10 +1,14 @@
 #include "pch.h"
 
-TTransform g_Trans = {};
+TObject g_Object = {};
 TGlobal g_Global = {};
 
 int g_NumFrameResources = 3;
 int g_MaxObjectCount = 40;
+
+const int g_TextureDescriptorsCount = 10;
+const int g_BlurDescriptorCount = 4;
+const int g_WavesGPUDescriptorCount = 6;
 
 Vector3 XAxis(1.f, 0.f, 0.f);
 Vector3 YAxis(0.f, 1.f, 0.f);

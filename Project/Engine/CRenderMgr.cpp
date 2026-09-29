@@ -32,6 +32,8 @@ void CRenderMgr::Render()
 
 	CDevice::GetInst()->ClearTargetAndPrepareRender(Colors::LightSteelBlue);
 
+	OnObjRenderStart.Broadcast();
+
 	(this->*Render_Func)();
 
 	OnObjRenderFinish.Broadcast();

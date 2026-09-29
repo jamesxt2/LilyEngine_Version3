@@ -43,7 +43,7 @@ extern const char* COMPONENT_TYPE_STRING[(UINT)COMPONENT_TYPE::END];
 // Constant Buffer Types
 enum class CB_TYPE
 {
-	TRANSFORM,
+	OBJECT,
 	MATERIAL,
 	GLOBAL,
 	ANIMATION,
@@ -60,6 +60,10 @@ enum class DIR_TYPE
 
 extern int g_NumFrameResources;
 extern int g_MaxObjectCount;
+
+extern const int g_TextureDescriptorsCount;
+extern const int g_BlurDescriptorCount;
+extern const int g_WavesGPUDescriptorCount;
 
 extern Vector3 XAxis;
 extern Vector3 YAxis;
@@ -93,6 +97,9 @@ enum class OBJ_PSO_TYPE : uint32
 	PSO_BILLBOARD = 1 << 7,
 	PSO_HORIZONTAL_BLUR = 1 << 8,
 	PSO_VERTICAL_BLUR = 1 << 9,
+	PSO_WAVE_RENDER = 1 << 10,
+	PSO_WAVE_UPDATE = 1 << 11,
+	PSO_WAVE_DISTURB = 1 << 12,
 
 	//ALL = PSO_DEFAULT | PSO_WIREFRAME | PSO_TRANSPARENT | PSO_ALPHA_TESTED | PSO_MIRRORS | PSO_REFLECTIONS
 };

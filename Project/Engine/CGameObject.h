@@ -14,13 +14,13 @@ class CGameObject : public CEntity
 public:
 	CGameObject();
 	CGameObject(const CGameObject& _other);
-	~CGameObject();
+	virtual ~CGameObject();
 	CLONE(CGameObject)
 
-	void Begin();
+	virtual void Begin();
 	void Tick();
 	virtual void FinalTick();
-	void Render();
+	virtual void Render();
 
 	void AddComponent(CComponent* component);
 

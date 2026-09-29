@@ -38,11 +38,6 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
 
-	void BuildRootSignature();
-	void BuildPostProcessRootSignature();
-
-	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
-
 	void BuildFrameResources();
 
 
@@ -84,9 +79,6 @@ private:
 	FrameResource*									m_CurrFrameResource;
 	int												m_CurrFrameResourceIndex;
 
-	ComPtr<ID3D12RootSignature>						m_RootSignature;
-	ComPtr<ID3D12RootSignature>						m_PostProcessRootSignature;
-
 	const float m_ClearColor[4] = { 0.69f, 0.77f, 0.87f, 1.0f };
 
 public:
@@ -104,9 +96,6 @@ public:
 
 	inline FrameResource* GetCurrFrameResource() const { return m_CurrFrameResource; }
 
-	inline ComPtr<ID3D12RootSignature> GetRootSignature() const { return m_RootSignature; }
-	inline ComPtr<ID3D12RootSignature> GetPostProcessRootSignature() const { return m_PostProcessRootSignature; }
-	
 	inline bool EnableMSAA() const { return m_EnableMSAA; }
 	inline UINT Get4xMSAAQuality() const { return m_4xMsaaQuality; }
 };

@@ -16,6 +16,7 @@ public:
 	void SetCurrentLevel(const std::wstring& levalname);
 	inline void RegisterEditorCamera(CCamera* editorCam) { m_EditorCam = editorCam; }
 
+	MulticastDelegate<> OnObjRenderStart;
 	MulticastDelegate<> OnObjRenderFinish;
 
 private:

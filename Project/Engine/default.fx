@@ -19,6 +19,7 @@
 #include "LightingUtils.fx"
 
 Texture2D g_DiffuseMap : register(t0);
+Texture2D g_DisplacementMap : register(t1);
 
 SamplerState g_SamPointWrap : register(s0);
 SamplerState g_SamPointClamp : register(s1);
@@ -27,12 +28,16 @@ SamplerState g_SamLinearClamp : register(s3);
 SamplerState g_SamAnisotropicWrap : register(s4);
 SamplerState g_SamAnisotropicClamp : register(s5);
 
-cbuffer TRANSFORM : register(b0)
+cbuffer OBJECT : register(b0)
 {
     row_major matrix g_World;
     row_major matrix g_WorldInvTranspose;
     row_major matrix g_ViewProj;
     row_major matrix g_TexTransform;
+    
+    float2 g_DisplacementMapTexelSize;
+    float g_GridSpatialStep;
+    float padding_object;
 }
 
 cbuffer MATERIAL : register(b1)
@@ -78,6 +83,20 @@ VertexOut VS(VertexIn vin)
 {
     VertexOut vout = (VertexOut) 0.f;
     
+#ifdef DISPLACEMENT_MAP
+    // Sample the displacement map using non-transformed [0,1]^2 tex-coords.
+    vin.PosL.y += g_DisplacementMap.SampleLevel(g_SamLinearWrap, vin.TexCoord, 1.0f).r;
+	
+	// Estimate normal using finite difference.
+    float du = g_DisplacementMapTexelSize.x;
+    float dv = g_DisplacementMapTexelSize.y;
+    float l = g_DisplacementMap.SampleLevel(g_SamPointClamp, vin.TexCoord - float2(du, 0.0f), 0.0f).r;
+    float r = g_DisplacementMap.SampleLevel(g_SamPointClamp, vin.TexCoord + float2(du, 0.0f), 0.0f).r;
+    float t = g_DisplacementMap.SampleLevel(g_SamPointClamp, vin.TexCoord - float2(0.0f, dv), 0.0f).r;
+    float b = g_DisplacementMap.SampleLevel(g_SamPointClamp, vin.TexCoord + float2(0.0f, dv), 0.0f).r;
+    vin.NormalL = normalize(float3(-r + l, 2.0f * g_GridSpatialStep, b - t));
+#endif    
+
     float4 posW = mul(float4(vin.PosL, 1.f), g_World);
     vout.PosW = posW.xyz;
     

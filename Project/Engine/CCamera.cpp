@@ -81,42 +81,46 @@ void CCamera::Render()
 		m_IsDirty = false;
 	}
 
-	g_Trans.ViewProj = m_matView * m_matProj;
+	g_Object.ViewProj = m_matView * m_matProj;
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_DEFAULT);
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_DEFAULT).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_DEFAULT])
 		obj->Render();
 
-	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_ALPHA_TESTED);
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_ALPHA_TESTED).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_ALPHA_TESTED])
 		obj->Render();
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
-	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_BILLBOARD);
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_BILLBOARD).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_BILLBOARD])
 		obj->Render();
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	// the mirror area's pixel's stencils are set to 1
 	CMDLIST->OMSetStencilRef(1);
-	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_MIRRORS);
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_MIRRORS).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_MIRRORS])
 		obj->Render();
 
 	// stencil still 1 for mirror, 0 for other, if 1, render to the mirror area
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(1, 3);
-	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_REFLECTIONS);
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_REFLECTIONS).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_REFLECTIONS])
 		obj->Render();
 
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(0, 3);
 	CMDLIST->OMSetStencilRef(0);
-	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_TRANSPARENT);
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_TRANSPARENT).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_TRANSPARENT])
 		obj->Render();
 
-	CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_SHADOW);
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_WAVE_RENDER).Get());
+	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_WAVE_RENDER])
+		obj->Render();
+
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_SHADOW).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_SHADOW])
 		obj->Render();
 
@@ -150,6 +154,8 @@ void CCamera::SortObjects()
 			m_SortedObjs[OBJ_PSO_TYPE::PSO_BILLBOARD].push_back(obj);
 		if ((uint32)(OBJ_PSO_TYPE::PSO_HORIZONTAL_BLUR & type))
 			m_SortedObjs[OBJ_PSO_TYPE::PSO_HORIZONTAL_BLUR].push_back(obj);
+		if ((uint32)(OBJ_PSO_TYPE::PSO_WAVE_RENDER & type))
+			m_SortedObjs[OBJ_PSO_TYPE::PSO_WAVE_RENDER].push_back(obj);
 	}
 }
 

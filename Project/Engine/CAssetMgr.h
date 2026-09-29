@@ -6,6 +6,7 @@
 #include "MeshData.h"
 #include "Waves.h"
 #include "BlurFilter.h"
+#include "CWaveObject.h"
 
 class CAssetMgr : public CSingleton<CAssetMgr>
 {
@@ -27,8 +28,6 @@ public:
 
 	void GetAssetNames(ASSET_TYPE type, _Out_ std::vector<std::string>& vecNames);
 	inline const std::unordered_map<std::wstring, Ptr<CAsset>>& GetAssets(ASSET_TYPE type) const { return m_AssetMap[(UINT)type]; }
-
-	void SetCMDPSO(OBJ_PSO_TYPE type);
 
 private:
 
@@ -73,6 +72,7 @@ private:
 
 	void CreateMeshes();
 
+	void CreateDefaultMeshes();
 	void CreateSceneMeshes();
 	void CreateWaveMeshes();
 	void CreateSkullMesh();
@@ -96,10 +96,16 @@ private:
 
 	std::unordered_map<std::wstring, MeshData> m_MeshDataMap;
 
+	std::unordered_map<std::wstring, ComPtr<ID3D12RootSignature>> m_RootSignatureMap;
+	void BuildRootSignatures();
+	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
+
 	void BuildPSO();
 	std::unordered_map<OBJ_PSO_TYPE, ComPtr<ID3D12PipelineState>>	m_PSOGroup;
 
 	std::unique_ptr<Waves> m_Waves;
+
+	CWaveObject* m_WaveObject{ nullptr };
 
 	std::unique_ptr<BlurFilter> m_BlurFilter;
 	ComPtr<ID3D12DescriptorHeap>		m_CbvSrvUavDescriptorHeap;
@@ -107,12 +113,20 @@ private:
 	void BuildDescriptorHeaps();
 
 public:
+	inline CWaveObject* GetWaveObject() const { return m_WaveObject; }
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(int Offset) const;
+	CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(int Offset) const;
+
 	inline int GetWavesVertexCount() const { return m_Waves->VertexCount(); }
 	inline UINT GetAssetSize(ASSET_TYPE type) const { return (UINT)m_AssetMap[(UINT)type].size(); }
 
 	inline void ExecuteBlur(ID3D12Resource* input, int blurCount) const { m_BlurFilter->Execute(input, blurCount); }
 
 	inline ComPtr<ID3D12DescriptorHeap> GetDescriptorHeap() const { return m_CbvSrvUavDescriptorHeap; }
+
+	ComPtr<ID3D12PipelineState> GetPSO(OBJ_PSO_TYPE type) const;
+	ComPtr<ID3D12RootSignature> GetRootSignature(const std::wstring& key) const;
 };
 
 template<typename T>

@@ -12,6 +12,7 @@
 #include "CKeyMgr.h"
 #include "CDevice.h"
 #include "CConstantBuffer.h"
+#include "CWaveObject.h"
 
 CLevelMgr::CLevelMgr()
 	: m_CurLevel(nullptr)
@@ -71,7 +72,24 @@ void CLevelMgr::Init()
 
 
 
-	CGameObject* pWave = new CGameObject;
+	//CGameObject* pWave = new CGameObject;
+	//pWave->SetName(L"Wave");
+	//pWave->AddComponent(new CTransform);
+	//pWave->AddComponent(new CMeshRender);
+	//
+	//pWave->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
+	//pWave->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
+	//pWave->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
+	//pWave->GetTransformComp()->SetObjCBIndex(1);
+	//
+	//pWave->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"WaveMesh"));
+	//pWave->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WaterMaterial"));
+	//pWave->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_TRANSPARENT);
+	//pWave->SetSubMeshGeo(pWave->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
+	//
+	//pWaveLevel->AddObject(pWave);
+
+	CWaveObject* pWave = CAssetMgr::GetInst()->GetWaveObject();
 	pWave->SetName(L"Wave");
 	pWave->AddComponent(new CTransform);
 	pWave->AddComponent(new CMeshRender);
@@ -83,7 +101,7 @@ void CLevelMgr::Init()
 
 	pWave->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"WaveMesh"));
 	pWave->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WaterMaterial"));
-	pWave->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_TRANSPARENT);
+	pWave->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_WAVE_RENDER);
 	pWave->SetSubMeshGeo(pWave->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
 
 	pWaveLevel->AddObject(pWave);

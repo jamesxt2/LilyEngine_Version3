@@ -112,7 +112,7 @@ void BlurFilter::Execute(ID3D12Resource* input, int blurCount)
 	auto weights = CalcGaussWeights(2.5f);
 	int blurRadius = (int)weights.size() / 2;
 
-	CMDLIST->SetComputeRootSignature(CDevice::GetInst()->GetPostProcessRootSignature().Get());
+	CMDLIST->SetComputeRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"PostProcess").Get());
 
 	Vector2 resolution = CDevice::GetInst()->GetRenderResolution();
 	CMDLIST->SetComputeRoot32BitConstants(0, 1, &blurRadius, 0);
@@ -141,7 +141,7 @@ void BlurFilter::Execute(ID3D12Resource* input, int blurCount)
 	for (int i = 0; i < blurCount; ++i)
 	{
 		// Horizontal
-		CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_HORIZONTAL_BLUR);
+		CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_HORIZONTAL_BLUR).Get());
 		CMDLIST->SetComputeRootDescriptorTable(1, m_Blur0GpuSrv);
 		CMDLIST->SetComputeRootDescriptorTable(2, m_Blur1GpuUav);
 
@@ -157,7 +157,7 @@ void BlurFilter::Execute(ID3D12Resource* input, int blurCount)
 		CMDLIST->ResourceBarrier(1, &UA2GRBarrier1);
 
 		// Vertical
-		CAssetMgr::GetInst()->SetCMDPSO(OBJ_PSO_TYPE::PSO_VERTICAL_BLUR);
+		CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_VERTICAL_BLUR).Get());
 		CMDLIST->SetComputeRootDescriptorTable(1, m_Blur1GpuSrv);
 		CMDLIST->SetComputeRootDescriptorTable(2, m_Blur0GpuUav);
 

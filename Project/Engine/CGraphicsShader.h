@@ -7,21 +7,21 @@ public:
 	CGraphicsShader();
 	~CGraphicsShader();
 
-	void BuildVertexShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint);
-	void BuildGeometryShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint);
-	void BuildPixelShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint);
+	void BuildVertexShader(const std::wstring& key, const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint);
+	void BuildGeometryShader(const std::wstring& key, const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint);
+	void BuildPixelShader(const std::wstring& key, const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint);
 
-	std::vector<D3D12_INPUT_ELEMENT_DESC>							m_InputLayout;
+	std::vector<D3D12_INPUT_ELEMENT_DESC>						m_InputLayout;
 
 private:
-	ComPtr<ID3DBlob>												m_vsByteCode;
-	ComPtr<ID3DBlob>												m_gsByteCode;
-	ComPtr<ID3DBlob>												m_psByteCode;
+	std::unordered_map<std::wstring, ComPtr<ID3DBlob>>			m_vsByteCodeMap;
+	std::unordered_map<std::wstring, ComPtr<ID3DBlob>>			m_gsByteCodeMap;
+	std::unordered_map<std::wstring, ComPtr<ID3DBlob>>			m_psByteCodeMap;
 
 public:
-	inline ComPtr<ID3DBlob> GetVsByteCode() const { return m_vsByteCode; }
-	inline ComPtr<ID3DBlob> GetGsByteCode() const { return m_gsByteCode; }
-	inline ComPtr<ID3DBlob> GetPsByteCode() const { return m_psByteCode; }
+	ComPtr<ID3DBlob> GetVsByteCode(const std::wstring& key) const;
+	ComPtr<ID3DBlob> GetGsByteCode(const std::wstring& key) const;
+	ComPtr<ID3DBlob> GetPsByteCode(const std::wstring& key) const;
 	inline std::vector<D3D12_INPUT_ELEMENT_DESC>& GetInputLayout() { return m_InputLayout; }
 };
 

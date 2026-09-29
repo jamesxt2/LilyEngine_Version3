@@ -108,13 +108,13 @@ void CTransform::Bind()
 	if (m_NumFramesDirty > 0)
 	{
 		// System memory -> GPU
-		std::shared_ptr<CConstantBuffer> pObjCB = CDevice::GetInst()->GetConstBuffer(CB_TYPE::TRANSFORM);
+		std::shared_ptr<CConstantBuffer> pObjCB = CDevice::GetInst()->GetConstBuffer(CB_TYPE::OBJECT);
 
-		g_Trans.World = m_matWorld;
-		g_Trans.WorldInvTranspose = m_matWorld.Invert().Transpose();
-		g_Trans.TexTransform = m_matTexTransform;
+		g_Object.World = m_matWorld;
+		g_Object.WorldInvTranspose = m_matWorld.Invert().Transpose();
+		g_Object.TexTransform = m_matTexTransform;
 
-		pObjCB->CopyData(m_ObjCBIndex, &g_Trans);
+		pObjCB->CopyData(m_ObjCBIndex, &g_Object);
 	}
 }
 

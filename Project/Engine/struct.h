@@ -19,16 +19,20 @@ struct BillboardVertex
 	Vector2 Size;
 };
 
-struct TTransform
+struct TObject
 {
 	Matrix World;
 	Matrix WorldInvTranspose;
 	Matrix ViewProj;
 
 	Matrix TexTransform;
+
+	Vector2 DisplacementMapTexelSize;
+	float GridSpatialStep;
+	float padding;
 };
 
-extern TTransform g_Trans;
+extern TObject g_Object;
 
 struct TMaterial
 {

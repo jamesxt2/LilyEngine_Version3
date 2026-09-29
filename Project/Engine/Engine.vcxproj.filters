@@ -98,6 +98,12 @@
     <Filter Include="08.Asset\Shader\ComputeShader\Filter">
       <UniqueIdentifier>{56b396f1-db77-4bfe-bee0-8a5095c489fa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03.Device\StructuredBuffer">
+      <UniqueIdentifier>{d1874b98-ca21-4a91-8f6f-32868228d9d7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="08.Asset\Shader\ComputeShader\GpuWaves">
+      <UniqueIdentifier>{7779867b-46d0-4e41-8327-0d39b577fe0d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -229,6 +235,15 @@
     <ClInclude Include="BlurFilter.h">
       <Filter>08.Asset\Shader\ComputeShader\Filter</Filter>
     </ClInclude>
+    <ClInclude Include="CStructuredBuffer.h">
+      <Filter>03.Device\StructuredBuffer</Filter>
+    </ClInclude>
+    <ClInclude Include="GpuWaves.h">
+      <Filter>08.Asset\Shader\ComputeShader\GpuWaves</Filter>
+    </ClInclude>
+    <ClInclude Include="CWaveObject.h">
+      <Filter>08.Asset\Shader\ComputeShader\GpuWaves</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -333,6 +348,15 @@
     <ClCompile Include="BlurFilter.cpp">
       <Filter>08.Asset\Shader\ComputeShader\Filter</Filter>
     </ClCompile>
+    <ClCompile Include="CStructuredBuffer.cpp">
+      <Filter>03.Device\StructuredBuffer</Filter>
+    </ClCompile>
+    <ClCompile Include="GpuWaves.cpp">
+      <Filter>08.Asset\Shader\ComputeShader\GpuWaves</Filter>
+    </ClCompile>
+    <ClCompile Include="CWaveObject.cpp">
+      <Filter>08.Asset\Shader\ComputeShader\GpuWaves</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="color.fx">
@@ -348,6 +372,9 @@
       <Filter>HLSL</Filter>
     </FxCompile>
     <FxCompile Include="blur.fx">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="WaveSim.fx">
       <Filter>HLSL</Filter>
     </FxCompile>
   </ItemGroup>
