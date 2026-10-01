@@ -4,11 +4,12 @@
 #include "CDevice.h"
 #include "CTimeMgr.h"
 #include "CAssetMgr.h"
+#include "CDescriptorAllocator.h"
 
 GpuWaves::GpuWaves(int m, int n, float dx, float dt, float speed, float damping)
 	: m_NumRows(m), m_NumCols(n), m_VertexCount(m * n), 
 	m_TriangleCount((m - 1)* (n - 1) * 2), m_TimeStep(dt),
-	m_SpatialStep(dx)
+	m_SpatialStep(dx), m_IsResourceUploaded(false)
 {
 	assert((m * n) % 256 == 0);
 
@@ -88,6 +89,12 @@ void GpuWaves::BuildResources()
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(m_CurrUploadBuffer.GetAddressOf())));
+}
+
+void GpuWaves::UploadResources()
+{
+	const UINT num2DSubresources = 1;
+	//const UINT num2DSubresources = texDesc.DepthOrArraySize * texDesc.MipLevels;
 
 	// Describe the data we want to copy into the default buffer.
 	std::vector<float> initData(m_NumRows * m_NumCols, 0.f);
@@ -121,11 +128,11 @@ void GpuWaves::BuildResources()
 	CMDLIST->ResourceBarrier(1, &C2UANextBarrier);
 }
 
-void GpuWaves::BuildDescriptors(
-	CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuDescriptor,
-	CD3DX12_GPU_DESCRIPTOR_HANDLE hGpuDescriptor,
-	UINT descriptorSize)
+void GpuWaves::BuildDescriptors()
 {
+	auto alloc = CDescriptorAllocator::GetInst()->Allocate(6);
+	assert(alloc.IsValid());
+
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
@@ -139,21 +146,23 @@ void GpuWaves::BuildDescriptors(
 	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 	uavDesc.Texture2D.MipSlice = 0;
 
-	DEVICE->CreateShaderResourceView(m_PrevSol.Get(), &srvDesc, hCpuDescriptor);
-	DEVICE->CreateShaderResourceView(m_CurrSol.Get(), &srvDesc, hCpuDescriptor.Offset(1, descriptorSize));
-	DEVICE->CreateShaderResourceView(m_NextSol.Get(), &srvDesc, hCpuDescriptor.Offset(1, descriptorSize));
+	UINT descriptorSize = DEVICE->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	DEVICE->CreateUnorderedAccessView(m_PrevSol.Get(), nullptr, &uavDesc, hCpuDescriptor.Offset(1, descriptorSize));
-	DEVICE->CreateUnorderedAccessView(m_CurrSol.Get(), nullptr, &uavDesc, hCpuDescriptor.Offset(1, descriptorSize));
-	DEVICE->CreateUnorderedAccessView(m_NextSol.Get(), nullptr, &uavDesc, hCpuDescriptor.Offset(1, descriptorSize));
+	DEVICE->CreateShaderResourceView(m_PrevSol.Get(), &srvDesc, alloc.cpuHandle);
+	DEVICE->CreateShaderResourceView(m_CurrSol.Get(), &srvDesc, alloc.cpuHandle.Offset(1, descriptorSize));
+	DEVICE->CreateShaderResourceView(m_NextSol.Get(), &srvDesc, alloc.cpuHandle.Offset(1, descriptorSize));
+
+	DEVICE->CreateUnorderedAccessView(m_PrevSol.Get(), nullptr, &uavDesc, alloc.cpuHandle.Offset(1, descriptorSize));
+	DEVICE->CreateUnorderedAccessView(m_CurrSol.Get(), nullptr, &uavDesc, alloc.cpuHandle.Offset(1, descriptorSize));
+	DEVICE->CreateUnorderedAccessView(m_NextSol.Get(), nullptr, &uavDesc, alloc.cpuHandle.Offset(1, descriptorSize));
 
 	// Save references to the GPU descriptors. 
-	m_PrevSolSrv = hGpuDescriptor;
-	m_CurrSolSrv = hGpuDescriptor.Offset(1, descriptorSize);
-	m_NextSolSrv = hGpuDescriptor.Offset(1, descriptorSize);
-	m_PrevSolUav = hGpuDescriptor.Offset(1, descriptorSize);
-	m_CurrSolUav = hGpuDescriptor.Offset(1, descriptorSize);
-	m_NextSolUav = hGpuDescriptor.Offset(1, descriptorSize);
+	m_PrevSolSrv = alloc.gpuHandle;
+	m_CurrSolSrv = alloc.gpuHandle.Offset(1, descriptorSize);
+	m_NextSolSrv = alloc.gpuHandle.Offset(1, descriptorSize);
+	m_PrevSolUav = alloc.gpuHandle.Offset(1, descriptorSize);
+	m_CurrSolUav = alloc.gpuHandle.Offset(1, descriptorSize);
+	m_NextSolUav = alloc.gpuHandle.Offset(1, descriptorSize);
 }
 
 void GpuWaves::Update()

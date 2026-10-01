@@ -81,6 +81,8 @@ void CCamera::Render()
 		m_IsDirty = false;
 	}
 
+	g_Object.View = m_matView;
+	g_Object.Proj = m_matProj;
 	g_Object.ViewProj = m_matView * m_matProj;
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

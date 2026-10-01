@@ -6,12 +6,12 @@
 #include "CDevice.h"
 
 CMeshRender::CMeshRender()
-	: CRenderComponent(COMPONENT_TYPE::MESHRENDER)
+	: CRenderComponent(COMPONENT_TYPE::MESHRENDER), m_SubMeshGeo(nullptr)
 {
 }
 
 CMeshRender::CMeshRender(const CMeshRender& _other)
-	: CRenderComponent(_other)
+	: CRenderComponent(_other), m_SubMeshGeo(_other.m_SubMeshGeo)
 {
 }
 
@@ -30,5 +30,10 @@ void CMeshRender::Render()
 	CDevice::GetInst()->GetConstBuffer(CB_TYPE::MATERIAL)->Bind(GetMaterial()->GetMtrlCBIndex(), 2);
 	GetMaterial()->Bind();
 
-	GetMesh()->Render();
+	GetMesh()->Bind();
+
+	if (m_SubMeshGeo)
+		CMDLIST->DrawIndexedInstanced(m_SubMeshGeo->IndexCount, 1, m_SubMeshGeo->StartIndexLocation, m_SubMeshGeo->BaseVertexLocation, 0);
+	else
+		CMDLIST->DrawIndexedInstanced(GetMesh()->GetIndexCount(), 1, 0, 0, 0);
 }

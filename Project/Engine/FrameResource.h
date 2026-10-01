@@ -11,12 +11,13 @@ public:
 	~FrameResource();
 
 	void CreateCB(UINT elementByteSize, UINT elementCount, CB_TYPE type);
-	void CreateWavesVB(UINT waveVtxCount);
+	//void CreateWavesVB(UINT waveVtxCount);
 
-	ComPtr<ID3D12CommandAllocator> m_CmdListAlloc;
+	ComPtr<ID3D12CommandAllocator> m_CmdAlloc;
+	ComPtr<ID3D12GraphicsCommandList> m_CmdList;
 
 	std::shared_ptr<CConstantBuffer> m_CBs[(UINT)CB_TYPE::END];
-	std::unique_ptr<UploadBuffer<sizeof(Vertex)>> m_WavesVB;
+	//std::unique_ptr<UploadBuffer<sizeof(Vertex)>> m_WavesVB;
 
 	UINT64 Fence = 0;
 

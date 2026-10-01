@@ -7,8 +7,7 @@
 
 CDevice::CDevice()
 	: m_MainWnd(nullptr), m_RenderResolution{}, m_Format(DXGI_FORMAT_R8G8B8A8_UNORM),
-	m_CurrentFence(0), m_RtvDescriptorSize(0),
-	m_DsvDescriptorSize(0), m_CbvSrvUavDescriptorSize(0),
+	//m_CurrentFence(0), 
 	m_4xMsaaQuality(0), m_EnableMSAA(false),
 	m_ScreenViewport(), m_ScissorRect{},
 	m_CurrFrameResource(nullptr), m_CurrFrameResourceIndex(0)
@@ -36,6 +35,12 @@ CDevice::~CDevice()
 	//
 	//m_d3dDevice.Reset();
 	//m_dxgiFactory.Reset();
+
+	if (m_FenceEvent != nullptr)
+	{
+		CloseHandle(m_FenceEvent);
+		m_FenceEvent = nullptr;
+	}
 }
 
 int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
@@ -67,14 +72,6 @@ int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
 	}
 
 	/*************************************/
-	// Create Fence
-	/*************************************/
-	ThrowIfFailed(m_d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence)));
-	m_RtvDescriptorSize = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	m_DsvDescriptorSize = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	m_CbvSrvUavDescriptorSize = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	/*************************************/
 	// Detect 4X MSAA
 	/*************************************/
 	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS m_sQualityLevels;
@@ -88,9 +85,9 @@ int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
 	assert(m_4xMsaaQuality > 0 && "Unexpected MSAA quality level.");
 
 	/*************************************/
-	// Create Command Objects
+	// Create Command Objects And Fence
 	/*************************************/
-	CreateCommandObjects();
+	CreateCommandObjectsAndFence();
 
 	/*************************************/
 	// Create Swap Chain
@@ -105,31 +102,34 @@ int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
 	OnResize(m_RenderResolution);
 
 	/*************************************/
-	// Init and Create CB
+	// Frame Resources
 	/*************************************/
-	//CConstantBuffer::Init(3);
+	BuildFrameResources();
 
 	return S_OK;
 }
 
-void CDevice::PostInit()
-{
-	BuildFrameResources();
-}
-
-void CDevice::CreateCommandObjects()
+void CDevice::CreateCommandObjectsAndFence()
 {
 	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	ThrowIfFailed(m_d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_CommandQueue)));
-	ThrowIfFailed(m_d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_DirectCmdListAlloc)));
 
-	ThrowIfFailed(m_d3dDevice->CreateCommandList(
-		0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_DirectCmdListAlloc.Get(), nullptr,
-		IID_PPV_ARGS(&m_CommandList)
-	));
-	m_CommandList->Close();
+	m_UploadContexts.resize(kUploadContextCount);
+	for (auto& ctx : m_UploadContexts)
+	{
+		ThrowIfFailed(m_d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&ctx.alloc)));
+		ThrowIfFailed(m_d3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, ctx.alloc.Get(), nullptr, IID_PPV_ARGS(&ctx.list)));
+
+		ThrowIfFailed(ctx.list->Close());
+		ctx.fenceValue = 0;
+		ctx.bInUse = false;
+	}
+
+	ThrowIfFailed(m_d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence)));
+	m_FenceEvent = CreateEventEx(nullptr, nullptr, false, EVENT_ALL_ACCESS);
+	m_FenceValue = 0;
 }
 
 void CDevice::CreateSwapChain()
@@ -195,7 +195,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE CDevice::CurrentBackBufferView() const
 			m_MsaaRtvHeap->GetCPUDescriptorHandleForHeapStart());
 	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
 		m_RtvHeap->GetCPUDescriptorHandleForHeapStart(), m_CurrentBackBuffer,
-		m_RtvDescriptorSize);
+		m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE CDevice::DepthStencilView() const
@@ -205,15 +205,15 @@ D3D12_CPU_DESCRIPTOR_HANDLE CDevice::DepthStencilView() const
 
 void CDevice::FlushCommandQueue()
 {
-	++m_CurrentFence;
+	++m_FenceValue;
 
-	ThrowIfFailed(m_CommandQueue->Signal(m_Fence.Get(), m_CurrentFence));
+	ThrowIfFailed(m_CommandQueue->Signal(m_Fence.Get(), m_FenceValue));
 
-	if (m_Fence->GetCompletedValue() < m_CurrentFence)
+	if (m_Fence->GetCompletedValue() < m_FenceValue)
 	{
 		HANDLE eventHandle = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 
-		ThrowIfFailed(m_Fence->SetEventOnCompletion(m_CurrentFence, eventHandle));
+		ThrowIfFailed(m_Fence->SetEventOnCompletion(m_FenceValue, eventHandle));
 
 		assert(eventHandle);
 		WaitForSingleObject(eventHandle, INFINITE);
@@ -227,9 +227,8 @@ void CDevice::BuildFrameResources()
 	{
 		m_FrameResources.push_back(std::make_unique<FrameResource>(m_d3dDevice.Get()));
 		m_FrameResources[i]->CreateCB(sizeof(TObject), g_MaxObjectCount, CB_TYPE::OBJECT);
-		m_FrameResources[i]->CreateCB(sizeof(TMaterial), CAssetMgr::GetInst()->GetAssetSize(ASSET_TYPE::MATERIAL), CB_TYPE::MATERIAL);
+		m_FrameResources[i]->CreateCB(sizeof(TMaterial), g_MaxMaterialCount, CB_TYPE::MATERIAL);
 		m_FrameResources[i]->CreateCB(sizeof(TGlobal), 2, CB_TYPE::GLOBAL);
-		m_FrameResources[i]->CreateWavesVB(CAssetMgr::GetInst()->GetWavesVertexCount());
 	}
 	m_CurrFrameResource = m_FrameResources[0].get();
 }
@@ -238,7 +237,6 @@ void CDevice::OnResize(POINT newRenderResolution)
 {
 	if (!m_d3dDevice) return;
 	assert(m_SwapChain);
-	assert(m_DirectCmdListAlloc);
 
 	m_RenderResolution = newRenderResolution;
 
@@ -248,7 +246,7 @@ void CDevice::OnResize(POINT newRenderResolution)
 
 	FlushCommandQueue();
 
-	ThrowIfFailed(m_CommandList->Reset(m_DirectCmdListAlloc.Get(), nullptr));
+	//ThrowIfFailed(m_CommandList->Reset(m_DirectCmdListAlloc.Get(), nullptr));
 
 	for (UINT i = 0; i < m_SwapChainBufferCount; ++i)
 		m_SwapChainBuffer[i].Reset();
@@ -268,7 +266,7 @@ void CDevice::OnResize(POINT newRenderResolution)
 	{
 		ThrowIfFailed(m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&m_SwapChainBuffer[i])));
 		m_d3dDevice->CreateRenderTargetView(m_SwapChainBuffer[i].Get(), nullptr, rtvHeapHandle);
-		rtvHeapHandle.Offset(1, m_RtvDescriptorSize);
+		rtvHeapHandle.Offset(1, m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
 	}
 
 	/*************************************************/
@@ -354,18 +352,16 @@ void CDevice::OnResize(POINT newRenderResolution)
 	m_d3dDevice->CreateDepthStencilView(m_DepthStencilBuffer.Get(), &dsvDesc, DepthStencilView());
 
 	// trnsition the resource from its initial state to be used as depth buffer
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_DepthStencilBuffer.Get(),
-		D3D12_RESOURCE_STATE_COMMON,
-		D3D12_RESOURCE_STATE_DEPTH_WRITE
-	);
-	m_CommandList->ResourceBarrier(1, &barrier);
+	UploadResourceAsync([&](ID3D12GraphicsCommandList* cmdList) {
+		CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+			m_DepthStencilBuffer.Get(),
+			D3D12_RESOURCE_STATE_COMMON,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE
+		);
+		cmdList->ResourceBarrier(1, &barrier);
+		});
 
-	ThrowIfFailed(m_CommandList->Close());
-	ID3D12CommandList* cmdsLists[] = { m_CommandList.Get() };
-	m_CommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
-
-	FlushCommandQueue();
+	WaitForAllUploads();
 
 	/*************************************************/
 	// Update the viewport transform
@@ -389,19 +385,18 @@ void CDevice::Update()
 
 	if (m_CurrFrameResource->Fence != 0 && m_Fence->GetCompletedValue() < m_CurrFrameResource->Fence)
 	{
-		HANDLE eventHandle = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 		ThrowIfFailed(m_Fence->SetEventOnCompletion(
-			m_CurrFrameResource->Fence, eventHandle
+			m_CurrFrameResource->Fence, m_FenceEvent
 		));
-		WaitForSingleObject(eventHandle, INFINITE);
-		CloseHandle(eventHandle);
+		WaitForSingleObject(m_FenceEvent, INFINITE);
 	}
 
-	ThrowIfFailed(m_CurrFrameResource->m_CmdListAlloc->Reset());
-	ThrowIfFailed(m_CommandList->Reset(m_CurrFrameResource->m_CmdListAlloc.Get(), nullptr));
+	WaitForAllUploads();
 
-	//GetConstBuffer(CB_TYPE::TRANSFORM)->Bind();
-	m_CommandList->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Default").Get());
+	ThrowIfFailed(m_CurrFrameResource->m_CmdAlloc->Reset());
+	ThrowIfFailed(m_CurrFrameResource->m_CmdList->Reset(m_CurrFrameResource->m_CmdAlloc.Get(), nullptr));
+
+	m_CurrFrameResource->m_CmdList->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Default").Get());
 }
 
 void CDevice::ClearTargetAndPrepareRender(XMVECTORF32 color)
@@ -414,25 +409,25 @@ void CDevice::ClearTargetAndPrepareRender(XMVECTORF32 color)
 	// Reusing the command list reuses memory.
 	//ThrowIfFailed(m_CommandList->Reset(m_CurrFrameResource->m_CmdListAlloc.Get(), nullptr));
 
-	m_CommandList->RSSetViewports(1, &m_ScreenViewport);
-	m_CommandList->RSSetScissorRects(1, &m_ScissorRect);
+	m_CurrFrameResource->m_CmdList->RSSetViewports(1, &m_ScreenViewport);
+	m_CurrFrameResource->m_CmdList->RSSetScissorRects(1, &m_ScissorRect);
 
 	// Indicate a state transition on the resource usage.
 	CD3DX12_RESOURCE_BARRIER barrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
 		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-	m_CommandList->ResourceBarrier(1, &barrier);
+	m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &barrier);
 
 	// Clear the back buffer and depth buffer.
-	m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), m_ClearColor, 0, nullptr);
-	m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	m_CurrFrameResource->m_CmdList->ClearRenderTargetView(CurrentBackBufferView(), m_ClearColor, 0, nullptr);
+	m_CurrFrameResource->m_CmdList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 	// Specify the buffers we are going to render to.
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrBBV = CurrentBackBufferView();
 	D3D12_CPU_DESCRIPTOR_HANDLE DSV = DepthStencilView();
-	m_CommandList->OMSetRenderTargets(1, &CurrBBV, true, &DSV);
+	m_CurrFrameResource->m_CmdList->OMSetRenderTargets(1, &CurrBBV, true, &DSV);
 
 	ID3D12DescriptorHeap* descriptorHeaps[] = { CAssetMgr::GetInst()->GetDescriptorHeap().Get() };
-	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+	m_CurrFrameResource->m_CmdList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 }
 
 void CDevice::ExecuteAndFinishDrawCall()
@@ -443,16 +438,16 @@ void CDevice::ExecuteAndFinishDrawCall()
 		CD3DX12_RESOURCE_BARRIER toResolveDestBarrier(
 			CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
 				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_DEST));
-		m_CommandList->ResourceBarrier(1, &toResolveDestBarrier);
+		m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &toResolveDestBarrier);
 
 		// MSAA texture: RenderTarget -> ResolveSource
 		CD3DX12_RESOURCE_BARRIER toResolveSrcBarrier(
 			CD3DX12_RESOURCE_BARRIER::Transition(m_MsaaRenderTarget.Get(),
 				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE));
-		m_CommandList->ResourceBarrier(1, &toResolveSrcBarrier);
+		m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &toResolveSrcBarrier);
 
 		// MSAA -> Back Buffer
-		m_CommandList->ResolveSubresource(
+		m_CurrFrameResource->m_CmdList->ResolveSubresource(
 			CurrentBackBuffer(), 0, m_MsaaRenderTarget.Get(),
 			0, DXGI_FORMAT_R8G8B8A8_UNORM
 		);
@@ -461,12 +456,12 @@ void CDevice::ExecuteAndFinishDrawCall()
 		CD3DX12_RESOURCE_BARRIER toRenderTargetBarrier(
 			CD3DX12_RESOURCE_BARRIER::Transition(m_MsaaRenderTarget.Get(),
 				D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET));
-		m_CommandList->ResourceBarrier(1, &toRenderTargetBarrier);
+		m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &toRenderTargetBarrier);
 
 		// Back Buffer: ResolveDest -> Render Target
 		CD3DX12_RESOURCE_BARRIER toRTBarrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
 			D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET));
-		m_CommandList->ResourceBarrier(1, &toRTBarrier);
+		m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &toRTBarrier);
 	}
 
 	//CAssetMgr::GetInst()->ExecuteBlur(CurrentBackBuffer(), 4);
@@ -474,13 +469,13 @@ void CDevice::ExecuteAndFinishDrawCall()
 	// Back Buffer: RenderTarget -> Present
 	CD3DX12_RESOURCE_BARRIER toPresentBarrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-	m_CommandList->ResourceBarrier(1, &toPresentBarrier);
+	m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &toPresentBarrier);
 
 	// Done recording commands.
-	ThrowIfFailed(m_CommandList->Close());
+	ThrowIfFailed(m_CurrFrameResource->m_CmdList->Close());
 
 	// Add the command list to the queue for execution.
-	ID3D12CommandList* cmdsLists[] = { m_CommandList.Get() };
+	ID3D12CommandList* cmdsLists[] = { m_CurrFrameResource->m_CmdList.Get() };
 	m_CommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
 	// swap the back and front buffers
@@ -493,26 +488,68 @@ void CDevice::ExecuteAndFinishDrawCall()
 	//FlushCommandQueue();
 
 	// Advance the fence value to mark commands up to this fence point.
-	m_CurrFrameResource->Fence = ++m_CurrentFence;
+	m_CurrFrameResource->Fence = ++m_FenceValue;
 
 	// Add an instruction to the command queue to set a new fence point. 
 	// Because we are on the GPU timeline, the new fence point won't be 
 	// set until the GPU finishes processing all the commands prior to this Signal().
-	m_CommandQueue->Signal(m_Fence.Get(), m_CurrentFence);
+	m_CommandQueue->Signal(m_Fence.Get(), m_FenceValue);
 }
 
-void CDevice::Reset()
+
+ComPtr<ID3D12Resource> CDevice::CreateDefaultBuffer(const void* initData, UINT64 byteSize, ComPtr<ID3D12Resource>& uploadBuffer, ID3D12GraphicsCommandList* cmdlist)
 {
-	ThrowIfFailed(m_DirectCmdListAlloc->Reset());
-	ThrowIfFailed(m_CommandList->Reset(m_DirectCmdListAlloc.Get(), nullptr));
-}
+	ComPtr<ID3D12Resource> defaultBuffer;
 
-void CDevice::Close()
-{
-	ThrowIfFailed(m_CommandList->Close());
+	// Create actual default buffer resource
+	CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
+	CD3DX12_RESOURCE_DESC desc(CD3DX12_RESOURCE_DESC::Buffer(byteSize));
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
+		&heapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&desc,
+		D3D12_RESOURCE_STATE_COMMON,
+		nullptr,
+		IID_PPV_ARGS(defaultBuffer.GetAddressOf())
+	));
 
-	ID3D12CommandList* cmdsLists[] = { m_CommandList.Get() };
-	m_CommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+	// To copy the data from CPU memory to default buffer, we need to create an intermediate upload buffer
+	heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
+		&heapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&desc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(uploadBuffer.GetAddressOf())
+	));
 
-	FlushCommandQueue();
+	// describe the data we want to copy to the default buffer
+	D3D12_SUBRESOURCE_DATA subResourceData = {};
+	subResourceData.pData = initData;
+	subResourceData.RowPitch = byteSize;
+	subResourceData.SlicePitch = byteSize;
+
+	// copy
+
+	assert(cmdlist);
+
+	CD3DX12_RESOURCE_BARRIER barrier1(CD3DX12_RESOURCE_BARRIER::Transition(
+		defaultBuffer.Get(),
+		D3D12_RESOURCE_STATE_COMMON,
+		D3D12_RESOURCE_STATE_COPY_DEST
+	));
+	cmdlist->ResourceBarrier(1, &barrier1);
+	UpdateSubresources<1>(
+		cmdlist, defaultBuffer.Get(), uploadBuffer.Get(),
+		0, 0, 1, &subResourceData
+	);
+	CD3DX12_RESOURCE_BARRIER barrier2(CD3DX12_RESOURCE_BARRIER::Transition(
+		defaultBuffer.Get(),
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		D3D12_RESOURCE_STATE_GENERIC_READ
+	));
+	cmdlist->ResourceBarrier(1, &barrier2);
+
+	return defaultBuffer;
 }

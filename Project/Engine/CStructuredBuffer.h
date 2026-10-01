@@ -4,20 +4,16 @@
 class CStructuredBuffer : public CEntity
 {
 public:
-	CStructuredBuffer();
-	CStructuredBuffer(const CStructuredBuffer& other);
+	CStructuredBuffer() = delete;
+	CStructuredBuffer(const CStructuredBuffer& other) = delete;
+	CStructuredBuffer(UINT elementByteSize, UINT elementCount);
 	~CStructuredBuffer();
-	CLONE(CStructuredBuffer)
+	CLONE_DISABLE(CStructuredBuffer)
 
 private:
-	ComPtr<ID3D12Resource>			m_Main;
-	ComPtr<ID3D12Resource>			m_Upload;
-	ComPtr<ID3D12Resource>			m_Readback;
+	UINT m_ElementByteSize;
 
-	D3D12_CPU_DESCRIPTOR_HANDLE		m_CpuSrv;
-	D3D12_CPU_DESCRIPTOR_HANDLE		m_CpuUav;
-
-	D3D12_GPU_DESCRIPTOR_HANDLE		m_GpuSrv;
-	D3D12_GPU_DESCRIPTOR_HANDLE		m_GpuUav;
+	ComPtr<ID3D12Resource> m_InputBuffer; // System memory -> GPU
+	ComPtr<ID3D12Resource> m_InputUploadBuffer;
 };
 

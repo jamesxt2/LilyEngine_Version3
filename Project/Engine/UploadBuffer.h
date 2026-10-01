@@ -17,7 +17,7 @@ public:
         // UINT   SizeInBytes;   // multiple of 256
         // } D3D12_CONSTANT_BUFFER_VIEW_DESC;
         if (isConstantBuffer)
-            m_ElementByteSize = CalcConstantBufferByteSize(m_BufferSize);
+            m_ElementByteSize = Utilities::CalcConstantBufferByteSize(m_BufferSize);
         else
             m_ElementByteSize = m_BufferSize;
 

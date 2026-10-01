@@ -9,7 +9,6 @@ class CDevice : public CSingleton<CDevice>
 
 public:
 	int Init(HWND _MainWnd, POINT _RenderResolution);
-	void PostInit();
 
 	void OnResize(POINT newRenderResolution);
 	MulticastDelegate<UINT, UINT> OnWindowResize;
@@ -19,18 +18,11 @@ public:
 	void ClearTargetAndPrepareRender(XMVECTORF32 color);
 	void ExecuteAndFinishDrawCall();
 
-	void Reset();
-	void Close();
-
 	void FlushCommandQueue();
-
-	UINT											m_RtvDescriptorSize;
-	UINT											m_DsvDescriptorSize;
-	UINT											m_CbvSrvUavDescriptorSize;
 
 private:
 
-	void CreateCommandObjects();
+	void CreateCommandObjectsAndFence();
 	void CreateSwapChain();
 	void CreateRtvAndDsvDescriptorHeaps();
 
@@ -48,15 +40,7 @@ private:
 	ComPtr<ID3D12Device>							m_d3dDevice;
 	ComPtr<IDXGIFactory4>							m_dxgiFactory;
 
-	ComPtr<ID3D12Fence>								m_Fence;
-	UINT64											m_CurrentFence;
-	
-
 	UINT											m_4xMsaaQuality;
-
-	ComPtr<ID3D12CommandQueue>						m_CommandQueue;
-	ComPtr<ID3D12CommandAllocator>					m_DirectCmdListAlloc;
-	ComPtr<ID3D12GraphicsCommandList>				m_CommandList;
 
 	int												m_CurrentBackBuffer = 0;
 	static constexpr int							m_SwapChainBufferCount = 2;
@@ -83,7 +67,7 @@ private:
 
 public:
 	inline ComPtr<ID3D12Device> GetDevice() const { return m_d3dDevice; }
-	inline ComPtr<ID3D12GraphicsCommandList> GetCmdList() const { return m_CommandList; }
+
 	inline std::shared_ptr<CConstantBuffer> GetConstBuffer(CB_TYPE type)
 	{
 		return m_CurrFrameResource->GetConstantBuffer(type);
@@ -98,5 +82,96 @@ public:
 
 	inline bool EnableMSAA() const { return m_EnableMSAA; }
 	inline UINT Get4xMSAAQuality() const { return m_4xMsaaQuality; }
+
+
+	// Help function
+	ComPtr<ID3D12Resource> CreateDefaultBuffer(const void* initData, UINT64 byteSize, ComPtr<ID3D12Resource>& uploadBuffer, ID3D12GraphicsCommandList* cmdlist = nullptr);
+
+/***********************Command Objects And Fence******************************/
+public:
+
+	ComPtr<ID3D12CommandQueue> GetCommandQueue() const { return m_CommandQueue; }
+
+	template<typename F>
+	void UploadResourceAsync(F&& recordFunc)
+	{
+		UploadContext& ctx = AcquireUploadContext();
+
+		ThrowIfFailed(ctx.alloc->Reset());
+		ThrowIfFailed(ctx.list->Reset(ctx.alloc.Get(), nullptr));
+
+		recordFunc(ctx.list.Get());
+
+		ThrowIfFailed(ctx.list->Close());
+		ID3D12CommandList* lists[] = { ctx.list.Get() };
+		m_CommandQueue->ExecuteCommandLists(1, lists);
+
+		ctx.fenceValue = ++m_FenceValue;
+		m_CommandQueue->Signal(m_Fence.Get(), ctx.fenceValue);
+		ctx.bInUse = true;
+
+		m_PendingUploadFenceValues.push_back(ctx.fenceValue);
+	}
+
+	void WaitForAllUploads()
+	{
+		if (m_PendingUploadFenceValues.empty()) return;
+
+		uint64 latestFence = m_PendingUploadFenceValues.back();
+		if (m_Fence->GetCompletedValue() < latestFence)
+		{
+			ThrowIfFailed(m_Fence->SetEventOnCompletion(latestFence, m_FenceEvent));
+			WaitForSingleObject(m_FenceEvent, INFINITE);
+		}
+		m_PendingUploadFenceValues.clear();
+	}
+
+private:
+
+	struct UploadContext
+	{
+		ComPtr<ID3D12CommandAllocator> alloc;
+		ComPtr<ID3D12GraphicsCommandList> list;
+		uint64 fenceValue = 0;
+		bool bInUse = false;
+	};
+
+	UploadContext& AcquireUploadContext()
+	{
+		for (auto& ctx : m_UploadContexts)
+		{
+			if (!ctx.bInUse) return ctx;
+
+			if (m_Fence->GetCompletedValue() >= ctx.fenceValue)
+			{
+				ctx.bInUse = false;
+				return ctx;
+			}
+		}
+
+		UploadContext& oldest = *std::min_element(
+			m_UploadContexts.begin(), m_UploadContexts.end(),
+			[](const UploadContext& a, const UploadContext& b) {
+				return a.fenceValue < b.fenceValue;
+			});
+
+		ThrowIfFailed(m_Fence->SetEventOnCompletion(oldest.fenceValue, m_FenceEvent));
+		WaitForSingleObject(m_FenceEvent, INFINITE);
+		oldest.bInUse = false;
+		return oldest;
+	}
+	
+	static constexpr UINT kUploadContextCount = 4;
+
+	ComPtr<ID3D12CommandQueue>						m_CommandQueue;
+
+	std::vector<UploadContext> m_UploadContexts;
+	ComPtr<ID3D12Fence> m_Fence;
+	uint64 m_FenceValue = 0;
+	HANDLE m_FenceEvent = nullptr;
+	std::vector<uint64> m_PendingUploadFenceValues;
+
+/***********************Command Objects And Fence******************************/
+
 };
 

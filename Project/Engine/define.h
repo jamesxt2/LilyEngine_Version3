@@ -35,7 +35,7 @@ inline std::wstring AnsiToWString(const std::string& str)
 #define CLONE_DISABLE(type) virtual type* Clone() override { return nullptr; } 
 
 #define DEVICE CDevice::GetInst()->GetDevice()
-#define CMDLIST CDevice::GetInst()->GetCmdList()
+#define CMDLIST CDevice::GetInst()->GetCurrFrameResource()->m_CmdList
 
 #define KEY_CHECK(Key, State) CKeyMgr::GetInst()->GetKeyState(Key) == State
 #define KEY_TAP(Key) KEY_CHECK(Key, KEY_STATE::TAP)

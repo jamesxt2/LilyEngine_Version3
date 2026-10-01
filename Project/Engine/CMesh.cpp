@@ -1,8 +1,6 @@
 #include "pch.h"
 #include "CMesh.h"
 
-#include "CDevice.h"
-
 CMesh::CMesh()
 	: CAsset(ASSET_TYPE::MESH),
 	m_VertexBufferCPU(nullptr), m_VertexBufferGPU(nullptr),
@@ -20,29 +18,24 @@ CMesh::~CMesh()
 
 }
 
-void CMesh::CreateIndexBuffer32(UINT* idxData, UINT idxCount)
+void CMesh::CreateIndexBuffer32(UINT* idxData, UINT idxCount, ID3D12GraphicsCommandList* cmdlist)
 {
 	m_IndexCount = idxCount;
 	m_IndexFormat = DXGI_FORMAT_R32_UINT;
 	m_IndexBufferByteSize = idxCount * sizeof(UINT);
 	ThrowIfFailed(D3DCreateBlob(m_IndexBufferByteSize, &m_IndexBufferCPU));
 	CopyMemory(m_IndexBufferCPU->GetBufferPointer(), idxData, m_IndexBufferByteSize);
-	m_IndexBufferGPU = CreateDefaultBuffer(idxData, m_IndexBufferByteSize, m_IndexBufferUploader);
+	m_IndexBufferGPU = CDevice::GetInst()->CreateDefaultBuffer(idxData, m_IndexBufferByteSize, m_IndexBufferUploader, cmdlist);
 }
 
-void CMesh::CreateIndexBuffer16(uint16* idxData, UINT idxCount)
+void CMesh::CreateIndexBuffer16(uint16* idxData, UINT idxCount, ID3D12GraphicsCommandList* cmdlist)
 {
 	m_IndexCount = idxCount;
 	m_IndexFormat = DXGI_FORMAT_R16_UINT;
 	m_IndexBufferByteSize = idxCount * sizeof(uint16);
 	ThrowIfFailed(D3DCreateBlob(m_IndexBufferByteSize, &m_IndexBufferCPU));
 	CopyMemory(m_IndexBufferCPU->GetBufferPointer(), idxData, m_IndexBufferByteSize);
-	m_IndexBufferGPU = CreateDefaultBuffer(idxData, m_IndexBufferByteSize, m_IndexBufferUploader);
-}
-
-void CMesh::Render()
-{
-	Bind();
+	m_IndexBufferGPU = CDevice::GetInst()->CreateDefaultBuffer(idxData, m_IndexBufferByteSize, m_IndexBufferUploader, cmdlist);
 }
 
 void CMesh::Bind()

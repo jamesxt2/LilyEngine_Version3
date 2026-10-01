@@ -14,70 +14,71 @@ public:
     int LineNumber = -1;
 };
 
-void WStringToString(_In_ const std::wstring& wstr, _Out_ std::string& str);
-void StringToWString(_In_ const std::string& str, _Out_ std::wstring& wstr);
-std::string WStringToString(_In_ const std::wstring& wstr);
-std::wstring StringToWString(_In_ const std::string& str);
-
-ComPtr<ID3D12Resource> CreateDefaultBuffer(const void* initData, UINT64 byteSize, ComPtr<ID3D12Resource>& uploadBuffer);
-
-template<typename T, int size>
-void Safe_Del_Array(T* (&Array)[size])
+namespace Utilities
 {
-	for (int i = 0; i < size; ++i)
+	void WStringToString(_In_ const std::wstring& wstr, _Out_ std::string& str);
+	void StringToWString(_In_ const std::string& str, _Out_ std::wstring& wstr);
+	std::string WStringToString(_In_ const std::wstring& wstr);
+	std::wstring StringToWString(_In_ const std::string& str);
+
+	template<typename T, int size>
+	void Safe_Del_Array(T* (&Array)[size])
 	{
-		if (Array[i] != nullptr)
+		for (int i = 0; i < size; ++i)
 		{
-			delete Array[i];
-			Array[i] = nullptr;
+			if (Array[i] != nullptr)
+			{
+				delete Array[i];
+				Array[i] = nullptr;
+			}
 		}
 	}
-}
 
-template<typename T>
-void Safe_Del_Vector(std::vector<T*>& vec)
-{
-	for (size_t i = 0; i < vec.size(); ++i)
+	template<typename T>
+	void Safe_Del_Vector(std::vector<T*>& vec)
 	{
-		if (vec[i] != nullptr)
-			delete vec[i];
+		for (size_t i = 0; i < vec.size(); ++i)
+		{
+			if (vec[i] != nullptr)
+				delete vec[i];
+		}
+		vec.clear();
 	}
-	vec.clear();
-}
 
-template<typename T1, typename T2>
-void Safe_Del_Map(std::map<T1, T2>& _map)
-{
-	for (const auto& pair : _map)
+	template<typename T1, typename T2>
+	void Safe_Del_Map(std::map<T1, T2>& _map)
 	{
-		if (pair.second != nullptr)
-			delete pair.second;
+		for (const auto& pair : _map)
+		{
+			if (pair.second != nullptr)
+				delete pair.second;
+		}
+		_map.clear();
 	}
-	_map.clear();
+
+	inline UINT CalcConstantBufferByteSize(UINT byteSize)
+	{
+		// Constant buffers must be a multiple of the minimum hardware
+		// allocation size (usually 256 bytes).  So round up to nearest
+		// multiple of 256.  We do this by adding 255 and then masking off
+		// the lower 2 bytes which store all bits < 256.
+		// Example: Suppose byteSize = 300.
+		// (300 + 255) & ~255
+		// 555 & ~255
+		// 0x022B & ~0x00ff
+		// 0x022B & 0xff00
+		// 0x0200
+		// 512
+		return (byteSize + 255) & ~255;
+	}
+
+	int Rand(int a, int b);
+
+	// Returns random float in [0, 1).
+	float RandF();
+
+	// Returns random float in [a, b).
+	float RandF(float a, float b);
+
+	Vector4 SphericalToCartesian(float radius, float theta, float phi);
 }
-
-inline UINT CalcConstantBufferByteSize(UINT byteSize)
-{
-	// Constant buffers must be a multiple of the minimum hardware
-	// allocation size (usually 256 bytes).  So round up to nearest
-	// multiple of 256.  We do this by adding 255 and then masking off
-	// the lower 2 bytes which store all bits < 256.
-	// Example: Suppose byteSize = 300.
-	// (300 + 255) & ~255
-	// 555 & ~255
-	// 0x022B & ~0x00ff
-	// 0x022B & 0xff00
-	// 0x0200
-	// 512
-	return (byteSize + 255) & ~255;
-}
-
-int Rand(int a, int b);
-
-// Returns random float in [0, 1).
-float RandF();
-
-// Returns random float in [a, b).
-float RandF(float a, float b);
-
-Vector4 SphericalToCartesian(float radius, float theta, float phi);

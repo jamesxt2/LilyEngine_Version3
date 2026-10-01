@@ -44,8 +44,6 @@ int CEngine::Init(HWND _MainWnd, POINT _Resolution)
 	CPathMgr::GetInst()->Init();
 	CKeyMgr::GetInst()->Init();
 	CAssetMgr::GetInst()->Init();
-	CDevice::GetInst()->PostInit();
-	CAssetMgr::GetInst()->PostInit();
 	CRenderMgr::GetInst()->Init();
 	CLevelMgr::GetInst()->Init();
 

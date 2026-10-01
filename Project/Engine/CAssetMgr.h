@@ -14,7 +14,6 @@ class CAssetMgr : public CSingleton<CAssetMgr>
 
 public:
 	void Init();
-	void PostInit();
 	void Tick();
 
 	template<typename T>
@@ -29,52 +28,54 @@ public:
 	void GetAssetNames(ASSET_TYPE type, _Out_ std::vector<std::string>& vecNames);
 	inline const std::unordered_map<std::wstring, Ptr<CAsset>>& GetAssets(ASSET_TYPE type) const { return m_AssetMap[(UINT)type]; }
 
+	Ptr<CMesh> CreateWaveMesh(const std::wstring& key, UINT rows, UINT columns);
+
 private:
 
 	///<summary>
 	/// Creates a box centered at the origin with the given dimensions, where each
 	/// face has m rows and n columns of vertices.
 	///</summary>
-	void CreateBox(const std::wstring& name, float width, float height, float depth, uint32 numSubdivisions = 0);
+	std::shared_ptr<MeshData> CreateBox(float width, float height, float depth, uint32 numSubdivisions = 0);
 
 	///<summary>
 	/// Creates a sphere centered at the origin with the given radius.  The
 	/// slices and stacks parameters control the degree of tessellation.
 	///</summary>
-	void CreateSphere(const std::wstring& name, float radius, uint32 sliceCount, uint32 stackCount);
+	std::shared_ptr<MeshData> CreateSphere(float radius, uint32 sliceCount, uint32 stackCount);
 
 	///<summary>
 	/// Creates a geosphere centered at the origin with the given radius.  The
 	/// depth controls the level of tessellation.
 	///</summary>
-	void CreateGeosphere(const std::wstring& name, float radius, uint32 numSubdivisions);
+	std::shared_ptr<MeshData> CreateGeosphere(float radius, uint32 numSubdivisions);
 
 	///<summary>
 	/// Creates a cylinder parallel to the y-axis, and centered about the origin.  
 	/// The bottom and top radius can vary to form various cone shapes rather than true
 	// cylinders.  The slices and stacks parameters control the degree of tessellation.
 	///</summary>
-	void CreateCylinder(const std::wstring& name, float bottomRadius, float topRadius, float height, UINT sliceCount, UINT stackCount);
+	std::shared_ptr<MeshData> CreateCylinder(float bottomRadius, float topRadius, float height, UINT sliceCount, UINT stackCount);
 
 	///<summary>
 	/// Creates an mxn grid in the xz-plane with m rows and n columns, centered
 	/// at the origin with the specified width and depth.
 	///</summary>
-	void CreateGrid(const std::wstring& name, float width, float depth, uint32 m, uint32 n);
+	std::shared_ptr<MeshData> CreateGrid(float width, float depth, uint32 m, uint32 n);
 
 	///<summary>
 	/// Creates a quad aligned with the screen.  This is useful for postprocessing and screen effects.
 	///</summary>
-	void CreateQuad(const std::wstring& name, float x, float y, float w, float h, float depth);
+	std::shared_ptr<MeshData> CreateQuad(float x, float y, float w, float h, float depth);
 
-	void UpdateWaves();
+	//void UpdateWaves();
 	void AnimateMaterials();
 
 	void CreateMeshes();
 
 	void CreateDefaultMeshes();
 	void CreateSceneMeshes();
-	void CreateWaveMeshes();
+	void CreateWaveSceneMeshes();
 	void CreateSkullMesh();
 	void CreateRoomMeshes();
 	void CreateBillboardMesh();
@@ -86,15 +87,13 @@ private:
 	void CreateGraphicsShaders();
 	void CreateComputeShaders();
 
-	void BuildCylinderTopCap(float bottomRadius, float topRadius, float height, uint32 sliceCount, uint32 stackCount, MeshData& meshData);
-	void BuildCylinderBottomCap(float bottomRadius, float topRadius, float height, uint32 sliceCount, uint32 stackCount, MeshData& meshData);
+	void BuildCylinderTopCap(float bottomRadius, float topRadius, float height, uint32 sliceCount, uint32 stackCount, std::shared_ptr<MeshData> meshData);
+	void BuildCylinderBottomCap(float bottomRadius, float topRadius, float height, uint32 sliceCount, uint32 stackCount, std::shared_ptr<MeshData> meshData);
 
 	VertexMesh MidPoint(const VertexMesh& v0, const VertexMesh& v1);
-	void Subdivide(MeshData& meshData);
+	void Subdivide(std::shared_ptr<MeshData> meshData);
 
 	std::unordered_map<std::wstring, Ptr<CAsset>> m_AssetMap[(UINT)ASSET_TYPE::END];
-
-	std::unordered_map<std::wstring, MeshData> m_MeshDataMap;
 
 	std::unordered_map<std::wstring, ComPtr<ID3D12RootSignature>> m_RootSignatureMap;
 	void BuildRootSignatures();
@@ -103,25 +102,17 @@ private:
 	void BuildPSO();
 	std::unordered_map<OBJ_PSO_TYPE, ComPtr<ID3D12PipelineState>>	m_PSOGroup;
 
-	std::unique_ptr<Waves> m_Waves;
 
-	CWaveObject* m_WaveObject{ nullptr };
-
-	std::unique_ptr<BlurFilter> m_BlurFilter;
+	//std::unique_ptr<BlurFilter> m_BlurFilter;
 	ComPtr<ID3D12DescriptorHeap>		m_CbvSrvUavDescriptorHeap;
-	UINT								m_TextureDescriptorCount;
+
 	void BuildDescriptorHeaps();
 
 public:
-	inline CWaveObject* GetWaveObject() const { return m_WaveObject; }
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(int Offset) const;
-	CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(int Offset) const;
-
-	inline int GetWavesVertexCount() const { return m_Waves->VertexCount(); }
 	inline UINT GetAssetSize(ASSET_TYPE type) const { return (UINT)m_AssetMap[(UINT)type].size(); }
 
-	inline void ExecuteBlur(ID3D12Resource* input, int blurCount) const { m_BlurFilter->Execute(input, blurCount); }
+	//inline void ExecuteBlur(ID3D12Resource* input, int blurCount) const { m_BlurFilter->Execute(input, blurCount); }
 
 	inline ComPtr<ID3D12DescriptorHeap> GetDescriptorHeap() const { return m_CbvSrvUavDescriptorHeap; }
 

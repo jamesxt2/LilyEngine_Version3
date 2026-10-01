@@ -11,12 +11,12 @@
 #include "CDevice.h"
 
 CGameObject::CGameObject()
-	: m_arrComp{}, m_RenderComp(nullptr), m_Parent(nullptr), m_Dead(false), m_SubMeshGeo(nullptr)
+	: m_arrComp{}, m_RenderComp(nullptr), m_Parent(nullptr), m_Dead(false)
 {
 }
 
 CGameObject::CGameObject(const CGameObject& other)
-	: CEntity(other), m_RenderComp(nullptr), m_arrComp{}, m_Parent(nullptr), m_Dead(false), m_SubMeshGeo(other.m_SubMeshGeo)
+	: CEntity(other), m_RenderComp(nullptr), m_arrComp{}, m_Parent(nullptr), m_Dead(false)
 {
 	for (UINT i = 0; i < (UINT)COMPONENT_TYPE::END; ++i)
 	{
@@ -35,8 +35,8 @@ CGameObject::CGameObject(const CGameObject& other)
 
 CGameObject::~CGameObject()
 {
-	Safe_Del_Array(m_arrComp);
-	Safe_Del_Vector(m_vecChild);
+	Utilities::Safe_Del_Array(m_arrComp);
+	Utilities::Safe_Del_Vector(m_vecChild);
 }
 
 void CGameObject::Begin()
@@ -100,11 +100,6 @@ void CGameObject::Render()
 		}
 
 		m_RenderComp->Render();
-
-		if (m_SubMeshGeo)
-			CMDLIST->DrawIndexedInstanced(m_SubMeshGeo->IndexCount, 1, m_SubMeshGeo->StartIndexLocation, m_SubMeshGeo->BaseVertexLocation, 0);
-		else
-			CMDLIST->DrawIndexedInstanced(m_RenderComp->GetMesh()->GetIndexCount(), 1, 0, 0, 0);
 	}
 }
 

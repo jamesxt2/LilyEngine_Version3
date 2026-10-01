@@ -4,7 +4,8 @@ TObject g_Object = {};
 TGlobal g_Global = {};
 
 int g_NumFrameResources = 3;
-int g_MaxObjectCount = 40;
+int g_MaxObjectCount = 100;
+int g_MaxMaterialCount = 100;
 
 const int g_TextureDescriptorsCount = 10;
 const int g_BlurDescriptorCount = 4;

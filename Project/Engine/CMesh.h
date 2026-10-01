@@ -2,6 +2,7 @@
 #include "CAsset.h"
 
 #include "MeshData.h"
+#include "CDevice.h"
 
 class CMesh : public CAsset
 {
@@ -13,17 +14,15 @@ public:
 	friend class CAssetMgr;
 
 	template<typename T>
-	void CreateVertexBuffer(T* vtxData, UINT vtxCount);
+	void CreateVertexBuffer(T* vtxData, UINT vtxCount, ID3D12GraphicsCommandList* cmdlist);
 
 
-	void CreateIndexBuffer32(UINT* idxData, UINT idxCount);
-	void CreateIndexBuffer16(uint16* idxData, UINT idxCount);
-
-	void Render();
-
-private:
+	void CreateIndexBuffer32(UINT* idxData, UINT idxCount, ID3D12GraphicsCommandList* cmdlist);
+	void CreateIndexBuffer16(uint16* idxData, UINT idxCount, ID3D12GraphicsCommandList* cmdlist);
 
 	void Bind();
+
+private:
 
 	// Vertex
 	ComPtr<ID3DBlob>						m_VertexBufferCPU;
@@ -50,11 +49,11 @@ public:
 };
 
 template<typename T>
-inline void CMesh::CreateVertexBuffer(T* vtxData, UINT vtxCount)
+inline void CMesh::CreateVertexBuffer(T* vtxData, UINT vtxCount, ID3D12GraphicsCommandList* cmdlist)
 {
 	m_VertexByteStride = sizeof(T);
 	m_VertexBufferByteSize = vtxCount * m_VertexByteStride;
 	ThrowIfFailed(D3DCreateBlob(m_VertexBufferByteSize, &m_VertexBufferCPU));
 	CopyMemory(m_VertexBufferCPU->GetBufferPointer(), vtxData, m_VertexBufferByteSize);
-	m_VertexBufferGPU = CreateDefaultBuffer(vtxData, m_VertexBufferByteSize, m_VertexBufferUploader);
+	m_VertexBufferGPU = CDevice::GetInst()->CreateDefaultBuffer(vtxData, m_VertexBufferByteSize, m_VertexBufferUploader, cmdlist);
 }

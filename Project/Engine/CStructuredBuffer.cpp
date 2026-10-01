@@ -1,11 +1,8 @@
 #include "pch.h"
 #include "CStructuredBuffer.h"
 
-CStructuredBuffer::CStructuredBuffer()
-{
-}
-
-CStructuredBuffer::CStructuredBuffer(const CStructuredBuffer& other)
+CStructuredBuffer::CStructuredBuffer(UINT elementByteSize, UINT elementCount)
+	: m_ElementByteSize(elementByteSize)
 {
 }
 

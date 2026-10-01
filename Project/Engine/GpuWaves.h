@@ -3,7 +3,6 @@
 class GpuWaves
 {
 public:
-public:
 	// Note that m,n should be divisible by 16 so there is no 
 	// remainder when we divide into thread groups.
 	GpuWaves(int m, int n, float dx, float dt, float speed, float damping);
@@ -11,10 +10,7 @@ public:
 	GpuWaves& operator=(const GpuWaves& rhs) = delete;
 	virtual ~GpuWaves() = default;
 
-	void BuildDescriptors(
-		CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuDescriptor,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE hGpuDescriptor,
-		UINT descriptorSize);
+	void BuildDescriptors();
 
 	void Update();
 
@@ -51,6 +47,9 @@ protected:
 
 	ComPtr<ID3D12Resource> m_PrevUploadBuffer = nullptr;
 	ComPtr<ID3D12Resource> m_CurrUploadBuffer = nullptr;
+
+	bool m_IsResourceUploaded;
+	void UploadResources();
 
 public:
 	inline UINT GetDescriptorCount() const { return 6; }

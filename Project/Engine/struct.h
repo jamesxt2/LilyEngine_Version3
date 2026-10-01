@@ -23,6 +23,8 @@ struct TObject
 {
 	Matrix World;
 	Matrix WorldInvTranspose;
+	Matrix View;
+	Matrix Proj;
 	Matrix ViewProj;
 
 	Matrix TexTransform;

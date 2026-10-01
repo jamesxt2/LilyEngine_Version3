@@ -14,7 +14,7 @@ CLevel::CLevel()
 
 CLevel::~CLevel()
 {
-	Safe_Del_Vector(m_vecParent);
+	Utilities::Safe_Del_Vector(m_vecParent);
 }
 
 void CLevel::Begin()
@@ -42,12 +42,12 @@ void CLevel::Tick()
 	// global CB
 	g_Global.AmbientLight = Vector4(0.35f, 0.35f, 0.45f, 1.0f);
 
-	XMVECTOR lightDir = -SphericalToCartesian(1.0f, m_SunTheta, m_SunPhi);
+	XMVECTOR lightDir = -Utilities::SphericalToCartesian(1.0f, m_SunTheta, m_SunPhi);
 
 	g_Global.Lights[0].Direction = lightDir;
 	g_Global.Lights[0].Strength = Vector3(1.f, 1.f, 0.9f);
 
-	lightDir = -SphericalToCartesian(1.0f, m_SunTheta + XM_PI, m_SunPhi);
+	lightDir = -Utilities::SphericalToCartesian(1.0f, m_SunTheta + XM_PI, m_SunPhi);
 
 	g_Global.Lights[1].Direction = lightDir;
 	g_Global.Lights[1].Strength = Vector3(0.7f, 0.7f, 0.6f);

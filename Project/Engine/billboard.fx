@@ -30,6 +30,8 @@ cbuffer TRANSFORM : register(b0)
 {
     row_major matrix g_World;
     row_major matrix g_WorldInvTranspose;
+    row_major matrix g_View;
+    row_major matrix g_Proj;
     row_major matrix g_ViewProj;
     row_major matrix g_TexTransform;
 }

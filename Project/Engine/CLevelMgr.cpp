@@ -66,7 +66,7 @@ void CLevelMgr::Init()
 	pLandGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"LandMesh"));
 	pLandGrid->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"GrassMaterial"));
 	pLandGrid->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-	pLandGrid->SetSubMeshGeo(pLandGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
+	pLandGrid->GetMeshRenderComp()->SetSubMeshGeo(pLandGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
 
 	pWaveLevel->AddObject(pLandGrid);
 
@@ -89,21 +89,21 @@ void CLevelMgr::Init()
 	//
 	//pWaveLevel->AddObject(pWave);
 
-	CWaveObject* pWave = CAssetMgr::GetInst()->GetWaveObject();
+	CWaveObject* pWave = new CWaveObject(256, 256, 0.25f, 0.03f, 2.0f, 0.2f);
 	pWave->SetName(L"Wave");
 	pWave->AddComponent(new CTransform);
 	pWave->AddComponent(new CMeshRender);
-
+	
 	pWave->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
 	pWave->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
 	pWave->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
 	pWave->GetTransformComp()->SetObjCBIndex(1);
-
-	pWave->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"WaveMesh"));
+	
+	pWave->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->CreateWaveMesh(L"WaveMesh", 256, 256));
 	pWave->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WaterMaterial"));
 	pWave->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_WAVE_RENDER);
-	pWave->SetSubMeshGeo(pWave->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
-
+	//pWave->GetMeshRenderComp()->SetSubMeshGeo(pWave->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
+	
 	pWaveLevel->AddObject(pWave);
 
 	CGameObject* pWoodBox = new CGameObject;
@@ -119,7 +119,7 @@ void CLevelMgr::Init()
 	pWoodBox->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 	pWoodBox->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WireFenceBoxMaterial"));
 	pWoodBox->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_ALPHA_TESTED);
-	pWoodBox->SetSubMeshGeo(pWoodBox->GetMeshRenderComp()->GetMesh()->GetSubGeo("box"));
+	pWoodBox->GetMeshRenderComp()->SetSubMeshGeo(pWoodBox->GetMeshRenderComp()->GetMesh()->GetSubGeo("box"));
 
 	pWaveLevel->AddObject(pWoodBox);
 
@@ -179,7 +179,7 @@ void CLevelMgr::Init()
 	pSceneGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 	pSceneGrid->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"TileMaterial"));
 	pSceneGrid->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-	pSceneGrid->SetSubMeshGeo(pSceneGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
+	pSceneGrid->GetMeshRenderComp()->SetSubMeshGeo(pSceneGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
 
 	pSceneLevel->AddObject(pSceneGrid);
 
@@ -196,7 +196,7 @@ void CLevelMgr::Init()
 	pBox->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 	pBox->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WoodBoxMaterial"));
 	pBox->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-	pBox->SetSubMeshGeo(pBox->GetMeshRenderComp()->GetMesh()->GetSubGeo("box"));
+	pBox->GetMeshRenderComp()->SetSubMeshGeo(pBox->GetMeshRenderComp()->GetMesh()->GetSubGeo("box"));
 
 	pSceneLevel->AddObject(pBox);
 
@@ -232,7 +232,7 @@ void CLevelMgr::Init()
 		pCylinder->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pCylinder->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
 		pCylinder->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-		pCylinder->SetSubMeshGeo(pCylinder->GetMeshRenderComp()->GetMesh()->GetSubGeo("cylinder"));
+		pCylinder->GetMeshRenderComp()->SetSubMeshGeo(pCylinder->GetMeshRenderComp()->GetMesh()->GetSubGeo("cylinder"));
 
 		pSceneLevel->AddObject(pCylinder);
 
@@ -250,7 +250,7 @@ void CLevelMgr::Init()
 		pCylinder2->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pCylinder2->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
 		pCylinder2->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-		pCylinder2->SetSubMeshGeo(pCylinder2->GetMeshRenderComp()->GetMesh()->GetSubGeo("cylinder"));
+		pCylinder2->GetMeshRenderComp()->SetSubMeshGeo(pCylinder2->GetMeshRenderComp()->GetMesh()->GetSubGeo("cylinder"));
 
 		pSceneLevel->AddObject(pCylinder2);
 
@@ -268,7 +268,7 @@ void CLevelMgr::Init()
 		pSphere->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pSphere->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"StoneMaterial"));
 		pSphere->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-		pSphere->SetSubMeshGeo(pSphere->GetMeshRenderComp()->GetMesh()->GetSubGeo("sphere"));
+		pSphere->GetMeshRenderComp()->SetSubMeshGeo(pSphere->GetMeshRenderComp()->GetMesh()->GetSubGeo("sphere"));
 
 		pSceneLevel->AddObject(pSphere);
 
@@ -286,7 +286,7 @@ void CLevelMgr::Init()
 		pSphere2->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pSphere2->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"StoneMaterial"));
 		pSphere2->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-		pSphere2->SetSubMeshGeo(pSphere2->GetMeshRenderComp()->GetMesh()->GetSubGeo("sphere"));
+		pSphere2->GetMeshRenderComp()->SetSubMeshGeo(pSphere2->GetMeshRenderComp()->GetMesh()->GetSubGeo("sphere"));
 
 		pSceneLevel->AddObject(pSphere2);
 	}
@@ -328,7 +328,7 @@ void CLevelMgr::Init()
 	pRoomFloor->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"RoomMesh"));
 	pRoomFloor->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"TileMaterial"));
 	pRoomFloor->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-	pRoomFloor->SetSubMeshGeo(pRoomFloor->GetMeshRenderComp()->GetMesh()->GetSubGeo("floor"));
+	pRoomFloor->GetMeshRenderComp()->SetSubMeshGeo(pRoomFloor->GetMeshRenderComp()->GetMesh()->GetSubGeo("floor"));
 
 	pRoomLevel->AddObject(pRoomFloor);
 
@@ -345,7 +345,7 @@ void CLevelMgr::Init()
 	pRoomWall->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"RoomMesh"));
 	pRoomWall->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
 	pRoomWall->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-	pRoomWall->SetSubMeshGeo(pRoomWall->GetMeshRenderComp()->GetMesh()->GetSubGeo("wall"));
+	pRoomWall->GetMeshRenderComp()->SetSubMeshGeo(pRoomWall->GetMeshRenderComp()->GetMesh()->GetSubGeo("wall"));
 
 	pRoomLevel->AddObject(pRoomWall);
 
@@ -391,7 +391,7 @@ void CLevelMgr::Init()
 	pRoomMirror->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"RoomMesh"));
 	pRoomMirror->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"MirrorMaterial"));
 	pRoomMirror->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_MIRRORS | OBJ_PSO_TYPE::PSO_TRANSPARENT);
-	pRoomMirror->SetSubMeshGeo(pRoomMirror->GetMeshRenderComp()->GetMesh()->GetSubGeo("mirror"));
+	pRoomMirror->GetMeshRenderComp()->SetSubMeshGeo(pRoomMirror->GetMeshRenderComp()->GetMesh()->GetSubGeo("mirror"));
 
 	pRoomLevel->AddObject(pRoomMirror);
 

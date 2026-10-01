@@ -5,33 +5,35 @@
 #include "CDevice.h"
 #include "CAssetMgr.h"
 
+
 CTexture::CTexture()
 	: CAsset(ASSET_TYPE::TEXTURE),
 	m_Resource(nullptr), m_UploadHeap(nullptr),
-	m_DescriptorHeapOffsetSize(0)
+	m_Alloc{}
 {
 	
 }
 
 CTexture::~CTexture()
 {
+
 }
 
-void CTexture::CreateFromFile(const std::wstring& filename, INT descriptorOffset, bool isTextureArray)
+void CTexture::CreateFromFile(const std::wstring& filename, bool isTextureArray)
 {
-	m_DescriptorHeapOffsetSize = descriptorOffset;
-
 	std::wstring strPath = CPathMgr::GetInst()->GetContentPath();
 
-	ThrowIfFailed(CreateDDSTextureFromFile12(
-		DEVICE.Get(), CMDLIST.Get(),
-		(strPath + filename).c_str(),
-		m_Resource, m_UploadHeap
-	));
+	CDevice::GetInst()->UploadResourceAsync([&](ID3D12GraphicsCommandList* cmdlist) {
+		ThrowIfFailed(CreateDDSTextureFromFile12(
+			DEVICE.Get(), cmdlist,
+			(strPath + filename).c_str(),
+			m_Resource, m_UploadHeap));
+		});
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(
-		CAssetMgr::GetInst()->GetDescriptorHeap()->GetCPUDescriptorHandleForHeapStart());
-	hDescriptor.Offset(descriptorOffset, CDevice::GetInst()->m_CbvSrvUavDescriptorSize);
+	m_Alloc = CDescriptorAllocator::GetInst()->Allocate(1);
+	assert(m_Alloc.IsValid());
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_Alloc.cpuHandle);
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -56,8 +58,6 @@ void CTexture::CreateFromFile(const std::wstring& filename, INT descriptorOffset
 
 void CTexture::Bind()
 {
-	CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(
-		CAssetMgr::GetInst()->GetDescriptorHeap()->GetGPUDescriptorHandleForHeapStart());
-	texHandle.Offset(m_DescriptorHeapOffsetSize, CDevice::GetInst()->m_CbvSrvUavDescriptorSize);
+	CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(m_Alloc.gpuHandle);
 	CMDLIST->SetGraphicsRootDescriptorTable(0, texHandle);
 }

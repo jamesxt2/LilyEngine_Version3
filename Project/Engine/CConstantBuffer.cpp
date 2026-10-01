@@ -3,22 +3,11 @@
 
 #include "CDevice.h"
 
-ComPtr<ID3D12DescriptorHeap> CConstantBuffer::m_CbvHeap = nullptr;
-
-CConstantBuffer::CConstantBuffer()
-	: m_Type(CB_TYPE::END), m_BufferSize(0), m_ElementByteSize(0),
-	m_TotalSize(0),
-	m_UploadBuffer(nullptr), m_MappedData(nullptr)
-{
-
-}
-
 CConstantBuffer::CConstantBuffer(UINT elementByteSize, UINT elementCount, CB_TYPE type)
-	: m_Type(CB_TYPE::END), m_BufferSize(0), m_ElementByteSize(0),
-	m_TotalSize(0),
+	: m_Type(type), m_BufferSize(0), m_ElementByteSize(0),
 	 m_UploadBuffer(nullptr), m_MappedData(nullptr)
 {
-	Create(elementByteSize, elementCount, type);
+	BuildResources(elementByteSize, elementCount);
 }
 
 CConstantBuffer::~CConstantBuffer()
@@ -28,28 +17,13 @@ CConstantBuffer::~CConstantBuffer()
 	m_MappedData = nullptr;
 }
 
-void CConstantBuffer::BuildCbvDescriptorHeap()
-{
-	UINT NumDescriptors = g_MaxObjectCount * g_NumFrameResources;
-
-	D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
-	cbvHeapDesc.NumDescriptors = NumDescriptors;
-	cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	cbvHeapDesc.NodeMask = 0;
-	ThrowIfFailed(DEVICE->CreateDescriptorHeap(&cbvHeapDesc,
-		IID_PPV_ARGS(&m_CbvHeap)));
-}
-
-void CConstantBuffer::Create(UINT elementByteSize, UINT elementCount, CB_TYPE type)
+void CConstantBuffer::BuildResources(UINT elementByteSize, UINT elementCount)
 {
 	m_BufferSize = (UINT)elementByteSize;
-	m_Type = type;
-	m_ElementByteSize = CalcConstantBufferByteSize((UINT)elementByteSize);
-	m_TotalSize = m_ElementByteSize * elementCount;
+	m_ElementByteSize = Utilities::CalcConstantBufferByteSize((UINT)elementByteSize);
 
 	CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-	CD3DX12_RESOURCE_DESC rDesc(CD3DX12_RESOURCE_DESC::Buffer(m_TotalSize));
+	CD3DX12_RESOURCE_DESC rDesc(CD3DX12_RESOURCE_DESC::Buffer(m_ElementByteSize * elementCount));
 	ThrowIfFailed(DEVICE->CreateCommittedResource(
 		&heapProps,
 		D3D12_HEAP_FLAG_NONE,

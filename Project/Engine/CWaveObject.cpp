@@ -9,12 +9,17 @@
 CWaveObject::CWaveObject(int m, int n, float dx, float dt, float speed, float damping)
 	: CGameObject(), GpuWaves(m, n, dx, dt, speed, damping)
 {
-
+	BuildDescriptors();
 	CRenderMgr::GetInst()->OnObjRenderStart.AddDynamic(this, &CWaveObject::UpdateWaveObject);
 }
 
 CWaveObject::~CWaveObject()
 {
+}
+
+void CWaveObject::Begin()
+{
+	
 }
 
 void CWaveObject::Render()
@@ -30,6 +35,12 @@ void CWaveObject::Render()
 
 void CWaveObject::UpdateWaveObject()
 {
+	if (!m_IsResourceUploaded)
+	{
+		UploadResources();
+		m_IsResourceUploaded = true;
+	}
+
 	CD3DX12_RESOURCE_BARRIER GR2UACurrBarrier(CD3DX12_RESOURCE_BARRIER::Transition(m_CurrSol.Get(),
 		D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 	CMDLIST->ResourceBarrier(1, &GR2UACurrBarrier);
@@ -40,9 +51,9 @@ void CWaveObject::UpdateWaveObject()
 	{
 		t_base += 0.25f;
 
-		int i = Rand(4, m_NumRows - 5);
-		int j = Rand(4, m_NumCols - 5);
-		float r = RandF(1.f, 2.f);
+		int i = Utilities::Rand(4, m_NumRows - 5);
+		int j = Utilities::Rand(4, m_NumCols - 5);
+		float r = Utilities::RandF(1.f, 2.f);
 
 		Disturb(i, j, r);
 	}

@@ -11,6 +11,7 @@ public:
 	~CWaveObject();
 	CLONE_DISABLE(CWaveObject)
 
+	virtual void Begin() override;
 	virtual void Render() override;
 	
 	void UpdateWaveObject();

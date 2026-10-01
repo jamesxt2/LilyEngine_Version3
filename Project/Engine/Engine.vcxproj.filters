@@ -104,6 +104,12 @@
     <Filter Include="08.Asset\Shader\ComputeShader\GpuWaves">
       <UniqueIdentifier>{7779867b-46d0-4e41-8327-0d39b577fe0d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="07.Component\09.Render\02.ParticleSystem">
+      <UniqueIdentifier>{a87900a3-eb0a-46c2-8007-8867cd7c0edf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04.Manager\06.DescriptorAllocator">
+      <UniqueIdentifier>{db095a24-2c1e-4331-8f73-6769c693e98f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -244,6 +250,12 @@
     <ClInclude Include="CWaveObject.h">
       <Filter>08.Asset\Shader\ComputeShader\GpuWaves</Filter>
     </ClInclude>
+    <ClInclude Include="CParticleSystem.h">
+      <Filter>07.Component\09.Render\02.ParticleSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="CDescriptorAllocator.h">
+      <Filter>04.Manager\06.DescriptorAllocator</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -357,6 +369,12 @@
     <ClCompile Include="CWaveObject.cpp">
       <Filter>08.Asset\Shader\ComputeShader\GpuWaves</Filter>
     </ClCompile>
+    <ClCompile Include="CParticleSystem.cpp">
+      <Filter>07.Component\09.Render\02.ParticleSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="CDescriptorAllocator.cpp">
+      <Filter>04.Manager\06.DescriptorAllocator</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="color.fx">
@@ -375,6 +393,9 @@
       <Filter>HLSL</Filter>
     </FxCompile>
     <FxCompile Include="WaveSim.fx">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="particle.fx">
       <Filter>HLSL</Filter>
     </FxCompile>
   </ItemGroup>
