@@ -56,8 +56,20 @@ void CTexture::CreateFromFile(const std::wstring& filename, bool isTextureArray)
 	DEVICE->CreateShaderResourceView(m_Resource.Get(), &srvDesc, hDescriptor);
 }
 
-void CTexture::Bind()
+void CTexture::Bind_Graphics_Table(UINT rootParamIndex)
 {
 	CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(m_Alloc.gpuHandle);
-	CMDLIST->SetGraphicsRootDescriptorTable(0, texHandle);
+	CMDLIST->SetGraphicsRootDescriptorTable(rootParamIndex, texHandle);
+}
+
+void CTexture::Bind_Graphics_Table(ID3D12GraphicsCommandList* cmdlist, UINT rootParamIndex)
+{
+	CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(m_Alloc.gpuHandle);
+	cmdlist->SetGraphicsRootDescriptorTable(rootParamIndex, texHandle);
+}
+
+void CTexture::Bind_Compute_Table(ID3D12GraphicsCommandList* cmdlist, UINT rootParamIndex)
+{
+	CD3DX12_GPU_DESCRIPTOR_HANDLE texHandle(m_Alloc.gpuHandle);
+	cmdlist->SetComputeRootDescriptorTable(rootParamIndex, texHandle);
 }

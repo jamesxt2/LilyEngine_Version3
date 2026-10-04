@@ -199,6 +199,93 @@ void CAssetMgr::BuildRootSignatures()
 		serializedRootSig->GetBufferSize(),
 		IID_PPV_ARGS(wavesRootSig.GetAddressOf())));
 	m_RootSignatureMap[L"Waves"] = wavesRootSig;
+
+	/***************************************************************/
+	// Particles
+	/***************************************************************/
+	CD3DX12_DESCRIPTOR_RANGE srvTable0_Particle;
+	srvTable0_Particle.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+	CD3DX12_DESCRIPTOR_RANGE srvTable1_Particle;
+	srvTable1_Particle.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+
+	CD3DX12_ROOT_PARAMETER slotRootParameter_Particle[4];
+
+	// t0: g_Particle,  t1: g_ParticleTexture
+	slotRootParameter_Particle[0].InitAsDescriptorTable(1, &srvTable0_Particle, D3D12_SHADER_VISIBILITY_ALL);
+	slotRootParameter_Particle[1].InitAsConstantBufferView(0);
+	slotRootParameter_Particle[2].InitAsConstantBufferView(1);
+	slotRootParameter_Particle[3].InitAsDescriptorTable(1, &srvTable1_Particle, D3D12_SHADER_VISIBILITY_ALL);
+
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc_Particle(4, slotRootParameter_Particle,
+		(UINT)staticSamplers.size(), staticSamplers.data(),
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	serializedRootSig = nullptr;
+	errorBlob = nullptr;
+	hr = D3D12SerializeRootSignature(&rootSigDesc_Particle, D3D_ROOT_SIGNATURE_VERSION_1,
+		serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+	if (errorBlob != nullptr)
+	{
+		::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+	}
+	ThrowIfFailed(hr);
+
+	ComPtr<ID3D12RootSignature> particleRootSig;
+	ThrowIfFailed(DEVICE->CreateRootSignature(
+		0,
+		serializedRootSig->GetBufferPointer(),
+		serializedRootSig->GetBufferSize(),
+		IID_PPV_ARGS(particleRootSig.GetAddressOf())));
+	m_RootSignatureMap[L"Particle"] = particleRootSig;
+
+	/***************************************************************/
+	// Particle Tick
+	/***************************************************************/
+	CD3DX12_DESCRIPTOR_RANGE texTable_ParticleTick;
+	texTable_ParticleTick.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+	CD3DX12_DESCRIPTOR_RANGE uavTable0_ParticleTick;
+	uavTable0_ParticleTick.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+
+	CD3DX12_DESCRIPTOR_RANGE uavTable1_ParticleTick;
+	uavTable1_ParticleTick.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);
+
+	CD3DX12_DESCRIPTOR_RANGE srvTable_ParticleTick;
+	srvTable_ParticleTick.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+
+	CD3DX12_ROOT_PARAMETER slotRootParameter_ParticleTick[6];
+
+	slotRootParameter_ParticleTick[0].InitAsConstantBufferView(0);
+	slotRootParameter_ParticleTick[1].InitAsDescriptorTable(1, &uavTable0_ParticleTick);
+	slotRootParameter_ParticleTick[2].InitAsDescriptorTable(1, &uavTable1_ParticleTick);
+	slotRootParameter_ParticleTick[3].InitAsDescriptorTable(1, &srvTable_ParticleTick);
+	slotRootParameter_ParticleTick[4].InitAsConstants(1, 1);
+	slotRootParameter_ParticleTick[5].InitAsDescriptorTable(1, &texTable_ParticleTick);
+
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc_ParticleTick(6, slotRootParameter_ParticleTick,
+		(UINT)staticSamplers.size(), staticSamplers.data(),
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	serializedRootSig = nullptr;
+	errorBlob = nullptr;
+	hr = D3D12SerializeRootSignature(&rootSigDesc_ParticleTick, D3D_ROOT_SIGNATURE_VERSION_1,
+		serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+	if (errorBlob != nullptr)
+	{
+		::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+	}
+	ThrowIfFailed(hr);
+
+	ComPtr<ID3D12RootSignature> particleTickRootSig;
+	ThrowIfFailed(DEVICE->CreateRootSignature(
+		0,
+		serializedRootSig->GetBufferPointer(),
+		serializedRootSig->GetBufferSize(),
+		IID_PPV_ARGS(particleTickRootSig.GetAddressOf())));
+	m_RootSignatureMap[L"ParticleTick"] = particleTickRootSig;
 }
 
 std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> CAssetMgr::GetStaticSamplers()
@@ -271,12 +358,12 @@ void CAssetMgr::BuildPSO()
 	ComPtr<ID3D12RootSignature> rootSignature(GetRootSignature(L"Default"));
 	ComPtr<ID3D12RootSignature> postProcessRootSignature(GetRootSignature(L"PostProcess"));
 	ComPtr<ID3D12RootSignature> wavesRootSignature(GetRootSignature(L"Waves"));
-
-	assert(rootSignature);
+	ComPtr<ID3D12RootSignature> particleRootSignature(GetRootSignature(L"Particle"));
+	ComPtr<ID3D12RootSignature> particleTickRootSignature(GetRootSignature(L"ParticleTick"));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
 	ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	Ptr<CGraphicsShader> shader = CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"DefaultShader");
+	Ptr<CGraphicsShader> shader = FindAsset<CGraphicsShader>(L"DefaultShader");
 	psoDesc.InputLayout = { shader->GetInputLayout().data(), (UINT)shader->GetInputLayout().size() };
 	psoDesc.pRootSignature = rootSignature.Get();
 	psoDesc.VS =
@@ -406,7 +493,7 @@ void CAssetMgr::BuildPSO()
 	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&shadowPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_SHADOW])));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC billboardPSODesc = psoDesc;
-	shader = CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"BillboardShader");
+	shader = FindAsset<CGraphicsShader>(L"BillboardShader");
 	billboardPSODesc.VS =
 	{
 		reinterpret_cast<BYTE*>(shader->GetVsByteCode(L"BillboardVS")->GetBufferPointer()),
@@ -429,7 +516,7 @@ void CAssetMgr::BuildPSO()
 	// CS
 	D3D12_COMPUTE_PIPELINE_STATE_DESC horzBlurPSODesc = {};
 	horzBlurPSODesc.pRootSignature = postProcessRootSignature.Get();
-	Ptr<CComputeShader> pCS = CAssetMgr::GetInst()->FindAsset<CComputeShader>(L"HorzBlurCS");
+	Ptr<CComputeShader> pCS = FindAsset<CComputeShader>(L"HorzBlurCS");
 	horzBlurPSODesc.CS =
 	{
 		reinterpret_cast<BYTE*>(pCS->GetCsByteCode()->GetBufferPointer()),
@@ -440,7 +527,7 @@ void CAssetMgr::BuildPSO()
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC vertBlurPSODesc = {};
 	vertBlurPSODesc.pRootSignature = postProcessRootSignature.Get();
-	pCS = CAssetMgr::GetInst()->FindAsset<CComputeShader>(L"VertBlurCS");
+	pCS = FindAsset<CComputeShader>(L"VertBlurCS");
 	vertBlurPSODesc.CS =
 	{
 		reinterpret_cast<BYTE*>(pCS->GetCsByteCode()->GetBufferPointer()),
@@ -450,7 +537,7 @@ void CAssetMgr::BuildPSO()
 	ThrowIfFailed(DEVICE->CreateComputePipelineState(&vertBlurPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_VERTICAL_BLUR])));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC waveRenderPSODesc = transparencyPSODesc;
-	shader = CAssetMgr::GetInst()->FindAsset<CGraphicsShader>(L"WaveShader");
+	shader = FindAsset<CGraphicsShader>(L"DefaultShader");
 	waveRenderPSODesc.VS =
 	{
 		reinterpret_cast<BYTE*>(shader->GetVsByteCode(L"WaveVS")->GetBufferPointer()),
@@ -460,7 +547,7 @@ void CAssetMgr::BuildPSO()
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC waveUpdatePSODesc = {};
 	waveUpdatePSODesc.pRootSignature = wavesRootSignature.Get();
-	pCS = CAssetMgr::GetInst()->FindAsset<CComputeShader>(L"UpdateWavesCS");
+	pCS = FindAsset<CComputeShader>(L"UpdateWavesCS");
 	waveUpdatePSODesc.CS =
 	{
 		reinterpret_cast<BYTE*>(pCS->GetCsByteCode()->GetBufferPointer()),
@@ -471,7 +558,7 @@ void CAssetMgr::BuildPSO()
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC waveDisturbPSODesc = {};
 	waveDisturbPSODesc.pRootSignature = wavesRootSignature.Get();
-	pCS = CAssetMgr::GetInst()->FindAsset<CComputeShader>(L"DisturbWavesCS");
+	pCS = FindAsset<CComputeShader>(L"DisturbWavesCS");
 	waveDisturbPSODesc.CS =
 	{
 		reinterpret_cast<BYTE*>(pCS->GetCsByteCode()->GetBufferPointer()),
@@ -479,6 +566,43 @@ void CAssetMgr::BuildPSO()
 	};
 	waveDisturbPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	ThrowIfFailed(DEVICE->CreateComputePipelineState(&waveDisturbPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_WAVE_DISTURB])));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC particleRenderPSODesc = transparencyPSODesc;
+	particleRenderPSODesc.pRootSignature = particleRootSignature.Get();
+	shader = FindAsset<CGraphicsShader>(L"ParticleShader");
+	particleRenderPSODesc.VS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetVsByteCode(L"ParticleVS")->GetBufferPointer()),
+		shader->GetVsByteCode(L"ParticleVS")->GetBufferSize()
+	};
+	particleRenderPSODesc.InputLayout = { shader->GetInputLayout().data(), (UINT)shader->GetInputLayout().size() };
+	particleRenderPSODesc.GS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetGsByteCode(L"ParticleGS")->GetBufferPointer()),
+		shader->GetGsByteCode(L"ParticleGS")->GetBufferSize()
+	};
+	particleRenderPSODesc.PS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetPsByteCode(L"ParticlePS")->GetBufferPointer()),
+		shader->GetPsByteCode(L"ParticlePS")->GetBufferSize()
+	};
+	particleRenderPSODesc.DepthStencilState.DepthEnable = true;
+	particleRenderPSODesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	particleRenderPSODesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	particleRenderPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&particleRenderPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_PARTICLE_RENDER])));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC particleTickPSODesc = {};
+	particleTickPSODesc.pRootSignature = particleTickRootSignature.Get();
+	pCS = FindAsset<CComputeShader>(L"ParticleTickCS");
+	particleTickPSODesc.CS =
+	{
+		reinterpret_cast<BYTE*>(pCS->GetCsByteCode()->GetBufferPointer()),
+		pCS->GetCsByteCode()->GetBufferSize()
+	};
+	particleTickPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	ThrowIfFailed(DEVICE->CreateComputePipelineState(&particleTickPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_PARTICLE_TICK])));
+
 }
 
 ComPtr<ID3D12PipelineState> CAssetMgr::GetPSO(OBJ_PSO_TYPE type) const
@@ -492,6 +616,9 @@ ComPtr<ID3D12PipelineState> CAssetMgr::GetPSO(OBJ_PSO_TYPE type) const
 void CAssetMgr::Tick()
 {
 	//UpdateWaves();
+	ID3D12DescriptorHeap* descriptorHeaps[] = { m_CbvSrvUavDescriptorHeap.Get() };
+	CMDLIST->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+
 	AnimateMaterials();
 }
 
@@ -612,6 +739,22 @@ void CAssetMgr::CreateDefaultMeshes()
 		});
 
 	AddAsset<CMesh>(L"RectMesh", pMesh);
+
+	/***************/
+	// Point Mesh
+	/***************/
+	Vertex vPoint;
+	vPoint.Position = Vector3(0.f);
+	uint16 idxPoint = 0;
+
+	pMesh = new CMesh;
+
+	CDevice::GetInst()->UploadResourceAsync([&](ID3D12GraphicsCommandList* cmdlist) {
+		pMesh->CreateVertexBuffer(&vPoint, 1, cmdlist);
+		pMesh->CreateIndexBuffer16(&idxPoint, 1, cmdlist);
+		});
+
+	AddAsset<CMesh>(L"PointMesh", pMesh);
 }
 
 void CAssetMgr::CreateSceneMeshes()
@@ -1037,7 +1180,11 @@ void CAssetMgr::CreateTextures()
 
 	pTexture = new CTexture;
 	pTexture->CreateFromFile(L"textures\\particle\\AlphaCircle.dds");
-	AddAsset<CTexture>(L"AlphaCircleArray", pTexture);
+	AddAsset<CTexture>(L"AlphaCircleTexture", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\noise\\noise_03.dds");
+	AddAsset<CTexture>(L"NoiseTexture", pTexture);
 }
 
 void CAssetMgr::CreateMaterials()
@@ -1149,6 +1296,7 @@ void CAssetMgr::CreateMaterials()
 	pMaterial->m_Roughness = 0.125f;
 	pMaterial->m_Texture = FindAsset<CTexture>(L"AlphaCircleTexture");
 	AddAsset<CMaterial>(L"AlphaCircleMaterial", pMaterial);
+
 }
 
 void CAssetMgr::CreateGraphicsShaders()
@@ -1157,6 +1305,7 @@ void CAssetMgr::CreateGraphicsShaders()
 
 	Ptr<CGraphicsShader> pShader = nullptr;
 
+	// default.fx
 	const D3D_SHADER_MACRO opaqueDefines[] =
 	{
 		"FOG", "1",
@@ -1179,8 +1328,16 @@ void CAssetMgr::CreateGraphicsShaders()
 	};
 	pShader->BuildPixelShader(L"AlphaTestedPS", strPath + L"shader\\default.fx", alphaTestDefines, "PS");
 
+	const D3D_SHADER_MACRO waveDefines[] =
+	{
+		"DISPLACEMENT_MAP", "1",
+		NULL, NULL
+	};
+	pShader->BuildVertexShader(L"WaveVS", strPath + L"shader\\default.fx", waveDefines, "VS");
+
 	AddAsset<CGraphicsShader>(L"DefaultShader", pShader);
 
+	// billboard.fx
 	pShader = new CGraphicsShader;
 	pShader->BuildVertexShader(L"BillboardVS", strPath + L"shader\\billboard.fx", nullptr, "VS");
 	pShader->m_InputLayout = {
@@ -1192,21 +1349,17 @@ void CAssetMgr::CreateGraphicsShaders()
 
 	AddAsset<CGraphicsShader>(L"BillboardShader", pShader);
 
-	const D3D_SHADER_MACRO waveDefines[] =
-	{
-		"DISPLACEMENT_MAP", "1",
-		NULL, NULL
-	};
+	// particle.fx
 	pShader = new CGraphicsShader;
-	pShader->BuildVertexShader(L"WaveVS", strPath + L"shader\\default.fx", waveDefines, "VS");
+	pShader->BuildVertexShader(L"ParticleVS", strPath + L"shader\\particle.fx", nullptr, "VS");
 	pShader->m_InputLayout = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	};
-	pShader->BuildPixelShader(L"AlphaTestedPS", strPath + L"shader\\default.fx", alphaTestDefines, "PS");
+	pShader->BuildGeometryShader(L"ParticleGS", strPath + L"shader\\particle.fx", nullptr, "GS");
+	pShader->BuildPixelShader(L"ParticlePS", strPath + L"shader\\particle.fx", nullptr, "PS");
 
-	AddAsset<CGraphicsShader>(L"WaveShader", pShader);
+	AddAsset<CGraphicsShader>(L"ParticleShader", pShader);
 }
 
 void CAssetMgr::CreateComputeShaders()
@@ -1228,6 +1381,10 @@ void CAssetMgr::CreateComputeShaders()
 	pShader = new CComputeShader;
 	pShader->BuildComputeShader(strPath + L"shader\\WaveSim.fx", nullptr, "DisturbWavesCS");
 	AddAsset<CComputeShader>(L"DisturbWavesCS", pShader);
+
+	pShader = new CComputeShader;
+	pShader->BuildComputeShader(strPath + L"shader\\particletick.fx", nullptr, "CS_ParticleTick");
+	AddAsset<CComputeShader>(L"ParticleTickCS", pShader);
 }
 
 

@@ -12,7 +12,7 @@ public:
 	CLONE_DISABLE(CMaterial)
 	friend class CAssetMgr;
 
-	void Bind();
+	void Bind(UINT texRootParamIndex = 0, UINT mtrlCBRootParamIndex = 2);
 
 private:
 	int m_MtrlCBIndex;

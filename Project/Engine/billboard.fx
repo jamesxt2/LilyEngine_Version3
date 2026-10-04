@@ -57,7 +57,9 @@ cbuffer GLOBAL : register(b2)
     float4 g_FogColor;
     float g_FogStart;
     float g_FogRange;
-    float2 padding_Global2;
+    
+    float g_DeltaTime;
+    float g_TotalTime;
 }
 
 struct VertexIn

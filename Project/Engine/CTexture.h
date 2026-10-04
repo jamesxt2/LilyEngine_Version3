@@ -14,7 +14,9 @@ public:
 
 	void CreateFromFile(const std::wstring& filename, bool isTextureArray = false);
 
-	void Bind();
+	void Bind_Graphics_Table(UINT rootParamIndex = 0);
+	void Bind_Graphics_Table(ID3D12GraphicsCommandList* cmdlist, UINT rootParamIndex = 0);
+	void Bind_Compute_Table(ID3D12GraphicsCommandList* cmdlist, UINT rootParamIndex);
 
 private:
 

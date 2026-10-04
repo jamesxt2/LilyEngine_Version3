@@ -398,5 +398,11 @@
     <FxCompile Include="particle.fx">
       <Filter>HLSL</Filter>
     </FxCompile>
+    <FxCompile Include="particletick.fx">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="struct.fx">
+      <Filter>HLSL</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

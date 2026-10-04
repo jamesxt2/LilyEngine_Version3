@@ -107,7 +107,6 @@ void CTransform::Bind()
 {
 	if (m_NumFramesDirty > 0)
 	{
-		// System memory -> GPU
 		std::shared_ptr<CConstantBuffer> pObjCB = CDevice::GetInst()->GetConstBuffer(CB_TYPE::OBJECT);
 
 		g_Object.World = m_matWorld;

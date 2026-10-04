@@ -42,7 +42,7 @@ void CTimeMgr::Tick()
 	{
 		HWND hMainWnd = CEngine::GetInst()->GetMainWnd();
 		wchar_t szText[255] = {};
-		swprintf_s(szText, L"FPS : %d Delta Time : %f", m_FrmCount, m_DeltaTime);
+		swprintf_s(szText, L"FPS : %d Delta Time : %fms", m_FrmCount, m_DeltaTime * 1000.f);
 		SetWindowText(hMainWnd, szText);
 
 		m_AccTime -= 1.0;
@@ -50,8 +50,10 @@ void CTimeMgr::Tick()
 	}
 }
 
-float CTimeMgr::DeltaTime() const
+float CTimeMgr::DeltaTime()
 {
+	if (m_DeltaTime > 0.033f)
+		m_DeltaTime = 0.033f;
 	return (float)m_DeltaTime;
 }
 

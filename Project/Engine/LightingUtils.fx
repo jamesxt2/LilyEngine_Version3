@@ -1,17 +1,7 @@
 #ifndef _LIGHTING_UTILS
 #define _LIGHTING_UTILS
 
-#define MaxLights 16
-
-struct Light
-{
-    float3 Strength;
-    float FalloffStart;
-    float3 Direction;
-    float FalloffEnd;
-    float3 Position;
-    float SpotPower;
-};
+#include "struct.fx"
 
 float CalcAttenuation(float d, float falloffStart, float falloffEnd)
 {

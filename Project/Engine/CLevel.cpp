@@ -56,7 +56,9 @@ void CLevel::Tick()
 	g_Global.FogStart = 5.f;
 	g_Global.FogRange = 150.f;
 
-	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(0, 3);
+	g_Global.DeltaTime = CTimeMgr::GetInst()->DeltaTime();
+	g_Global.TotalTime = CTimeMgr::GetInst()->TotalTime();
+
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->CopyData(0, &g_Global);
 
 	TGlobal globalReflected = g_Global;

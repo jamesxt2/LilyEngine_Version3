@@ -7,7 +7,7 @@ class CTimeMgr : public CSingleton<CTimeMgr>
 
 public:
 	float TotalTime() const;
-	float DeltaTime() const;
+	float DeltaTime();
 
 	void Reset();
 	void Start();

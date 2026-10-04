@@ -2,13 +2,10 @@
 #include "CDevice.h"
 
 #include "CConstantBuffer.h"
-#include "CAssetMgr.h"
-#include "BlurFilter.h"
 
 CDevice::CDevice()
 	: m_MainWnd(nullptr), m_RenderResolution{}, m_Format(DXGI_FORMAT_R8G8B8A8_UNORM),
-	//m_CurrentFence(0), 
-	m_4xMsaaQuality(0), m_EnableMSAA(false),
+	m_4xMsaaQuality(0), m_EnableMSAA(true),
 	m_ScreenViewport(), m_ScissorRect{},
 	m_CurrFrameResource(nullptr), m_CurrFrameResourceIndex(0)
 {
@@ -17,25 +14,6 @@ CDevice::CDevice()
 
 CDevice::~CDevice()
 {
-	//FlushCommandQueue();
-	//
-	//for (auto& buf : m_SwapChainBuffer)
-	//	buf.Reset();
-	//m_DepthStencilBuffer.Reset();
-	//
-	//m_RtvHeap.Reset();
-	//m_DsvHeap.Reset();
-	//
-	//m_SwapChain.Reset();
-	//
-	//m_CommandList.Reset();
-	//m_DirectCmdListAlloc.Reset();
-	//m_CommandQueue.Reset();
-	//m_Fence.Reset();
-	//
-	//m_d3dDevice.Reset();
-	//m_dxgiFactory.Reset();
-
 	if (m_FenceEvent != nullptr)
 	{
 		CloseHandle(m_FenceEvent);
@@ -395,8 +373,6 @@ void CDevice::Update()
 
 	ThrowIfFailed(m_CurrFrameResource->m_CmdAlloc->Reset());
 	ThrowIfFailed(m_CurrFrameResource->m_CmdList->Reset(m_CurrFrameResource->m_CmdAlloc.Get(), nullptr));
-
-	m_CurrFrameResource->m_CmdList->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Default").Get());
 }
 
 void CDevice::ClearTargetAndPrepareRender(XMVECTORF32 color)
@@ -426,8 +402,6 @@ void CDevice::ClearTargetAndPrepareRender(XMVECTORF32 color)
 	D3D12_CPU_DESCRIPTOR_HANDLE DSV = DepthStencilView();
 	m_CurrFrameResource->m_CmdList->OMSetRenderTargets(1, &CurrBBV, true, &DSV);
 
-	ID3D12DescriptorHeap* descriptorHeaps[] = { CAssetMgr::GetInst()->GetDescriptorHeap().Get() };
-	m_CurrFrameResource->m_CmdList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 }
 
 void CDevice::ExecuteAndFinishDrawCall()

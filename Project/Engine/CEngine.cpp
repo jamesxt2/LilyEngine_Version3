@@ -56,8 +56,8 @@ void CEngine::Run()
     {
 		CTimeMgr::GetInst()->Tick();
 		CKeyMgr::GetInst()->Tick();
-		CAssetMgr::GetInst()->Tick();
 		CDevice::GetInst()->Update();
+		CAssetMgr::GetInst()->Tick();
 		CLevelMgr::GetInst()->Tick();
 		CRenderMgr::GetInst()->Render();
     }

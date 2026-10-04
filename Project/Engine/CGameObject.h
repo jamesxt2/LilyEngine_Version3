@@ -17,9 +17,9 @@ public:
 	CLONE(CGameObject)
 
 	virtual void Begin();
-	void Tick();
+	virtual void Tick();
 	virtual void FinalTick();
-	virtual void Render();
+	virtual void Render(UINT objCBRootParamIndex = 1);
 
 	void AddComponent(CComponent* component);
 

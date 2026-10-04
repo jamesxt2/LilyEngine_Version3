@@ -20,6 +20,7 @@ GpuWaves::GpuWaves(int m, int n, float dx, float dt, float speed, float damping)
 	m_K[2] = (2.0f * e) / d;
 
 	BuildResources();
+	BuildDescriptors();
 }
 
 void GpuWaves::BuildResources()
@@ -91,7 +92,7 @@ void GpuWaves::BuildResources()
 		IID_PPV_ARGS(m_CurrUploadBuffer.GetAddressOf())));
 }
 
-void GpuWaves::UploadResources()
+void GpuWaves::UploadResources(ID3D12GraphicsCommandList* cmdlist)
 {
 	const UINT num2DSubresources = 1;
 	//const UINT num2DSubresources = texDesc.DepthOrArraySize * texDesc.MipLevels;
@@ -109,23 +110,23 @@ void GpuWaves::UploadResources()
 	// read by a shader.
 	CD3DX12_RESOURCE_BARRIER C2CDPrevBarrier(CD3DX12_RESOURCE_BARRIER::Transition(m_PrevSol.Get(),
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
-	CMDLIST->ResourceBarrier(1, &C2CDPrevBarrier);
-	UpdateSubresources(CMDLIST.Get(), m_PrevSol.Get(), m_PrevUploadBuffer.Get(), 0, 0, num2DSubresources, &subResourceData);
+	cmdlist->ResourceBarrier(1, &C2CDPrevBarrier);
+	UpdateSubresources(cmdlist, m_PrevSol.Get(), m_PrevUploadBuffer.Get(), 0, 0, num2DSubresources, &subResourceData);
 	CD3DX12_RESOURCE_BARRIER CD2UAPrevBarrier(CD3DX12_RESOURCE_BARRIER::Transition(m_PrevSol.Get(),
 		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
-	CMDLIST->ResourceBarrier(1, &CD2UAPrevBarrier);
+	cmdlist->ResourceBarrier(1, &CD2UAPrevBarrier);
 
 	CD3DX12_RESOURCE_BARRIER C2CDCurrBarrier(CD3DX12_RESOURCE_BARRIER::Transition(m_CurrSol.Get(),
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
-	CMDLIST->ResourceBarrier(1, &C2CDCurrBarrier);
-	UpdateSubresources(CMDLIST.Get(), m_CurrSol.Get(), m_CurrUploadBuffer.Get(), 0, 0, num2DSubresources, &subResourceData);
+	cmdlist->ResourceBarrier(1, &C2CDCurrBarrier);
+	UpdateSubresources(cmdlist, m_CurrSol.Get(), m_CurrUploadBuffer.Get(), 0, 0, num2DSubresources, &subResourceData);
 	CD3DX12_RESOURCE_BARRIER CD2GRCurrBarrier(CD3DX12_RESOURCE_BARRIER::Transition(m_CurrSol.Get(),
 		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
-	CMDLIST->ResourceBarrier(1, &CD2GRCurrBarrier);
+	cmdlist->ResourceBarrier(1, &CD2GRCurrBarrier);
 
 	CD3DX12_RESOURCE_BARRIER C2UANextBarrier(CD3DX12_RESOURCE_BARRIER::Transition(m_NextSol.Get(),
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
-	CMDLIST->ResourceBarrier(1, &C2UANextBarrier);
+	cmdlist->ResourceBarrier(1, &C2UANextBarrier);
 }
 
 void GpuWaves::BuildDescriptors()
@@ -165,24 +166,24 @@ void GpuWaves::BuildDescriptors()
 	m_NextSolUav = alloc.gpuHandle.Offset(1, descriptorSize);
 }
 
-void GpuWaves::Update()
+void GpuWaves::Update(ID3D12GraphicsCommandList* cmdlist)
 {
 	static float t = 0.f;
 	t += CTimeMgr::GetInst()->DeltaTime();
 
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_WAVE_UPDATE).Get());
-	CMDLIST->SetComputeRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Waves").Get());
+	cmdlist->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_WAVE_UPDATE).Get());
+	cmdlist->SetComputeRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Waves").Get());
 
 	if (t > m_TimeStep)
 	{
-		CMDLIST->SetComputeRoot32BitConstants(0, 3, m_K, 0);
-		CMDLIST->SetComputeRootDescriptorTable(1, m_PrevSolUav);
-		CMDLIST->SetComputeRootDescriptorTable(2, m_CurrSolUav);
-		CMDLIST->SetComputeRootDescriptorTable(3, m_NextSolUav);
+		cmdlist->SetComputeRoot32BitConstants(0, 3, m_K, 0);
+		cmdlist->SetComputeRootDescriptorTable(1, m_PrevSolUav);
+		cmdlist->SetComputeRootDescriptorTable(2, m_CurrSolUav);
+		cmdlist->SetComputeRootDescriptorTable(3, m_NextSolUav);
 
 		UINT numGroupsX = m_NumCols / 16;
 		UINT numGroupsY = m_NumRows / 16;
-		CMDLIST->Dispatch(numGroupsX, numGroupsY, 1);
+		cmdlist->Dispatch(numGroupsX, numGroupsY, 1);
 
 		// ping-pong buffers
 		auto resTemp = m_PrevSol;
@@ -209,15 +210,15 @@ void GpuWaves::Update()
 	//CMDLIST->ResourceBarrier(1, &UA2GRCurrBarrier);
 }
 
-void GpuWaves::Disturb(UINT i, UINT j, float magnitude)
+void GpuWaves::Disturb(ID3D12GraphicsCommandList* cmdlist, UINT i, UINT j, float magnitude)
 {
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_WAVE_DISTURB).Get());
-	CMDLIST->SetComputeRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Waves").Get());
+	cmdlist->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_WAVE_DISTURB).Get());
+	cmdlist->SetComputeRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Waves").Get());
 
 	UINT disturbIndex[2] = { j, i };
-	CMDLIST->SetComputeRoot32BitConstants(0, 1, &magnitude, 3);
-	CMDLIST->SetComputeRoot32BitConstants(0, 2, disturbIndex, 4);
-	CMDLIST->SetComputeRootDescriptorTable(3, m_CurrSolUav);
+	cmdlist->SetComputeRoot32BitConstants(0, 1, &magnitude, 3);
+	cmdlist->SetComputeRoot32BitConstants(0, 2, disturbIndex, 4);
+	cmdlist->SetComputeRootDescriptorTable(3, m_CurrSolUav);
 
 	// The current solution is in the GENERIC_READ state so it can be read by the vertex shader.
 	// Change it to UNORDERED_ACCESS for the compute shader.  Note that a UAV can still be
@@ -228,5 +229,5 @@ void GpuWaves::Disturb(UINT i, UINT j, float magnitude)
 
 	// One thread group kicks off one thread, which displaces the height of one
 	// vertex and its neighbors.
-	CMDLIST->Dispatch(1, 1, 1);
+	cmdlist->Dispatch(1, 1, 1);
 }

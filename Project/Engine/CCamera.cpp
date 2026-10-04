@@ -85,6 +85,10 @@ void CCamera::Render()
 	g_Object.Proj = m_matProj;
 	g_Object.ViewProj = m_matView * m_matProj;
 
+	CMDLIST->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Default").Get());
+
+	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(0, 3);
+
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_DEFAULT).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_DEFAULT])
@@ -107,12 +111,12 @@ void CCamera::Render()
 		obj->Render();
 
 	// stencil still 1 for mirror, 0 for other, if 1, render to the mirror area
-	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(1, 3);
+	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(1, 3);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_REFLECTIONS).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_REFLECTIONS])
 		obj->Render();
 
-	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind(0, 3);
+	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(0, 3);
 	CMDLIST->OMSetStencilRef(0);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_TRANSPARENT).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_TRANSPARENT])
@@ -124,6 +128,13 @@ void CCamera::Render()
 
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_SHADOW).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_SHADOW])
+		obj->Render();
+
+	CMDLIST->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Particle").Get());
+
+	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_PARTICLE_RENDER).Get());
+	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_PARTICLE_RENDER])
 		obj->Render();
 
 	for (auto& obj : m_SortedObjs)
@@ -158,6 +169,8 @@ void CCamera::SortObjects()
 			m_SortedObjs[OBJ_PSO_TYPE::PSO_HORIZONTAL_BLUR].push_back(obj);
 		if ((uint32)(OBJ_PSO_TYPE::PSO_WAVE_RENDER & type))
 			m_SortedObjs[OBJ_PSO_TYPE::PSO_WAVE_RENDER].push_back(obj);
+		if ((uint32)(OBJ_PSO_TYPE::PSO_PARTICLE_RENDER & type))
+			m_SortedObjs[OBJ_PSO_TYPE::PSO_PARTICLE_RENDER].push_back(obj);
 	}
 }
 

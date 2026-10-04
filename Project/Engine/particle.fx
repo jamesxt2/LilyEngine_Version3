@@ -4,17 +4,29 @@
 struct TParticle
 {
     float4 Color;
-    bool bUseTex;
 
-    float3 LocalPosition;
-    float3 WorldPosition;
-    float3 WorldRotation;
+    float3 RelativePosition;
+    float3 RelativeRotation;
     float3 WorldInitScale;
     float3 WorldCurrentScale;
+    
+    float3 Velocity;
+    
+    int IsActive;
+    float Life;
+    float Age;
+    float NormalizedAge;
+    
+    float Mass;
+    float3 Force;
+    float NoiseForceAccTime;
+    float3 NoiseForceDir;
+    
+    float padding_Particle;
 };
 
-Texture2D g_ParticleTexture : register(t0);
-StructuredBuffer<TParticle> g_Particle : register(t1);
+StructuredBuffer<TParticle> g_Particle : register(t0);
+Texture2D g_ParticleTexture : register(t1);
 
 SamplerState g_SamPointWrap : register(s0);
 SamplerState g_SamPointClamp : register(s1);
@@ -35,6 +47,17 @@ cbuffer OBJECT : register(b0)
     float2 g_DisplacementMapTexelSize;
     float g_GridSpatialStep;
     float padding_object;
+}
+
+cbuffer MATERIAL : register(b1)
+{
+    float4 g_DiffuseAlbedo;
+    float3 g_FresnelR0;
+    float g_Roughness;
+    int g_bUseTexture;
+    float3 padding_Material;
+    
+    row_major matrix g_MtrlTransform;
 }
 
 struct VertexIn
@@ -70,7 +93,10 @@ VertexOut VS(VertexIn _in)
 [maxvertexcount(4)]
 void GS(point VertexOut gin[1], inout TriangleStream<GeoOut> triStream)
 {
-    float4 ViewPos = mul(float4(g_Particle[gin[0].InstID].WorldPosition, 1.f), g_View);
+    if (g_Particle[gin[0].InstID].IsActive == 0)
+        return;
+    
+    float4 ViewPos = mul(mul(float4(gin[0].PosW + g_Particle[gin[0].InstID].RelativePosition, 1.f), g_World), g_View);
     GeoOut output[4] =
     {
         (GeoOut) 0.f, (GeoOut) 0.f, (GeoOut) 0.f, (GeoOut) 0.f
@@ -81,19 +107,21 @@ void GS(point VertexOut gin[1], inout TriangleStream<GeoOut> triStream)
     // | \ |
     // 3---2
     output[0].PosH = float4(-g_Particle[gin[0].InstID].WorldCurrentScale.x * 0.5f,
-        g_Particle[gin[0].InstID].WorldCurrentScale.y * 0.5f, 0.f, 0.f);
+        g_Particle[gin[0].InstID].WorldCurrentScale.y * 0.5f, 0.f, 1.f);
     output[1].PosH = float4(g_Particle[gin[0].InstID].WorldCurrentScale.x * 0.5f,
-        g_Particle[gin[0].InstID].WorldCurrentScale.y * 0.5f, 0.f, 0.f);
+        g_Particle[gin[0].InstID].WorldCurrentScale.y * 0.5f, 0.f, 1.f);
     output[2].PosH = float4(g_Particle[gin[0].InstID].WorldCurrentScale.x * 0.5f,
-        -g_Particle[gin[0].InstID].WorldCurrentScale.y * 0.5f, 0.f, 0.f);
+        -g_Particle[gin[0].InstID].WorldCurrentScale.y * 0.5f, 0.f, 1.f);
     output[3].PosH = float4(-g_Particle[gin[0].InstID].WorldCurrentScale.x * 0.5f,
-        -g_Particle[gin[0].InstID].WorldCurrentScale.y * 0.5f, 0.f, 0.f);
-    
+        -g_Particle[gin[0].InstID].WorldCurrentScale.y * 0.5f, 0.f, 1.f);
+
     [unroll]
     for (int i = 0; i < 4; ++i)
     {
-        output[i].PosH += ViewPos;
+        output[i].PosH.xyz += ViewPos.xyz;
+        output[i].PosH.w = ViewPos.w;
         output[i].PosH = mul(output[i].PosH, g_Proj);
+        output[i].InstID = gin[0].InstID;
     }
 
     output[0].TexCoord = float2(0.f, 0.f);
@@ -103,15 +131,17 @@ void GS(point VertexOut gin[1], inout TriangleStream<GeoOut> triStream)
     
     triStream.Append(output[0]);
     triStream.Append(output[1]);
-    triStream.Append(output[2]);
     triStream.Append(output[3]);
+    triStream.Append(output[2]);
 }
 
 float4 PS(GeoOut _in) : SV_Target
 {
-    float4 Color = g_Particle[_in.InstID].bUseTex ?
-        g_ParticleTexture.Sample(g_SamAnisotropicWrap, _in.TexCoord) * g_Particle[_in.InstID].Color :
-        g_Particle[_in.InstID].Color;
+    float4 Color = float4(0.f, 0.f, 0.f, 0.f);
+    if (g_bUseTexture)
+        Color = g_ParticleTexture.Sample(g_SamAnisotropicWrap, _in.TexCoord) * g_Particle[_in.InstID].Color;
+    else
+        Color = g_Particle[_in.InstID].Color;
     return Color;
 }
 

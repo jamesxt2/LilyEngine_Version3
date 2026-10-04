@@ -13,6 +13,7 @@
 #include "CDevice.h"
 #include "CConstantBuffer.h"
 #include "CWaveObject.h"
+#include "CParticleSystem.h"
 
 CLevelMgr::CLevelMgr()
 	: m_CurLevel(nullptr)
@@ -136,9 +137,24 @@ void CLevelMgr::Init()
 	pTreeBillboard->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"TreeBillboardsMesh"));
 	pTreeBillboard->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"TreeBillboardMaterial"));
 	pTreeBillboard->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_BILLBOARD);
-	//pTreeBillboard->SetSubMeshGeo(pTreeBillboard->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
 
 	pWaveLevel->AddObject(pTreeBillboard);
+
+	CGameObject* pParticle = new CGameObject;
+	pParticle->SetName(L"Particle");
+	pParticle->AddComponent(new CTransform);
+	pParticle->AddComponent(new CParticleSystem);
+	
+	pParticle->GetTransformComp()->SetRelativePosition(30.f, 60.f, 0.f);
+	pParticle->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
+	pParticle->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
+	pParticle->GetTransformComp()->SetObjCBIndex(4);
+	
+	pParticle->GetRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"PointMesh"));
+	pParticle->GetRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"AlphaCircleMaterial"));
+	pParticle->GetRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_PARTICLE_RENDER);
+	
+	pWaveLevel->AddObject(pParticle);
 
 	AddLevel(L"WaveLevel", pWaveLevel);
 	/******************************************************************/
@@ -432,10 +448,6 @@ void CLevelMgr::Tick()
 		m_CurLevel->RegisterClear();
 		m_CurLevel->FinalTick();
 	}
-
-	//CMDLIST->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	//CMDLIST->SetPipelineState(m_PSOGroup[m_CurrPSOType].Get());
 }
 
 void CLevelMgr::ChangeLevel(const std::wstring& name)

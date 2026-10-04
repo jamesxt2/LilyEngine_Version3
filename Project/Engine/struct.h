@@ -69,6 +69,72 @@ struct TGlobal
 	Vector4 FogColor;
 	float FogStart;
 	float FogRange;
-	Vector2 padding2;
+	
+	float DeltaTime;
+	float TotalTime;
 };
 extern TGlobal g_Global;
+
+struct TParticle
+{
+	Vector4 Color;
+
+	Vector3 RelativePosition;
+	Vector3 RelativeRotation;
+	Vector3 WorldInitScale;
+	Vector3 WorldCurrentScale;
+
+	Vector3 Velocity;
+
+	int IsActive{ 0 };
+	float Life{ 0.f };
+	float Age{ 0.f };
+	float NormalizedAge{ 0.f };
+
+	float Mass{ 1.f };
+	Vector3 Force;
+	float NoiseForceAccTime{ 0.f };
+	Vector3 NoiseForceDir;
+
+	float padding{ 0.f };
+};
+
+struct TParticleSpawnCount
+{
+	int SpawnCount{ 0 };
+	Vector3 padding;
+};
+
+struct TParticleModule
+{
+	// Spawn
+	UINT SpawnRate{ 0 };
+
+	Vector4 SpawnColor;
+	Vector3 SpawnMinScale;
+	Vector3 SpawnMaxScale;
+
+	float MinLife{ 0.f };
+	float MaxLife{ 0.f };
+
+	UINT SpawnShape{ 1 }; // 0: Box, 1: Sphere
+	Vector3 SpawnShapeScale; // x == Radius
+
+	UINT BlockSpawnShape{ 1 }; // 0: Box, 1: Sphere
+	Vector3 BlockSpawnShapeScale; // x == Radius
+
+	// Add Velocity
+	UINT AddVelocityType{ 0 }; // 0: Random, 1: FromCenter, 2: ToCenter, 3: Fixed
+	Vector3 AddVelocityFixedDir;
+	float AddMinSpeed{ 0.f };
+	float AddMaxSpeed{ 0.f };
+
+	// Noise Force
+	float NoiseForceTerm{ 0.f };
+	float NoiseForceScale{ 0.f };
+
+	// Module on/off
+	int Module[(UINT)PARTICLE_MODULE::END] = {};
+
+	//Vector3 padding;
+};

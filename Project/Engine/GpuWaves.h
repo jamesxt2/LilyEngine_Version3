@@ -10,15 +10,14 @@ public:
 	GpuWaves& operator=(const GpuWaves& rhs) = delete;
 	virtual ~GpuWaves() = default;
 
-	void BuildDescriptors();
+	void Update(ID3D12GraphicsCommandList* cmdlist);
 
-	void Update();
-
-	void Disturb(UINT i, UINT j, float magnitude);
+	void Disturb(ID3D12GraphicsCommandList* cmdlist, UINT i, UINT j, float magnitude);
 
 protected:
 
 	void BuildResources();
+	void BuildDescriptors();
 
 	UINT m_NumRows;
 	UINT m_NumCols;
@@ -49,7 +48,7 @@ protected:
 	ComPtr<ID3D12Resource> m_CurrUploadBuffer = nullptr;
 
 	bool m_IsResourceUploaded;
-	void UploadResources();
+	void UploadResources(ID3D12GraphicsCommandList* cmdlist);
 
 public:
 	inline UINT GetDescriptorCount() const { return 6; }

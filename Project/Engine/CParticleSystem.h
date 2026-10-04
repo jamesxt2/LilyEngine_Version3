@@ -1,6 +1,8 @@
 #pragma once
 #include "CRenderComponent.h"
 
+class CStructuredBuffer;
+
 class CParticleSystem : public CRenderComponent
 {
 public:
@@ -14,6 +16,16 @@ public:
 
 private:
 
-	UINT m_MaxParticle;
+	void CalculateSpawnCount();
+
+	UINT m_MaxParticleCount;
+
+	CStructuredBuffer* m_ParticleBuffer;
+
+	float m_Time;
+
+	CStructuredBuffer* m_SpawnCountBuffer;
+	CStructuredBuffer* m_ModuleBuffer;
+	TParticleModule m_Module;
 };
 

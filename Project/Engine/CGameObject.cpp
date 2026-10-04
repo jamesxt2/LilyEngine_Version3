@@ -89,13 +89,13 @@ void CGameObject::FinalTick()
 	}
 }
 
-void CGameObject::Render()
+void CGameObject::Render(UINT objCBRootParamIndex)
 {
 	if (m_RenderComp)
 	{
 		if (GetTransformComp() != nullptr)
 		{
-			CDevice::GetInst()->GetConstBuffer(CB_TYPE::OBJECT)->Bind(GetTransformComp()->GetObjCBIndex(), 1);
+			CDevice::GetInst()->GetConstBuffer(CB_TYPE::OBJECT)->Bind_Graphics(GetTransformComp()->GetObjCBIndex(), objCBRootParamIndex);
 			GetTransformComp()->Bind();
 		}
 

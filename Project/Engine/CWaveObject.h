@@ -12,9 +12,8 @@ public:
 	CLONE_DISABLE(CWaveObject)
 
 	virtual void Begin() override;
-	virtual void Render() override;
-	
-	void UpdateWaveObject();
+	virtual void Tick() override;
+	virtual void Render(UINT objCBRootParamIndex = 1) override;
 
 };
 
