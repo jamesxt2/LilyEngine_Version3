@@ -7,9 +7,12 @@ int g_NumFrameResources = 3;
 int g_MaxObjectCount = 100;
 int g_MaxMaterialCount = 100;
 
-const int g_TextureDescriptorsCount = 10;
-const int g_BlurDescriptorCount = 4;
-const int g_WavesGPUDescriptorCount = 6;
+int g_MaxTexture2DCount = 4000;
+int g_MaxTextureArrayCount = 96;
+
+//const int g_TextureDescriptorsCount = 10;
+//const int g_BlurDescriptorCount = 4;
+//const int g_WavesGPUDescriptorCount = 6;
 
 Vector3 XAxis(1.f, 0.f, 0.f);
 Vector3 YAxis(0.f, 1.f, 0.f);

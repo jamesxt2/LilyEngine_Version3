@@ -10,7 +10,7 @@ CComputeShader::~CComputeShader()
 {
 }
 
-void CComputeShader::BuildComputeShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint)
+void CComputeShader::BuildComputeShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint, const std::string& target)
 {
-	m_csByteCode = CompileShader(filename, defines, entrypoint, "cs_5_0");
+	m_csByteCode = CompileShader(filename, defines, entrypoint, target);
 }

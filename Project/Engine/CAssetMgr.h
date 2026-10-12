@@ -28,7 +28,8 @@ public:
 	void GetAssetNames(ASSET_TYPE type, _Out_ std::vector<std::string>& vecNames);
 	inline const std::unordered_map<std::wstring, Ptr<CAsset>>& GetAssets(ASSET_TYPE type) const { return m_AssetMap[(UINT)type]; }
 
-	Ptr<CMesh> CreateWaveMesh(const std::wstring& key, UINT rows, UINT columns);
+	Ptr<CMesh> CreateGridMesh(const std::wstring& key, float width, float depth, UINT rows, UINT columns);
+	Ptr<CMesh> CreateTessQuadPatchMesh(const std::wstring& key);
 
 private:
 
@@ -70,6 +71,7 @@ private:
 
 	//void UpdateWaves();
 	void AnimateMaterials();
+	void UpdateAndUploadMaterials();
 
 	void CreateMeshes();
 

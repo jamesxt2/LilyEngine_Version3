@@ -6,7 +6,7 @@ class CStructuredBuffer;
 class CParticleSystem : public CRenderComponent
 {
 public:
-	CParticleSystem();
+	CParticleSystem(UINT maxParticleCount, UINT noiseTexIndex);
 	CParticleSystem(const CParticleSystem& _other);
 	~CParticleSystem();
 	CLONE(CParticleSystem)
@@ -16,9 +16,15 @@ public:
 
 private:
 
+	struct TParticleData
+	{
+		UINT MaxParticleCount = 0;
+		UINT NoiseTexIndex = 0;
+	};
+
 	void CalculateSpawnCount();
 
-	UINT m_MaxParticleCount;
+	TParticleData m_ParticleData;
 
 	CStructuredBuffer* m_ParticleBuffer;
 

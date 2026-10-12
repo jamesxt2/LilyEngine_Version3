@@ -13,7 +13,7 @@ CRenderMgr::CRenderMgr()
 
 CRenderMgr::~CRenderMgr()
 {
-	
+
 }
 
 void CRenderMgr::Init()

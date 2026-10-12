@@ -112,6 +112,8 @@ void CTransform::Bind()
 		g_Object.World = m_matWorld;
 		g_Object.WorldInvTranspose = m_matWorld.Invert().Transpose();
 		g_Object.TexTransform = m_matTexTransform;
+		if (GetOwner()->GetRenderComp())
+			g_Object.MaterialIndex = GetOwner()->GetRenderComp()->GetMaterialIndex();
 
 		pObjCB->CopyData(m_ObjCBIndex, &g_Object);
 	}

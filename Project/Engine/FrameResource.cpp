@@ -18,11 +18,19 @@ FrameResource::FrameResource(ID3D12Device* device)
 	ThrowIfFailed(m_CmdList->Close());
 }
 
-FrameResource::~FrameResource() {}
+FrameResource::~FrameResource() 
+{
+	
+}
 
 void FrameResource::CreateCB(UINT elementByteSize, UINT elementCount, CB_TYPE type)
 {
 	m_CBs[(UINT)type] = std::make_shared<CConstantBuffer>(elementByteSize, elementCount, type);
+}
+
+void FrameResource::CreateSB(UINT elementByteSize, UINT elementCount, SB_TYPE type, STRUCTURED_BUFFER_TYPE type_Buffer)
+{
+	m_SBs[(UINT)type] = std::make_shared<CStructuredBuffer>(elementByteSize, elementCount, type_Buffer);
 }
 
 /*

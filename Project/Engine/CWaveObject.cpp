@@ -61,7 +61,7 @@ void CWaveObject::Tick()
 
 void CWaveObject::Render(UINT objCBRootParamIndex)
 {
-	CMDLIST->SetGraphicsRootDescriptorTable(4, m_CurrSolSrv);
+	CMDLIST->SetGraphicsRootDescriptorTable(5, m_CurrSolSrv);
 
 	g_Object.DisplacementMapTexelSize.x = 1.f / m_NumCols;
 	g_Object.DisplacementMapTexelSize.y = 1.f / m_NumRows;

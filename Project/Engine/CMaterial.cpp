@@ -22,22 +22,3 @@ CMaterial::~CMaterial()
 
 }
 
-void CMaterial::Bind(UINT texRootParamIndex, UINT mtrlCBRootParamIndex)
-{
-	if (m_Texture != nullptr)
-		m_Texture->Bind_Graphics_Table(texRootParamIndex);
-
-	std::shared_ptr<CConstantBuffer> pMtrlCB = CDevice::GetInst()->GetConstBuffer(CB_TYPE::MATERIAL);
-	if (m_NumFramesDirty > 0)
-	{
-		TMaterial mtrl;
-		mtrl.DiffuseAlbedo = m_DiffuseAlbedo;
-		mtrl.FresnelR0 = m_FresnelR0;
-		mtrl.Roughness = m_Roughness;
-		mtrl.bUseTecture = m_Texture == nullptr ? 0 : 1;
-		mtrl.MtrlTransform = m_MtrlTransform;
-
-		pMtrlCB->CopyData(m_MtrlCBIndex, &mtrl);
-	}
-	pMtrlCB->Bind_Graphics(m_MtrlCBIndex, mtrlCBRootParamIndex);
-}

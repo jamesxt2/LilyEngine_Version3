@@ -4,15 +4,22 @@
 #include "CDevice.h"
 
 
-CStructuredBuffer::CStructuredBuffer(UINT elementByteSize, UINT elementCount)
-	: m_ElementByteSize(elementByteSize), m_ElementCount(elementCount), m_BufferSize(elementByteSize * elementCount)
+CStructuredBuffer::CStructuredBuffer(UINT elementByteSize, UINT elementCount, STRUCTURED_BUFFER_TYPE type)
+	: m_ElementByteSize(elementByteSize), m_ElementCount(elementCount), m_BufferSize(elementByteSize * elementCount),
+	m_Type(type), m_MappedData(nullptr)
 {
 	BuildResources();
-	BuildDescriptors();
+	if (type == STRUCTURED_BUFFER_TYPE::TABLE)
+		BuildDescriptors();
 }
 
 CStructuredBuffer::~CStructuredBuffer()
 {
+	if (m_InputUploadBuffer != nullptr && m_MappedData != nullptr)
+	{
+		m_InputUploadBuffer->Unmap(0, nullptr);
+		m_MappedData = nullptr;
+	}
 }
 
 void CStructuredBuffer::BuildResources()
@@ -36,6 +43,8 @@ void CStructuredBuffer::BuildResources()
 	ThrowIfFailed(DEVICE->CreateCommittedResource(&readbackHeapProps, D3D12_HEAP_FLAG_NONE,
 		&readbackDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
 		IID_PPV_ARGS(&m_ReadbackBuffer)));
+
+	m_InputUploadBuffer->Map(0, nullptr, reinterpret_cast<void**>(&m_MappedData));
 }
 
 void CStructuredBuffer::BuildDescriptors()
@@ -68,15 +77,18 @@ void CStructuredBuffer::BuildDescriptors()
 	DEVICE->CreateUnorderedAccessView(m_GpuBuffer.Get(), nullptr, &uavDesc, m_UavAlloc.cpuHandle);
 }
 
-void CStructuredBuffer::UploadData(const void* data)
+void CStructuredBuffer::CopyData(UINT elementIndex, const void* data)
 {
-	// CPU -> UploadBuffer
-	void* mapped = nullptr;
-	CD3DX12_RANGE readRange(0, 0);
-	m_InputUploadBuffer->Map(0, &readRange, &mapped);
-	memcpy(mapped, data, m_BufferSize);
-	m_InputUploadBuffer->Unmap(0, nullptr);
+	memcpy(m_MappedData + (uint64)elementIndex * m_ElementByteSize, data, m_ElementByteSize);
+}
 
+void CStructuredBuffer::CopyDataFull(const void* data)
+{
+	memcpy(m_MappedData, data, m_BufferSize);
+}
+
+void CStructuredBuffer::UploadDataToGpu()
+{
 	CDevice::GetInst()->UploadResourceAsync([&](ID3D12GraphicsCommandList* cmdlist) {
 		CD3DX12_RESOURCE_BARRIER barrier(CD3DX12_RESOURCE_BARRIER::Transition(
 			m_GpuBuffer.Get(), m_CurrentState, D3D12_RESOURCE_STATE_COPY_DEST));
@@ -89,7 +101,6 @@ void CStructuredBuffer::UploadData(const void* data)
 		cmdlist->ResourceBarrier(1, &barrier);
 		m_CurrentState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		});
-
 }
 
 void CStructuredBuffer::ReadbackData(void* outData)
@@ -127,6 +138,11 @@ void CStructuredBuffer::Bind_Graphics_SRV_Table(ID3D12GraphicsCommandList* cmdli
 		m_CurrentState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 	}
 	cmdlist->SetGraphicsRootDescriptorTable(rootParamIndex, m_SrvAlloc.gpuHandle);
+}
+
+void CStructuredBuffer::Bind_Graphics_SRV_Root(ID3D12GraphicsCommandList* cmdlist, UINT rootParamIndex)
+{
+	cmdlist->SetGraphicsRootShaderResourceView(rootParamIndex, m_GpuBuffer->GetGPUVirtualAddress());
 }
 
 void CStructuredBuffer::Bind_Compute_SRV_Table(ID3D12GraphicsCommandList* cmdlist, UINT rootParamIndex)

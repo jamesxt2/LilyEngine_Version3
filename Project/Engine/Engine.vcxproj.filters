@@ -110,6 +110,30 @@
     <Filter Include="04.Manager\06.DescriptorAllocator">
       <UniqueIdentifier>{db095a24-2c1e-4331-8f73-6769c693e98f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="HLSL\default">
+      <UniqueIdentifier>{99974c60-4831-4ae6-9335-4bd3e008fa79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HLSL\billboard">
+      <UniqueIdentifier>{4b1894f9-480b-4c96-8e53-00944284bd28}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HLSL\particle">
+      <UniqueIdentifier>{b3b1a640-e6c3-4670-be29-8b648a478e46}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HLSL\header">
+      <UniqueIdentifier>{e09d808f-d55d-4f2a-8dac-511edd3583c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HLSL\particletick">
+      <UniqueIdentifier>{4e87b051-c397-41ea-87c9-9403ebbd0201}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HLSL\tessquadpatch">
+      <UniqueIdentifier>{fd254edf-26ae-4a1c-aa42-f461637caa70}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HLSL\WaveSim">
+      <UniqueIdentifier>{231b5c0b-fd2a-42c4-8d6a-050821d51ae6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HLSL\blur">
+      <UniqueIdentifier>{65ff79bb-c98f-4e47-8916-198271e9adfa}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -256,6 +280,10 @@
     <ClInclude Include="CDescriptorAllocator.h">
       <Filter>04.Manager\06.DescriptorAllocator</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="CTexturePool.h">
+      <Filter>08.Asset\Texture</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -375,34 +403,83 @@
     <ClCompile Include="CDescriptorAllocator.cpp">
       <Filter>04.Manager\06.DescriptorAllocator</Filter>
     </ClCompile>
+    <ClCompile Include="CTexturePool.cpp">
+      <Filter>08.Asset\Texture</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="color.fx">
-      <Filter>HLSL</Filter>
+    <FxCompile Include="default.vs.hlsl">
+      <Filter>HLSL\default</Filter>
     </FxCompile>
-    <FxCompile Include="LightingUtils.fx">
-      <Filter>HLSL</Filter>
+    <FxCompile Include="default.ps.hlsl">
+      <Filter>HLSL\default</Filter>
     </FxCompile>
-    <FxCompile Include="default.fx">
-      <Filter>HLSL</Filter>
+    <FxCompile Include="billboard.vs.hlsl">
+      <Filter>HLSL\billboard</Filter>
     </FxCompile>
-    <FxCompile Include="billboard.fx">
-      <Filter>HLSL</Filter>
+    <FxCompile Include="billboard.gs.hlsl">
+      <Filter>HLSL\billboard</Filter>
     </FxCompile>
-    <FxCompile Include="blur.fx">
-      <Filter>HLSL</Filter>
+    <FxCompile Include="billboard.ps.hlsl">
+      <Filter>HLSL\billboard</Filter>
     </FxCompile>
-    <FxCompile Include="WaveSim.fx">
-      <Filter>HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="particle.fx">
-      <Filter>HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="particletick.fx">
-      <Filter>HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="struct.fx">
-      <Filter>HLSL</Filter>
-    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Engine.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="billboard_common.hlsli">
+      <Filter>HLSL\billboard</Filter>
+    </None>
+    <None Include="default_common.hlsli">
+      <Filter>HLSL\default</Filter>
+    </None>
+    <None Include="LightingUtils.hlsli">
+      <Filter>HLSL\header</Filter>
+    </None>
+    <None Include="material.hlsli">
+      <Filter>HLSL\header</Filter>
+    </None>
+    <None Include="struct.hlsli">
+      <Filter>HLSL\header</Filter>
+    </None>
+    <None Include="WaveSim.cs.hlsl">
+      <Filter>HLSL\WaveSim</Filter>
+    </None>
+    <None Include="TessQuadPatch.ds.hlsl">
+      <Filter>HLSL\tessquadpatch</Filter>
+    </None>
+    <None Include="TessQuadPatch.hs.hlsl">
+      <Filter>HLSL\tessquadpatch</Filter>
+    </None>
+    <None Include="TessQuadPatch.ps.hlsl">
+      <Filter>HLSL\tessquadpatch</Filter>
+    </None>
+    <None Include="TessQuadPatch.vs.hlsl">
+      <Filter>HLSL\tessquadpatch</Filter>
+    </None>
+    <None Include="TessQuadPatch_common.hlsli">
+      <Filter>HLSL\tessquadpatch</Filter>
+    </None>
+    <None Include="particletick.cs.hlsl">
+      <Filter>HLSL\particletick</Filter>
+    </None>
+    <None Include="particle.gs.hlsl">
+      <Filter>HLSL\particle</Filter>
+    </None>
+    <None Include="particle.ps.hlsl">
+      <Filter>HLSL\particle</Filter>
+    </None>
+    <None Include="particle.vs.hlsl">
+      <Filter>HLSL\particle</Filter>
+    </None>
+    <None Include="particle_common.hlsli">
+      <Filter>HLSL\particle</Filter>
+    </None>
+    <None Include="blur.cs.hlsl">
+      <Filter>HLSL\blur</Filter>
+    </None>
   </ItemGroup>
 </Project>

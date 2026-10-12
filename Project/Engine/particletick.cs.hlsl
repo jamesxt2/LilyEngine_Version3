@@ -1,7 +1,7 @@
 #ifndef _PARTICLE_TICK
 #define _PARTICLE_TICK
 
-#include "struct.fx"
+#include "struct.hlsli"
 
 struct TParticle
 {
@@ -24,7 +24,8 @@ struct TParticle
     float NoiseForceAccTime;
     float3 NoiseForceDir;
     
-    float padding_Particle;
+    uint VelocityAlignment;
+    //float padding_Particle;
 };
 
 struct TSpawnCount
@@ -46,6 +47,7 @@ struct TParticleModule
     float3 SpawnShapeScale;
     uint BlockSpawnShape;
     float3 BlockSpawnShapeScale;
+    uint VelocityAlignment;
     
     // Add Velocity
     uint AddVelocityType; // 0: Random, 1: FromCenter, 2: ToCenter, 3: Fixed
@@ -59,40 +61,20 @@ struct TParticleModule
     
     int Module[3];
     
-    //float3 padding_ParticleModule;
+    float3 padding_ParticleModule;
 };
 
 RWStructuredBuffer<TParticle> ParticleBuffer : register(u0);
 RWStructuredBuffer<TSpawnCount> SpawnCountBuffer : register(u1);
-Texture2D NoiseTex : register(t0);
-StructuredBuffer<TParticleModule> Module : register(t1);
+StructuredBuffer<TParticleModule> Module : register(t0, space3);
 
-SamplerState g_SamPointWrap : register(s0);
-SamplerState g_SamPointClamp : register(s1);
-SamplerState g_SamLinearWrap : register(s2);
-SamplerState g_SamLinearClamp : register(s3);
-SamplerState g_SamAnisotropicWrap : register(s4);
-SamplerState g_SamAnisotropicClamp : register(s5);
 
-cbuffer GLOBAL : register(b0)
+cbuffer PARTICLE : register(b2)
 {
-    float3 g_EyePosW;
-    float padding_Global1;
-    float4 g_AmbientLight;
-    Light g_Lights[MaxLights];
-    
-    float4 g_FogColor;
-    float g_FogStart;
-    float g_FogRange;
-    
-    float g_DeltaTime;
-    float g_TotalTime;
+    uint MaxParticleCount;
+    uint NoiseTexIndex;
 }
 
-cbuffer PARTICLE : register(b1)
-{
-    int MaxParticleCount;
-}
 
 // Module Check
 #define SpawnModule Module[0].Module[0]
@@ -126,9 +108,9 @@ void CS_ParticleTick(int3 dispatchThreadID : SV_DispatchThreadID)
                     CurSpawnCount, SpawnCountBuffer[0].SpawnCount - 1, originValue);
                 if (CurSpawnCount == originValue)
                 {
-                    float3 random = GetRandom(NoiseTex, (float) dispatchThreadID.x / (float) (MaxParticleCount - 1));
-                    float3 random1 = GetRandom(NoiseTex, (float) (dispatchThreadID.x + 1) / (float) (MaxParticleCount - 1));
-                    float3 random2 = GetRandom(NoiseTex, (float) (dispatchThreadID.x + 2) / (float) (MaxParticleCount - 1));
+                    float3 random = GetRandom(g_Textures2D[NoiseTexIndex], (float) dispatchThreadID.x / (float) (MaxParticleCount - 1));
+                    float3 random1 = GetRandom(g_Textures2D[NoiseTexIndex], (float) (dispatchThreadID.x + 1) / (float) (MaxParticleCount - 1));
+                    float3 random2 = GetRandom(g_Textures2D[NoiseTexIndex], (float) (dispatchThreadID.x + 2) / (float) (MaxParticleCount - 1));
                     
                     float3 SpawnPosition = (float3) 0.f;
                     
@@ -190,6 +172,8 @@ void CS_ParticleTick(int3 dispatchThreadID : SV_DispatchThreadID)
                     ParticleBuffer[dispatchThreadID.x].Age = 0.f;
                     ParticleBuffer[dispatchThreadID.x].Life = (Module[0].MaxLife - Module[0].MinLife) * random1.y + Module[0].MinLife;
                     ParticleBuffer[dispatchThreadID.x].NormalizedAge = 0.f;
+                    
+                    ParticleBuffer[dispatchThreadID.x].VelocityAlignment = Module[0].VelocityAlignment;
                 
                     break;
                 }
@@ -205,7 +189,7 @@ void CS_ParticleTick(int3 dispatchThreadID : SV_DispatchThreadID)
             if (ParticleBuffer[dispatchThreadID.x].NoiseForceAccTime >= Module[0].NoiseForceTerm)
             {
                 ParticleBuffer[dispatchThreadID.x].NoiseForceAccTime = 0.f;
-                float3 random = GetRandom(NoiseTex, ((float) dispatchThreadID.x / (float) (MaxParticleCount - 1)));
+                float3 random = GetRandom(g_Textures2D[NoiseTexIndex], ((float) dispatchThreadID.x / (float) (MaxParticleCount - 1)));
                 ParticleBuffer[dispatchThreadID.x].NoiseForceDir = normalize(random - 0.5f);
             }
             

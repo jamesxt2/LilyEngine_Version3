@@ -35,5 +35,6 @@ public:
 	inline const std::wstring& GetKey() const { return m_Key; }
 	inline const std::wstring& GetRelativePath() const { return m_RelativePath; }
 	inline ASSET_TYPE GetAssetType() const { return m_Type; }
+	inline int GetRefCount() const { return m_RefCount; }
 };
 

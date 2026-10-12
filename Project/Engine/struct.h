@@ -31,7 +31,10 @@ struct TObject
 
 	Vector2 DisplacementMapTexelSize;
 	float GridSpatialStep;
-	float padding;
+	
+	UINT MaterialIndex;
+
+	//float padding;
 };
 
 extern TObject g_Object;
@@ -41,8 +44,10 @@ struct TMaterial
 	Vector4 DiffuseAlbedo = { 1.f, 1.f, 1.f, 1.f };
 	Vector3 FresnelR0 = { 0.01f, 0.01f, 0.01f };
 	float Roughness = 0.25f;
-	int bUseTecture = 0;
-	Vector3 padding;
+	int bUseTexture = 0;
+	UINT DiffuseMapIndex = 0;
+	int bIsTexArray = 0;
+	float padding;
 
 	Matrix MtrlTransform;
 };
@@ -96,7 +101,9 @@ struct TParticle
 	float NoiseForceAccTime{ 0.f };
 	Vector3 NoiseForceDir;
 
-	float padding{ 0.f };
+	UINT VelocityAlignment{ 0 };
+
+	//float padding{ 0.f };
 };
 
 struct TParticleSpawnCount
@@ -123,6 +130,8 @@ struct TParticleModule
 	UINT BlockSpawnShape{ 1 }; // 0: Box, 1: Sphere
 	Vector3 BlockSpawnShapeScale; // x == Radius
 
+	UINT VelocityAlignment{ 0 };
+
 	// Add Velocity
 	UINT AddVelocityType{ 0 }; // 0: Random, 1: FromCenter, 2: ToCenter, 3: Fixed
 	Vector3 AddVelocityFixedDir;
@@ -136,5 +145,5 @@ struct TParticleModule
 	// Module on/off
 	int Module[(UINT)PARTICLE_MODULE::END] = {};
 
-	//Vector3 padding;
+	Vector3 padding;
 };

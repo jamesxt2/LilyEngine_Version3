@@ -9,6 +9,7 @@
 #include "CLevelMgr.h"
 #include "CLevel.h"
 #include "CRenderComponent.h"
+#include "CTexturePool.h"
 
 CCamera::CCamera()
 	: CComponent(COMPONENT_TYPE::CAMERA),
@@ -66,7 +67,7 @@ void CCamera::FinalTick()
 
 	// Projection
 	if (m_ProjType == PROJ_TYPE::PERSPECTIVE)
-		m_matProj = XMMatrixPerspectiveFovLH(m_FOV, m_AspectRatio, 1.f, m_Far);
+		m_matProj = XMMatrixPerspectiveFovLH(m_FOV, m_AspectRatio, 0.1f, m_Far);
 	else
 		m_matProj = XMMatrixOrthographicLH(m_Scale * m_Width, m_Scale * m_Width / m_AspectRatio, 1.f, m_Far);
 }
@@ -87,7 +88,10 @@ void CCamera::Render()
 
 	CMDLIST->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Default").Get());
 
-	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(0, 3);
+	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(0, 0);
+	CDevice::GetInst()->GetCurrFrameResource()->GetStructuredBuffer(SB_TYPE::MATERIAL)->Bind_Graphics_SRV_Table(CMDLIST.Get(), 2);
+	CTexturePool::GetInst()->Bind_Graphics_Table_2D(CMDLIST.Get(), 3);
+	CTexturePool::GetInst()->Bind_Graphics_Table_Array(CMDLIST.Get(), 4);
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_DEFAULT).Get());
@@ -98,12 +102,19 @@ void CCamera::Render()
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_ALPHA_TESTED])
 		obj->Render();
 
+	
+	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH).Get());
+	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH])
+		obj->Render();
+
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_BILLBOARD).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_BILLBOARD])
 		obj->Render();
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	
 	// the mirror area's pixel's stencils are set to 1
 	CMDLIST->OMSetStencilRef(1);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_MIRRORS).Get());
@@ -111,27 +122,27 @@ void CCamera::Render()
 		obj->Render();
 
 	// stencil still 1 for mirror, 0 for other, if 1, render to the mirror area
-	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(1, 3);
+	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(1, 0);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_REFLECTIONS).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_REFLECTIONS])
 		obj->Render();
 
-	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(0, 3);
+	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(0, 0);
 	CMDLIST->OMSetStencilRef(0);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_TRANSPARENT).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_TRANSPARENT])
 		obj->Render();
-
+		
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_WAVE_RENDER).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_WAVE_RENDER])
 		obj->Render();
-
+	
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_SHADOW).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_SHADOW])
 		obj->Render();
 
 	CMDLIST->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Particle").Get());
-
+		
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_PARTICLE_RENDER).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_PARTICLE_RENDER])
@@ -171,6 +182,8 @@ void CCamera::SortObjects()
 			m_SortedObjs[OBJ_PSO_TYPE::PSO_WAVE_RENDER].push_back(obj);
 		if ((uint32)(OBJ_PSO_TYPE::PSO_PARTICLE_RENDER & type))
 			m_SortedObjs[OBJ_PSO_TYPE::PSO_PARTICLE_RENDER].push_back(obj);
+		if ((uint32)(OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH & type))
+			m_SortedObjs[OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH].push_back(obj);
 	}
 }
 

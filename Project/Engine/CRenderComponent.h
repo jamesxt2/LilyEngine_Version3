@@ -27,5 +27,7 @@ public:
 	inline Ptr<CMaterial> GetMaterial() const { return m_Material; }
 	inline void SetObjPSOType(OBJ_PSO_TYPE type) { m_PSOType = type; }
 	inline OBJ_PSO_TYPE GetObjPSOType() const { return m_PSOType; }
+
+	int GetMaterialIndex() const;
 };
 

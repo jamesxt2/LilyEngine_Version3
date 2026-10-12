@@ -13,19 +13,29 @@ CGraphicsShader::~CGraphicsShader()
 {
 }
 
-void CGraphicsShader::BuildVertexShader(const std::wstring& key, const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint)
+void CGraphicsShader::BuildVertexShader(const std::wstring& key, const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint, const std::string& target)
 {
-    m_vsByteCodeMap[key] = CompileShader(filename, defines, entrypoint, "vs_5_0");
+    m_vsByteCodeMap[key] = CompileShader(filename, defines, entrypoint, target);
 }
 
-void CGraphicsShader::BuildGeometryShader(const std::wstring& key, const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint)
+void CGraphicsShader::BuildGeometryShader(const std::wstring& key, const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint, const std::string& target)
 {
-    m_gsByteCodeMap[key] = CompileShader(filename, defines, entrypoint, "gs_5_0");
+    m_gsByteCodeMap[key] = CompileShader(filename, defines, entrypoint, target);
 }
 
-void CGraphicsShader::BuildPixelShader(const std::wstring& key, const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint)
+void CGraphicsShader::BuildHullShader(const std::wstring& key, const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint, const std::string& target)
 {
-    m_psByteCodeMap[key] = CompileShader(filename, defines, entrypoint, "ps_5_0");
+    m_hsByteCodeMap[key] = CompileShader(filename, defines, entrypoint, target);
+}
+
+void CGraphicsShader::BuildDomainShader(const std::wstring& key, const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint, const std::string& target)
+{
+    m_dsByteCodeMap[key] = CompileShader(filename, defines, entrypoint, target);
+}
+
+void CGraphicsShader::BuildPixelShader(const std::wstring& key, const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint, const std::string& target)
+{
+    m_psByteCodeMap[key] = CompileShader(filename, defines, entrypoint, target);
 }
 
 ComPtr<ID3DBlob> CGraphicsShader::GetVsByteCode(const std::wstring& key) const
@@ -40,6 +50,22 @@ ComPtr<ID3DBlob> CGraphicsShader::GetGsByteCode(const std::wstring& key) const
 {
     std::unordered_map<std::wstring, ComPtr<ID3DBlob>>::const_iterator iter = m_gsByteCodeMap.find(key);
     if (iter == m_gsByteCodeMap.end())
+        return nullptr;
+    return iter->second;
+}
+
+ComPtr<ID3DBlob> CGraphicsShader::GetHsByteCode(const std::wstring& key) const
+{
+    std::unordered_map<std::wstring, ComPtr<ID3DBlob>>::const_iterator iter = m_hsByteCodeMap.find(key);
+    if (iter == m_hsByteCodeMap.end())
+        return nullptr;
+    return iter->second;
+}
+
+ComPtr<ID3DBlob> CGraphicsShader::GetDsByteCode(const std::wstring& key) const
+{
+    std::unordered_map<std::wstring, ComPtr<ID3DBlob>>::const_iterator iter = m_dsByteCodeMap.find(key);
+    if (iter == m_dsByteCodeMap.end())
         return nullptr;
     return iter->second;
 }

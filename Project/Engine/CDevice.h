@@ -2,6 +2,7 @@
 #include "singleton.h"
 
 class CConstantBuffer;
+class CStructuredBuffer;
 
 class CDevice : public CSingleton<CDevice>
 {
@@ -9,6 +10,8 @@ class CDevice : public CSingleton<CDevice>
 
 public:
 	int Init(HWND _MainWnd, POINT _RenderResolution);
+	void PostInit();
+	void Release();
 
 	void OnResize(POINT newRenderResolution);
 	MulticastDelegate<UINT, UINT> OnWindowResize;
@@ -71,6 +74,11 @@ public:
 	inline std::shared_ptr<CConstantBuffer> GetConstBuffer(CB_TYPE type)
 	{
 		return m_CurrFrameResource->GetConstantBuffer(type);
+	}
+
+	inline std::shared_ptr<CStructuredBuffer> GetStructuredBuffer(SB_TYPE type)
+	{
+		return m_CurrFrameResource->GetStructuredBuffer(type);
 	}
 
 	inline DXGI_FORMAT GetFormat() const { return m_Format; }

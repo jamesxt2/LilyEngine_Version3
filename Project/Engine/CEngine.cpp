@@ -9,6 +9,9 @@
 #include "CPathMgr.h"
 #include "CAssetMgr.h"
 #include "CKeyMgr.h"
+#include "CTexturePool.h"
+#include "CDescriptorAllocator.h"
+
 
 CEngine::CEngine()
     : m_MainWnd(nullptr), m_Resolution{}
@@ -44,6 +47,7 @@ int CEngine::Init(HWND _MainWnd, POINT _Resolution)
 	CPathMgr::GetInst()->Init();
 	CKeyMgr::GetInst()->Init();
 	CAssetMgr::GetInst()->Init();
+	CDevice::GetInst()->PostInit();
 	CRenderMgr::GetInst()->Init();
 	CLevelMgr::GetInst()->Init();
 
@@ -158,6 +162,30 @@ LRESULT CEngine::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 void CEngine::ShutDown()
 {
 	CDevice::GetInst()->FlushCommandQueue();
+
+	CTimeMgr::GetInst()->Destroy();
+	CPathMgr::GetInst()->Destroy();
+	CKeyMgr::GetInst()->Destroy();
+	CRenderMgr::GetInst()->Destroy();
+	CLevelMgr::GetInst()->Destroy();
+	CTexturePool::GetInst()->Destroy();
+	CAssetMgr::GetInst()->Destroy();
+	CDescriptorAllocator::GetInst()->Destroy();
 	
+	CDevice::GetInst()->Release();
+	
+#if defined(_DEBUG)
+	{
+		ComPtr<ID3D12DebugDevice> debugDevice;
+		if (CDevice::GetInst() &&
+			SUCCEEDED(CDevice::GetInst()->GetDevice()->QueryInterface(
+				IID_PPV_ARGS(&debugDevice))))
+		{
+			debugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
+		}
+	}
+#endif
+
+	CDevice::GetInst()->Destroy();
 }
 

@@ -7,7 +7,7 @@ public:
 	CComputeShader();
 	~CComputeShader();
 
-	void BuildComputeShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint);
+	void BuildComputeShader(const std::wstring& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint, const std::string& target);
 
 private:
 	ComPtr<ID3DBlob>												m_csByteCode;

@@ -18,3 +18,10 @@ CRenderComponent::CRenderComponent(const CRenderComponent& other)
 CRenderComponent::~CRenderComponent()
 {
 }
+
+int CRenderComponent::GetMaterialIndex() const
+{
+	if (m_Material == nullptr)
+		return -1;
+	return m_Material->GetMtrlCBIndex();
+}

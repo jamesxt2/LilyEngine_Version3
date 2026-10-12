@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "CShader.h"
+#include <dxcapi.h>
 
 
 CShader::CShader(ASSET_TYPE type)

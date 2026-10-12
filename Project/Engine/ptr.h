@@ -33,7 +33,7 @@ public:
 
 	T** operator&() const { return &m_Asset; }
 
-	T* operator->()
+	T* operator->() const
 	{
 		return m_Asset;
 	}
@@ -64,22 +64,22 @@ public:
 		return *this;
 	}
 
-	bool operator==(T* asset)
+	bool operator==(T* asset) const
 	{
 		return m_Asset == asset;
 	}
 
-	bool operator!=(T* asset)
+	bool operator!=(T* asset) const
 	{
 		return m_Asset != asset;
 	}
 
-	bool operator==(const Ptr<T>& asset)
+	bool operator==(const Ptr<T>& asset) const
 	{
 		return m_Asset == asset.m_Asset;
 	}
 
-	bool operator!=(const Ptr<T>& asset)
+	bool operator!=(const Ptr<T>& asset) const
 	{
 		return m_Asset != asset.m_Asset;
 	}

@@ -46,9 +46,12 @@ extern int g_NumFrameResources;
 extern int g_MaxObjectCount;
 extern int g_MaxMaterialCount;
 
-extern const int g_TextureDescriptorsCount;
-extern const int g_BlurDescriptorCount;
-extern const int g_WavesGPUDescriptorCount;
+extern int g_MaxTexture2DCount;
+extern int g_MaxTextureArrayCount;
+
+//extern const int g_TextureDescriptorsCount;
+//extern const int g_BlurDescriptorCount;
+//extern const int g_WavesGPUDescriptorCount;
 
 extern Vector3 XAxis;
 extern Vector3 YAxis;

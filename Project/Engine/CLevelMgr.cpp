@@ -71,25 +71,6 @@ void CLevelMgr::Init()
 
 	pWaveLevel->AddObject(pLandGrid);
 
-
-
-	//CGameObject* pWave = new CGameObject;
-	//pWave->SetName(L"Wave");
-	//pWave->AddComponent(new CTransform);
-	//pWave->AddComponent(new CMeshRender);
-	//
-	//pWave->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
-	//pWave->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
-	//pWave->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-	//pWave->GetTransformComp()->SetObjCBIndex(1);
-	//
-	//pWave->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"WaveMesh"));
-	//pWave->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WaterMaterial"));
-	//pWave->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_TRANSPARENT);
-	//pWave->SetSubMeshGeo(pWave->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
-	//
-	//pWaveLevel->AddObject(pWave);
-
 	CWaveObject* pWave = new CWaveObject(256, 256, 0.25f, 0.03f, 2.0f, 0.2f);
 	pWave->SetName(L"Wave");
 	pWave->AddComponent(new CTransform);
@@ -100,10 +81,9 @@ void CLevelMgr::Init()
 	pWave->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
 	pWave->GetTransformComp()->SetObjCBIndex(1);
 	
-	pWave->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->CreateWaveMesh(L"WaveMesh", 256, 256));
+	pWave->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->CreateGridMesh(L"WaveMesh", 160.f, 160.f, 256, 256));
 	pWave->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WaterMaterial"));
 	pWave->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_WAVE_RENDER);
-	//pWave->GetMeshRenderComp()->SetSubMeshGeo(pWave->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
 	
 	pWaveLevel->AddObject(pWave);
 
@@ -128,12 +108,12 @@ void CLevelMgr::Init()
 	pTreeBillboard->SetName(L"WaveGrid");
 	pTreeBillboard->AddComponent(new CTransform);
 	pTreeBillboard->AddComponent(new CMeshRender);
-
+	
 	pTreeBillboard->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
 	pTreeBillboard->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
 	pTreeBillboard->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
 	pTreeBillboard->GetTransformComp()->SetObjCBIndex(3);
-
+	
 	pTreeBillboard->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"TreeBillboardsMesh"));
 	pTreeBillboard->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"TreeBillboardMaterial"));
 	pTreeBillboard->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_BILLBOARD);
@@ -143,7 +123,10 @@ void CLevelMgr::Init()
 	CGameObject* pParticle = new CGameObject;
 	pParticle->SetName(L"Particle");
 	pParticle->AddComponent(new CTransform);
-	pParticle->AddComponent(new CParticleSystem);
+
+	
+
+	pParticle->AddComponent(new CParticleSystem(10000, CAssetMgr::GetInst()->FindAsset<CTexture>(L"NoiseTexture")->GetPoolIndex()));
 	
 	pParticle->GetTransformComp()->SetRelativePosition(30.f, 60.f, 0.f);
 	pParticle->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
@@ -308,6 +291,7 @@ void CLevelMgr::Init()
 	}
 
 	AddLevel(L"SceneLevel", pSceneLevel);
+	
 	/******************************************************************/
 	// Scene Level
 	/******************************************************************/
@@ -316,6 +300,7 @@ void CLevelMgr::Init()
 	/******************************************************************/
 	// Room Level
 	/******************************************************************/
+
 	CLevel* pRoomLevel = new CLevel;
 
 	CGameObject* pCamera3 = new CGameObject;
@@ -412,8 +397,48 @@ void CLevelMgr::Init()
 	pRoomLevel->AddObject(pRoomMirror);
 
 	AddLevel(L"RoomLevel", pRoomLevel);
+	
 	/******************************************************************/
 	// Room Level
+	/******************************************************************/
+
+	/******************************************************************/
+	// Tess Level
+	/******************************************************************/
+
+	CLevel* pTessLevel = new CLevel;
+
+	CGameObject* pCamera4 = new CGameObject;
+	pCamera4->SetName(L"TessMainCamera");
+	pCamera4->AddComponent(new CTransform);
+	pCamera4->AddComponent(new CCamera);
+	pCamera4->AddComponent(new CCameraMoveScript);
+	pCamera4->GetCameraComp()->SetProjType(PROJ_TYPE::PERSPECTIVE);
+		   
+	pCamera4->GetCameraComp()->SetCameraPriority(0, L"TessLevel");
+		   
+	pCamera4->GetTransformComp()->SetRelativePosition(0.f, 5.f, -15.f);
+
+	pTessLevel->AddObject(pCamera4);
+
+	CGameObject* pTessGrid = new CGameObject;
+	pTessGrid->SetName(L"TessGrid");
+	pTessGrid->AddComponent(new CTransform);
+	pTessGrid->AddComponent(new CMeshRender);
+
+	pTessGrid->GetTransformComp()->SetRelativePosition(0.f, -5.f, 0.f);
+	pTessGrid->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
+	pTessGrid->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
+	pTessGrid->GetTransformComp()->SetObjCBIndex(0);
+
+	pTessGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->CreateTessQuadPatchMesh(L"TessQuadPatch"));
+	pTessGrid->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH);
+
+	pTessLevel->AddObject(pTessGrid);
+
+	AddLevel(L"TessLevel", pTessLevel);
+	/******************************************************************/
+	// Tess Level
 	/******************************************************************/
 
 	ChangeLevel(L"WaveLevel");
@@ -438,6 +463,12 @@ void CLevelMgr::Tick()
 	{
 		ChangeLevel(L"RoomLevel");
 		CRenderMgr::GetInst()->SetCurrentLevel(L"RoomLevel");
+		OnLevelChange.Broadcast();
+	}
+	if (KEY_TAP(KEY::_4))
+	{
+		ChangeLevel(L"TessLevel");
+		CRenderMgr::GetInst()->SetCurrentLevel(L"TessLevel");
 		OnLevelChange.Broadcast();
 	}
 

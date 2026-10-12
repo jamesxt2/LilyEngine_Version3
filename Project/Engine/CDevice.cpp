@@ -19,6 +19,28 @@ CDevice::~CDevice()
 		CloseHandle(m_FenceEvent);
 		m_FenceEvent = nullptr;
 	}
+	//for (int i = 0; i < g_NumFrameResources; ++i)
+	//{
+	//	m_FrameResources[i] = nullptr;
+	//}
+}
+
+void CDevice::Release()
+{
+	FlushCommandQueue();
+	m_FrameResources.clear();
+	m_MsaaRtvHeap.Reset();
+	m_MsaaRenderTarget.Reset();
+	m_DsvHeap.Reset();
+	m_RtvHeap.Reset();
+	m_DepthStencilBuffer.Reset();
+	for (int i = 0; i < m_SwapChainBufferCount; ++i)
+		m_SwapChainBuffer[i].Reset();
+	m_SwapChain.Reset();
+	m_dxgiFactory.Reset();
+	m_UploadContexts.clear();
+	m_Fence.Reset();
+	m_CommandQueue.Reset();
 }
 
 int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
@@ -79,12 +101,17 @@ int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
 
 	OnResize(m_RenderResolution);
 
+	
+
+	return S_OK;
+}
+
+void CDevice::PostInit()
+{
 	/*************************************/
 	// Frame Resources
 	/*************************************/
 	BuildFrameResources();
-
-	return S_OK;
 }
 
 void CDevice::CreateCommandObjectsAndFence()
@@ -205,8 +232,9 @@ void CDevice::BuildFrameResources()
 	{
 		m_FrameResources.push_back(std::make_unique<FrameResource>(m_d3dDevice.Get()));
 		m_FrameResources[i]->CreateCB(sizeof(TObject), g_MaxObjectCount, CB_TYPE::OBJECT);
-		m_FrameResources[i]->CreateCB(sizeof(TMaterial), g_MaxMaterialCount, CB_TYPE::MATERIAL);
+		//m_FrameResources[i]->CreateCB(sizeof(TMaterial), g_MaxMaterialCount, CB_TYPE::MATERIAL);
 		m_FrameResources[i]->CreateCB(sizeof(TGlobal), 2, CB_TYPE::GLOBAL);
+		m_FrameResources[i]->CreateSB(sizeof(TMaterial), g_MaxMaterialCount, SB_TYPE::MATERIAL, STRUCTURED_BUFFER_TYPE::TABLE);
 	}
 	m_CurrFrameResource = m_FrameResources[0].get();
 }

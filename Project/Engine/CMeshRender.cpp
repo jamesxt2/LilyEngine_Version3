@@ -25,9 +25,10 @@ void CMeshRender::FinalTick()
 
 void CMeshRender::Render()
 {
-	if (GetMesh() == nullptr || GetMaterial() == nullptr) return;
+	if (GetMesh() == nullptr) return;
 
-	GetMaterial()->Bind();
+	//if (GetMaterial() != nullptr)
+		//GetMaterial()->Bind();
 
 	GetMesh()->Bind();
 

@@ -24,7 +24,7 @@ public:
 protected:
 	CSingleton()
 	{
-		atexit((DESTROY)&CSingleton<T>::Destroy);
+		//atexit((DESTROY)&CSingleton<T>::Destroy);
 	}
 	CSingleton(const CSingleton& _other) = delete;
 	~CSingleton() = default;
