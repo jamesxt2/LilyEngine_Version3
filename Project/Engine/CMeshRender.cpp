@@ -27,13 +27,17 @@ void CMeshRender::Render()
 {
 	if (GetMesh() == nullptr) return;
 
-	//if (GetMaterial() != nullptr)
-		//GetMaterial()->Bind();
-
 	GetMesh()->Bind();
 
-	if (m_SubMeshGeo)
+	if (m_SubMeshGeo != nullptr)
 		CMDLIST->DrawIndexedInstanced(m_SubMeshGeo->IndexCount, 1, m_SubMeshGeo->StartIndexLocation, m_SubMeshGeo->BaseVertexLocation, 0);
 	else
 		CMDLIST->DrawIndexedInstanced(GetMesh()->GetIndexCount(), 1, 0, 0, 0);
+}
+
+BoundingBox CMeshRender::GetBounds()
+{
+	if (m_SubMeshGeo != nullptr)
+		return m_SubMeshGeo->Bounds;
+	return GetMesh()->GetMeshBounds();
 }

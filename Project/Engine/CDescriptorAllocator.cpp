@@ -16,7 +16,6 @@ void CDescriptorAllocator::Initialize(ComPtr<ID3D12Device> device, ComPtr<ID3D12
 	m_Device = device;
 	m_Heap = heap;
 	m_Capacity = capacity;
-	m_UsedCount = 0;
 	m_DescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	m_FreeBlocks.clear();
@@ -42,7 +41,6 @@ CDescriptorAllocator::Allocation CDescriptorAllocator::Allocate(UINT count)
 	alloc.cpuHandle = GetCPUDescriptorHandle(startIndex);
 	alloc.gpuHandle = GetGPUDescriptorHandle(startIndex);
 
-	m_UsedCount += count;
 	return alloc;
 }
 
@@ -51,7 +49,6 @@ void CDescriptorAllocator::Free(const Allocation& alloc)
 	if (!alloc.IsValid()) return;
 
 	m_FreeBlocks.push_back({ alloc.startIndex, alloc.count });
-	m_UsedCount -= alloc.count;
 
 	std::sort(m_FreeBlocks.begin(), m_FreeBlocks.end(),
 		[](const FreeBlock& a, const FreeBlock& b) {

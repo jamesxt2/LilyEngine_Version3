@@ -64,12 +64,15 @@ void CCamera::FinalTick()
 	matViewRot._31 = vR.z; matViewRot._32 = vU.z; matViewRot._33 = vF.z;
 
 	m_matView = matViewTrans * matViewRot;
+	m_InvView = m_matView.Invert();
 
 	// Projection
 	if (m_ProjType == PROJ_TYPE::PERSPECTIVE)
 		m_matProj = XMMatrixPerspectiveFovLH(m_FOV, m_AspectRatio, 0.1f, m_Far);
 	else
 		m_matProj = XMMatrixOrthographicLH(m_Scale * m_Width, m_Scale * m_Width / m_AspectRatio, 1.f, m_Far);
+
+	BoundingFrustum::CreateFromMatrix(m_CamFrustum, m_matProj);
 }
 
 void CCamera::Render()
@@ -92,26 +95,31 @@ void CCamera::Render()
 	CDevice::GetInst()->GetCurrFrameResource()->GetStructuredBuffer(SB_TYPE::MATERIAL)->Bind_Graphics_SRV_Table(CMDLIST.Get(), 2);
 	CTexturePool::GetInst()->Bind_Graphics_Table_2D(CMDLIST.Get(), 3);
 	CTexturePool::GetInst()->Bind_Graphics_Table_Array(CMDLIST.Get(), 4);
+	CTexturePool::GetInst()->Bind_Graphics_Table_Cube(CMDLIST.Get(), 6);
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_DEFAULT).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_DEFAULT])
+		TestFrustumAndRender(obj);
+
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_SKY).Get());
+	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_SKY])
 		obj->Render();
 
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_ALPHA_TESTED).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_ALPHA_TESTED])
-		obj->Render();
+		TestFrustumAndRender(obj);
 
 	
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH])
-		obj->Render();
+		TestFrustumAndRender(obj);
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_BILLBOARD).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_BILLBOARD])
-		obj->Render();
+		TestFrustumAndRender(obj);
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
@@ -135,7 +143,7 @@ void CCamera::Render()
 		
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_WAVE_RENDER).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_WAVE_RENDER])
-		obj->Render();
+		TestFrustumAndRender(obj);
 	
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_SHADOW).Get());
 	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_SHADOW])
@@ -150,6 +158,15 @@ void CCamera::Render()
 
 	for (auto& obj : m_SortedObjs)
 		obj.second.clear();
+}
+
+void CCamera::TestFrustumAndRender(CGameObject* obj)
+{
+	Matrix viewToLocal = m_InvView * obj->GetTransformComp()->GetInvWorld();
+	BoundingFrustum localSpaceFrustum;
+	m_CamFrustum.Transform(localSpaceFrustum, viewToLocal);
+	if (localSpaceFrustum.Contains(obj->GetRenderComp()->GetBounds()) != DISJOINT)
+		obj->Render();
 }
 
 void CCamera::SortObjects()
@@ -184,6 +201,8 @@ void CCamera::SortObjects()
 			m_SortedObjs[OBJ_PSO_TYPE::PSO_PARTICLE_RENDER].push_back(obj);
 		if ((uint32)(OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH & type))
 			m_SortedObjs[OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH].push_back(obj);
+		if ((uint32)(OBJ_PSO_TYPE::PSO_SKY & type))
+			m_SortedObjs[OBJ_PSO_TYPE::PSO_SKY].push_back(obj);
 	}
 }
 

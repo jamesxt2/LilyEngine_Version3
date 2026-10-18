@@ -24,6 +24,8 @@ public:
 
 private:
 
+	ComPtr<ID3D12Resource> BuildBufferResource(const void* initData, UINT64 byteSize, ComPtr<ID3D12Resource>& uploadBuffer, ID3D12GraphicsCommandList* cmdlist);
+
 	// Vertex
 	ComPtr<ID3DBlob>						m_VertexBufferCPU;
 	ComPtr<ID3D12Resource>					m_VertexBufferGPU;
@@ -40,12 +42,14 @@ private:
 	DXGI_FORMAT								m_IndexFormat;
 	UINT									m_IndexBufferByteSize;
 
-	std::unordered_map<std::string, SubmeshGeometry> m_DrawArgs;
+	std::unordered_map<std::wstring, Ptr<SubmeshGeometry>> m_DrawArgs;
+	BoundingBox								m_MeshBounds;
 
 public:
-	SubmeshGeometry* GetSubGeo(const std::string& key);
+	Ptr<SubmeshGeometry> GetSubGeo(const std::wstring& key);
 
 	inline UINT GetIndexCount() const { return m_IndexCount; }
+	inline BoundingBox GetMeshBounds() const { return m_MeshBounds; }
 };
 
 template<typename T>
@@ -55,5 +59,5 @@ inline void CMesh::CreateVertexBuffer(T* vtxData, UINT vtxCount, ID3D12GraphicsC
 	m_VertexBufferByteSize = vtxCount * m_VertexByteStride;
 	ThrowIfFailed(D3DCreateBlob(m_VertexBufferByteSize, &m_VertexBufferCPU));
 	CopyMemory(m_VertexBufferCPU->GetBufferPointer(), vtxData, m_VertexBufferByteSize);
-	m_VertexBufferGPU = CDevice::GetInst()->CreateDefaultBuffer(vtxData, m_VertexBufferByteSize, m_VertexBufferUploader, cmdlist);
+	m_VertexBufferGPU = BuildBufferResource(vtxData, m_VertexBufferByteSize, m_VertexBufferUploader, cmdlist);
 }

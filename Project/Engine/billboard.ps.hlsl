@@ -3,7 +3,7 @@
 float4 PS(GeoOut pin) : SV_Target
 {
     float3 uvw = float3(pin.TexCoord, pin.PrimID % 3);
-    float4 diffuseAlbedo = g_TexturesArr[MATERIAL.DiffuseMapIndex].Sample(g_SamAnisotropicWrap, uvw) * MATERIAL.DiffuseAlbedo;
+    float4 diffuseAlbedo = g_TexturesArr[MATERIAL.TextureIndex].Sample(g_SamAnisotropicWrap, uvw) * MATERIAL.DiffuseAlbedo;
     
 #ifdef ALPHA_TEST
 	// Discard pixel if texture alpha < 0.1.  We do this test as soon 

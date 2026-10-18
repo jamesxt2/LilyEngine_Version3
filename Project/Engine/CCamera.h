@@ -20,6 +20,7 @@ public:
 
 private:
 
+	void TestFrustumAndRender(CGameObject* obj);
 	void SortObjects();
 	std::vector<CGameObject*> m_vecObjs;
 	std::unordered_map<OBJ_PSO_TYPE, std::vector<CGameObject*>> m_SortedObjs;
@@ -40,6 +41,9 @@ private:
 
 	Matrix			m_matView;
 	Matrix			m_matProj;
+
+	Matrix			m_InvView;
+	BoundingFrustum m_CamFrustum;
 
 	bool			m_IsDirty;
 

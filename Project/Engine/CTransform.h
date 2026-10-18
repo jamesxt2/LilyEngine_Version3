@@ -18,6 +18,7 @@ private:
 	Vector3		m_RelativeRotation;
 	Vector3		m_RelativeScale;
 	Matrix		m_matWorld;
+	Matrix		m_InvWorld;
 
 	Vector3		m_WorldDir[3];
 	Vector3		m_RelativeDir[3];
@@ -47,6 +48,7 @@ public:
 
 	inline void SetWorldMat(const Matrix& mat) { m_matWorld = mat; }
 	inline const Matrix& GetWorldMat() const { return m_matWorld; }
+	inline const Matrix& GetInvWorld() const { return m_InvWorld; }
 
 	inline Vector3 GetRelativeDir(DIR_TYPE type) const { return m_RelativeDir[(UINT)type]; }
 	inline Vector3 GetWorldDir(DIR_TYPE type) const { return m_WorldDir[(UINT)type]; }

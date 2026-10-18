@@ -18,8 +18,6 @@ public:
 	friend class Ptr<CAsset>;
 
 private:
-	std::wstring			m_Key;
-	std::wstring			m_RelativePath;
 	const ASSET_TYPE		m_Type;
 	int						m_RefCount;
 
@@ -32,8 +30,35 @@ private:
 	}
 
 public:
-	inline const std::wstring& GetKey() const { return m_Key; }
-	inline const std::wstring& GetRelativePath() const { return m_RelativePath; }
+	inline ASSET_TYPE GetAssetType() const { return m_Type; }
+	inline int GetRefCount() const { return m_RefCount; }
+};
+
+struct TAsset
+{
+public:
+	TAsset(ASSET_TYPE type);
+	TAsset(const TAsset& _other);
+	virtual ~TAsset();
+	friend class CAssetMgr;
+	template<typename T>
+	friend class Ptr;
+
+	friend class Ptr<TAsset>;
+
+private:
+	const ASSET_TYPE		m_Type;
+	int						m_RefCount;
+
+	inline void AddRef() { ++m_RefCount; }
+	void Release()
+	{
+		--m_RefCount;
+		if (m_RefCount <= 0)
+			delete this;
+	}
+
+public:
 	inline ASSET_TYPE GetAssetType() const { return m_Type; }
 	inline int GetRefCount() const { return m_RefCount; }
 };

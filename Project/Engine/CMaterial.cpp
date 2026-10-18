@@ -13,7 +13,6 @@ CMaterial::CMaterial()
 	m_Roughness(0.25f),
 	m_Texture(nullptr)
 {
-	CRenderMgr::GetInst()->OnObjRenderFinish.AddDynamic(this, &CMaterial::DecreaseNumFramesDirty);
 	CLevelMgr::GetInst()->OnLevelChange.AddDynamic(this, &CMaterial::ResetNumFramesDirty);
 }
 

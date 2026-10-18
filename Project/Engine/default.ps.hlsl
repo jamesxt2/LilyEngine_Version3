@@ -3,7 +3,7 @@
 float4 PS(VertexOut pin) : SV_Target
 {
     float4 diffuseAlbedo = MATERIAL.bUseTexture ?
-        (g_Textures2D[MATERIAL.DiffuseMapIndex].Sample(g_SamAnisotropicWrap, pin.TexCoord) * MATERIAL.DiffuseAlbedo)
+        (g_Textures2D[MATERIAL.TextureIndex].Sample(g_SamAnisotropicWrap, pin.TexCoord) * MATERIAL.DiffuseAlbedo)
         : MATERIAL.DiffuseAlbedo;
     
 #ifdef ALPHA_TEST
@@ -29,6 +29,14 @@ float4 PS(VertexOut pin) : SV_Target
     float4 directLight = ComputeLighting(g_Lights, mat, pin.PosW, pin.NormalW, toEyeW, shadowFactor);
 
     float4 litColor = ambient + directLight;
+    
+    if (MATERIAL.bUseCubeReflection)
+    {
+        float3 r = reflect(-toEyeW, pin.NormalW);
+        float4 reflectionColor = g_TexturesCube[0].Sample(g_SamLinearWrap, r);
+        float3 fresnelFactor = SchlickFresnel(MATERIAL.FresnelR0, pin.NormalW, r);
+        litColor.rgb += shininess * fresnelFactor * reflectionColor.rgb;
+    }
     
 #ifdef FOG
     float fogAmount = saturate((distToEye - g_FogStart) / g_FogRange);

@@ -12,11 +12,7 @@ public:
 	friend class CAssetMgr;
 	CLONE_DISABLE(CTexture)
 
-	void CreateFromFile(const std::wstring& filename);
-
-	//void Bind_Graphics_Table(UINT rootParamIndex = 0);
-	//void Bind_Graphics_Table(ID3D12GraphicsCommandList* cmdlist, UINT rootParamIndex = 0);
-	//void Bind_Compute_Table(ID3D12GraphicsCommandList* cmdlist, UINT rootParamIndex);
+	void CreateFromFile(const std::wstring& filename, bool isTextureCube = false);
 
 private:
 

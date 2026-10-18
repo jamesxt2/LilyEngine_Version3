@@ -45,9 +45,9 @@ struct TMaterial
 	Vector3 FresnelR0 = { 0.01f, 0.01f, 0.01f };
 	float Roughness = 0.25f;
 	int bUseTexture = 0;
-	UINT DiffuseMapIndex = 0;
+	UINT TextureIndex = 0;
 	int bIsTexArray = 0;
-	float padding;
+	int bUseCubeReflection = 0;
 
 	Matrix MtrlTransform;
 };

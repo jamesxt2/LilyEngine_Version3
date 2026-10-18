@@ -92,12 +92,11 @@ void CAssetMgr::UpdateAndUploadMaterials()
 			MtrlData.Roughness = mtrl->m_Roughness;
 			MtrlData.bUseTexture = mtrl->m_Texture == nullptr ? 0 : 1;
 			MtrlData.MtrlTransform = mtrl->m_MtrlTransform;
-			MtrlData.DiffuseMapIndex = mtrl->m_Texture == nullptr ? 0 : mtrl->m_Texture->GetPoolIndex();
-
-			if (mtrl->m_Texture.Get())
-				int a = 0;
+			MtrlData.TextureIndex = mtrl->m_Texture == nullptr ? 0 : mtrl->m_Texture->GetPoolIndex();
+			MtrlData.bUseCubeReflection = mtrl->m_bUseCubeReflection;
 
 			mtrlSB->CopyData(mtrl->m_MtrlCBIndex, (const void*)&MtrlData);
+			--mtrl->m_NumFramesDirty;
 		}
 	}
 	mtrlSB->UploadDataToGpu();
@@ -115,17 +114,6 @@ void CAssetMgr::BuildDescriptorHeaps()
 		&srvHeapDesc, IID_PPV_ARGS(&m_CbvSrvUavDescriptorHeap)));
 
 	CDescriptorAllocator::GetInst()->Initialize(DEVICE, m_CbvSrvUavDescriptorHeap, maxDescriptorCount);
-
-	//m_BlurFilter->BuildDescriptors(
-	//	CD3DX12_CPU_DESCRIPTOR_HANDLE(m_CbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), g_TextureDescriptorsCount, CDevice::GetInst()->m_CbvSrvUavDescriptorSize),
-	//	CD3DX12_GPU_DESCRIPTOR_HANDLE(m_CbvSrvUavDescriptorHeap->GetGPUDescriptorHandleForHeapStart(), g_TextureDescriptorsCount, CDevice::GetInst()->m_CbvSrvUavDescriptorSize),
-	//	CDevice::GetInst()->m_CbvSrvUavDescriptorSize);
-
-	//m_GpuWaves->BuildDescriptors(
-	//	CD3DX12_CPU_DESCRIPTOR_HANDLE(m_CbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), textureDescriptorsCount + blurDescriptorCount, CDevice::GetInst()->m_CbvSrvUavDescriptorSize),
-	//	CD3DX12_GPU_DESCRIPTOR_HANDLE(m_CbvSrvUavDescriptorHeap->GetGPUDescriptorHandleForHeapStart(), textureDescriptorsCount + blurDescriptorCount, CDevice::GetInst()->m_CbvSrvUavDescriptorSize),
-	//	CDevice::GetInst()->m_CbvSrvUavDescriptorSize
-	//)
 }
 
 void CAssetMgr::BuildRootSignatures()
@@ -145,8 +133,11 @@ void CAssetMgr::BuildRootSignatures()
 	CD3DX12_DESCRIPTOR_RANGE displacementMapTable;
 	displacementMapTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 3);
 
+	CD3DX12_DESCRIPTOR_RANGE texCubeTable_Default;
+	texCubeTable_Default.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, g_MaxTextureCubeCount, 0, 4);
+
 	// Root parameter can be a table, root descriptor or root constants.
-	CD3DX12_ROOT_PARAMETER slotRootParameter_Default[6];
+	CD3DX12_ROOT_PARAMETER slotRootParameter_Default[7];
 
 	// Perfomance TIP: Order from most frequent to least frequent.
 	// global : b1, object : b0
@@ -156,11 +147,12 @@ void CAssetMgr::BuildRootSignatures()
 	slotRootParameter_Default[3].InitAsDescriptorTable(1, &tex2DTable_Default);
 	slotRootParameter_Default[4].InitAsDescriptorTable(1, &texArrTable_Default);
 	slotRootParameter_Default[5].InitAsDescriptorTable(1, &displacementMapTable);
+	slotRootParameter_Default[6].InitAsDescriptorTable(1, &texCubeTable_Default);
 
 	auto staticSamplers = GetStaticSamplers();
 
 	// A root signature is an array of root parameters.
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc_Default(6, slotRootParameter_Default,
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc_Default(7, slotRootParameter_Default,
 		(UINT)staticSamplers.size(), staticSamplers.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
@@ -698,6 +690,22 @@ void CAssetMgr::BuildPSO()
 	tessPSODesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 	tessPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
 	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&tessPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH])));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyPSODesc = psoDesc;
+	shader = FindAsset<CGraphicsShader>(L"SkyShader");
+	skyPSODesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	skyPSODesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	skyPSODesc.VS = 
+	{
+		reinterpret_cast<BYTE*>(shader->GetVsByteCode(L"SkyVS")->GetBufferPointer()),
+		shader->GetVsByteCode(L"SkyVS")->GetBufferSize()
+	};
+	skyPSODesc.PS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetPsByteCode(L"SkyPS")->GetBufferPointer()),
+		shader->GetPsByteCode(L"SkyPS")->GetBufferSize()
+	};
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&skyPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_SKY])));
 }
 
 ComPtr<ID3D12PipelineState> CAssetMgr::GetPSO(OBJ_PSO_TYPE type) const
@@ -707,49 +715,6 @@ ComPtr<ID3D12PipelineState> CAssetMgr::GetPSO(OBJ_PSO_TYPE type) const
 		return nullptr;
 	return iter->second;
 }
-
-/*
-void CAssetMgr::UpdateWaves()
-{
-	// Every quarter second, generate a random wave.
-	static float t_base = 0.0f;
-
-	if ((CTimeMgr::GetInst()->TotalTime() - t_base) >= 0.25f)
-	{
-		t_base += 0.25f;
-
-		int i = Rand(4, m_Waves->RowCount() - 5);
-		int j = Rand(4, m_Waves->ColumnCount() - 5);
-
-		float r = RandF(0.2f, 0.5f);
-
-		m_Waves->Disturb(i, j, r);
-	}
-
-	// Update the wave simulation.
-	m_Waves->Update(CTimeMgr::GetInst()->DeltaTime());
-
-	// Update the wave vertex buffer with the new solution.
-	auto currWavesVB = CDevice::GetInst()->GetCurrFrameResource()->m_WavesVB.get();
-	for (int i = 0; i < m_Waves->VertexCount(); ++i)
-	{
-		Vertex v;
-
-		v.Position = m_Waves->Position(i);
-		v.Normal = m_Waves->Normal(i);
-		
-		// Derive tex-coords from position by 
-		// mapping [-w/2,w/2] --> [0,1]
-		v.TexCoord.x = 0.5f + v.Position.x / m_Waves->Width();
-		v.TexCoord.y = 0.5f - v.Position.z / m_Waves->Depth();
-
-		currWavesVB->CopyData(i, (const void*)&v);
-	}
-
-	// Set the dynamic VB of the wave renderitem to the current frame VB.
-	FindAsset<CMesh>(L"WaveMesh")->m_VertexBufferGPU = currWavesVB->Resource();
-}
-*/
 
 void CAssetMgr::CreateMeshes()
 {
@@ -802,6 +767,8 @@ void CAssetMgr::CreateDefaultMeshes()
 		pMesh->CreateIndexBuffer16(vecIdx.data(), (UINT)vecIdx.size(), cmdlist);
 		});
 
+	pMesh->m_MeshBounds = GetGeomertyBoundingBox(vecVtx);
+
 	AddAsset<CMesh>(L"RectMesh", pMesh);
 
 	/***************/
@@ -850,25 +817,29 @@ void CAssetMgr::CreateSceneMeshes()
 	// Define the SubmeshGeometry that cover different 
 	// regions of the vertex/index buffers.
 
-	SubmeshGeometry boxSubmesh;
-	boxSubmesh.IndexCount = (UINT)box->Indices32.size();
-	boxSubmesh.StartIndexLocation = boxIndexOffset;
-	boxSubmesh.BaseVertexLocation = boxVertexOffset;
+	Ptr<SubmeshGeometry> boxSubmesh = new SubmeshGeometry;
+	boxSubmesh->IndexCount = (UINT)box->Indices32.size();
+	boxSubmesh->StartIndexLocation = boxIndexOffset;
+	boxSubmesh->BaseVertexLocation = boxVertexOffset;
+	boxSubmesh->Bounds = GetGeomertyBoundingBox(box->Vertices);
 
-	SubmeshGeometry gridSubmesh;
-	gridSubmesh.IndexCount = (UINT)grid->Indices32.size();
-	gridSubmesh.StartIndexLocation = gridIndexOffset;
-	gridSubmesh.BaseVertexLocation = gridVertexOffset;
+	Ptr<SubmeshGeometry> gridSubmesh = new SubmeshGeometry;
+	gridSubmesh->IndexCount = (UINT)grid->Indices32.size();
+	gridSubmesh->StartIndexLocation = gridIndexOffset;
+	gridSubmesh->BaseVertexLocation = gridVertexOffset;
+	gridSubmesh->Bounds = GetGeomertyBoundingBox(grid->Vertices);
 
-	SubmeshGeometry sphereSubmesh;
-	sphereSubmesh.IndexCount = (UINT)sphere->Indices32.size();
-	sphereSubmesh.StartIndexLocation = sphereIndexOffset;
-	sphereSubmesh.BaseVertexLocation = sphereVertexOffset;
+	Ptr<SubmeshGeometry> sphereSubmesh = new SubmeshGeometry;
+	sphereSubmesh->IndexCount = (UINT)sphere->Indices32.size();
+	sphereSubmesh->StartIndexLocation = sphereIndexOffset;
+	sphereSubmesh->BaseVertexLocation = sphereVertexOffset;
+	sphereSubmesh->Bounds = GetGeomertyBoundingBox(sphere->Vertices);
 
-	SubmeshGeometry cylinderSubmesh;
-	cylinderSubmesh.IndexCount = (UINT)cylinder->Indices32.size();
-	cylinderSubmesh.StartIndexLocation = cylinderIndexOffset;
-	cylinderSubmesh.BaseVertexLocation = cylinderVertexOffset;
+	Ptr<SubmeshGeometry> cylinderSubmesh = new SubmeshGeometry;
+	cylinderSubmesh->IndexCount = (UINT)cylinder->Indices32.size();
+	cylinderSubmesh->StartIndexLocation = cylinderIndexOffset;
+	cylinderSubmesh->BaseVertexLocation = cylinderVertexOffset;
+	cylinderSubmesh->Bounds = GetGeomertyBoundingBox(cylinder->Vertices);
 
 	//
 	// Extract the vertex elements we are interested in and pack the
@@ -918,10 +889,11 @@ void CAssetMgr::CreateSceneMeshes()
 		});
 	
 
-	pMesh->m_DrawArgs.emplace("box", std::move(boxSubmesh));
-	pMesh->m_DrawArgs.emplace("grid", std::move(gridSubmesh));
-	pMesh->m_DrawArgs.emplace("sphere", std::move(sphereSubmesh));
-	pMesh->m_DrawArgs.emplace("cylinder", std::move(cylinderSubmesh));
+	pMesh->m_DrawArgs.emplace(L"box", std::move(boxSubmesh));
+	pMesh->m_DrawArgs.emplace(L"grid", std::move(gridSubmesh));
+	pMesh->m_DrawArgs.emplace(L"sphere", std::move(sphereSubmesh));
+	pMesh->m_DrawArgs.emplace(L"cylinder", std::move(cylinderSubmesh));
+	pMesh->m_MeshBounds = GetGeomertyBoundingBox(vertices);
 
 	AddAsset<CMesh>(L"SceneGeoMesh", pMesh);
 	/*********************************************************************/
@@ -963,12 +935,14 @@ void CAssetMgr::CreateWaveSceneMeshes()
 		pLandGridMesh->CreateIndexBuffer16(waveGridIndices.data(), (UINT)waveGridIndices.size(), cmdlist);
 		});
 
-	SubmeshGeometry submeshLandGrid;
-	submeshLandGrid.IndexCount = (UINT)waveGridIndices.size();
-	submeshLandGrid.StartIndexLocation = 0;
-	submeshLandGrid.BaseVertexLocation = 0;
+	Ptr<SubmeshGeometry> submeshLandGrid = new SubmeshGeometry;
+	submeshLandGrid->IndexCount = (UINT)waveGridIndices.size();
+	submeshLandGrid->StartIndexLocation = 0;
+	submeshLandGrid->BaseVertexLocation = 0;
+	submeshLandGrid->Bounds = GetGeomertyBoundingBox(landGridVertices);
 
-	pLandGridMesh->m_DrawArgs.emplace("grid", std::move(submeshLandGrid));
+	pLandGridMesh->m_MeshBounds = submeshLandGrid->Bounds;
+	pLandGridMesh->m_DrawArgs.emplace(L"grid", std::move(submeshLandGrid));
 
 	AddAsset<CMesh>(L"LandMesh", pLandGridMesh);
 	/*********************************************************************/
@@ -976,7 +950,7 @@ void CAssetMgr::CreateWaveSceneMeshes()
 	/*********************************************************************/
 }
 
-Ptr<CMesh> CAssetMgr::CreateGridMesh(const std::wstring& key, float width, float depth, UINT rows, UINT columns)
+Ptr<CMesh> CAssetMgr::CreateGridMesh(const std::wstring& name, float width, float depth, UINT rows, UINT columns)
 {
 	UINT vertexCount = rows * columns;
 
@@ -999,12 +973,14 @@ Ptr<CMesh> CAssetMgr::CreateGridMesh(const std::wstring& key, float width, float
 		pWave->CreateIndexBuffer16(indices.data(), (UINT)indices.size(), cmdlist);
 		});
 
-	AddAsset<CMesh>(key, pWave);
+	pWave->m_MeshBounds = GetGeomertyBoundingBox(vertices);
+
+	AddAsset<CMesh>(name, pWave);
 
 	return pWave;
 }
 
-Ptr<CMesh> CAssetMgr::CreateTessQuadPatchMesh(const std::wstring& key)
+Ptr<CMesh> CAssetMgr::CreateTessQuadPatchMesh(const std::wstring& name)
 {
 	std::vector<Vector3> vertices(4);
 	vertices[0] = Vector3(-10.0f, 0.0f, +10.0f);
@@ -1021,7 +997,14 @@ Ptr<CMesh> CAssetMgr::CreateTessQuadPatchMesh(const std::wstring& key)
 		pTessQuad->CreateIndexBuffer16(indices.data(), (UINT)indices.size(), cmdlist);
 		});
 
-	AddAsset<CMesh>(key, pTessQuad);
+	std::vector<Vertex> vtxs(4);
+	vtxs[0].Position = Vector3(-10.0f, 0.0f, +10.0f);
+	vtxs[1].Position = Vector3(+10.0f, 0.0f, +10.0f);
+	vtxs[2].Position = Vector3(-10.0f, 0.0f, -10.0f);
+	vtxs[3].Position = Vector3(+10.0f, 0.0f, -10.0f);
+	pTessQuad->m_MeshBounds = GetGeomertyBoundingBox(vtxs);
+
+	AddAsset<CMesh>(name, pTessQuad);
 
 	return pTessQuad;
 }
@@ -1079,12 +1062,14 @@ void CAssetMgr::CreateSkullMesh()
 		pSkullMesh->CreateIndexBuffer32(indices.data(), (UINT)indices.size(), cmdlist);
 		});
 
-	SubmeshGeometry submesh;
-	submesh.IndexCount = (UINT)indices.size();
-	submesh.StartIndexLocation = 0;
-	submesh.BaseVertexLocation = 0;
+	Ptr<SubmeshGeometry> submesh = new SubmeshGeometry;
+	submesh->IndexCount = (UINT)indices.size();
+	submesh->StartIndexLocation = 0;
+	submesh->BaseVertexLocation = 0;
+	submesh->Bounds = GetGeomertyBoundingBox(vertices);
 
-	pSkullMesh->m_DrawArgs["skull"] = submesh;
+	pSkullMesh->m_MeshBounds = submesh->Bounds;
+	pSkullMesh->m_DrawArgs.emplace(L"skull", std::move(submesh));
 
 	AddAsset<CMesh>(L"SkullMesh", pSkullMesh);
 }
@@ -1104,7 +1089,7 @@ void CAssetMgr::CreateRoomMeshes()
 	//  /   Floor      /
 	// /--------------/
 
-	std::array<Vertex, 20> vertices =
+	std::vector<Vertex> vertices =
 	{
 		// Floor: Observe we tile texture coordinates.
 		Vertex(-3.5f, 0.0f, -10.0f, 0.0f, 1.0f, 0.0f, 0.0f, 4.0f), // 0 
@@ -1157,20 +1142,25 @@ void CAssetMgr::CreateRoomMeshes()
 		16, 18, 19
 	};
 
-	SubmeshGeometry floorSubmesh;
-	floorSubmesh.IndexCount = 6;
-	floorSubmesh.StartIndexLocation = 0;
-	floorSubmesh.BaseVertexLocation = 0;
+	BoundingBox roomBound = GetGeomertyBoundingBox(vertices);
 
-	SubmeshGeometry wallSubmesh;
-	wallSubmesh.IndexCount = 18;
-	wallSubmesh.StartIndexLocation = 6;
-	wallSubmesh.BaseVertexLocation = 0;
+	Ptr<SubmeshGeometry> floorSubmesh = new SubmeshGeometry;
+	floorSubmesh->IndexCount = 6;
+	floorSubmesh->StartIndexLocation = 0;
+	floorSubmesh->BaseVertexLocation = 0;
+	floorSubmesh->Bounds = roomBound;
 
-	SubmeshGeometry mirrorSubmesh;
-	mirrorSubmesh.IndexCount = 6;
-	mirrorSubmesh.StartIndexLocation = 24;
-	mirrorSubmesh.BaseVertexLocation = 0;
+	Ptr<SubmeshGeometry> wallSubmesh = new SubmeshGeometry;
+	wallSubmesh->IndexCount = 18;
+	wallSubmesh->StartIndexLocation = 6;
+	wallSubmesh->BaseVertexLocation = 0;
+	wallSubmesh->Bounds = roomBound;
+
+	Ptr<SubmeshGeometry> mirrorSubmesh = new SubmeshGeometry;
+	mirrorSubmesh->IndexCount = 6;
+	mirrorSubmesh->StartIndexLocation = 24;
+	mirrorSubmesh->BaseVertexLocation = 0;
+	mirrorSubmesh->Bounds = roomBound;
 
 	Ptr<CMesh> pMesh = new CMesh;
 
@@ -1179,9 +1169,11 @@ void CAssetMgr::CreateRoomMeshes()
 		pMesh->CreateIndexBuffer16(indices.data(), (UINT)indices.size(), cmdlist);
 		});
 
-	pMesh->m_DrawArgs.emplace("floor", std::move(floorSubmesh));
-	pMesh->m_DrawArgs.emplace("wall", std::move(wallSubmesh));
-	pMesh->m_DrawArgs.emplace("mirror", std::move(mirrorSubmesh));
+	pMesh->m_DrawArgs.emplace(L"floor", std::move(floorSubmesh));
+	pMesh->m_DrawArgs.emplace(L"wall", std::move(wallSubmesh));
+	pMesh->m_DrawArgs.emplace(L"mirror", std::move(mirrorSubmesh));
+
+	pMesh->m_MeshBounds = roomBound;
 	
 	AddAsset<CMesh>(L"RoomMesh", pMesh);
 }
@@ -1189,7 +1181,7 @@ void CAssetMgr::CreateRoomMeshes()
 void CAssetMgr::CreateBillboardMesh()
 {
 	static const int treeCount = 16;
-	std::array<BillboardVertex, 16> vertices;
+	std::vector<BillboardVertex> vertices(16);
 	for (UINT i = 0; i < treeCount; ++i)
 	{
 		float x = Utilities::RandF(-45.0f, 45.0f);
@@ -1216,12 +1208,14 @@ void CAssetMgr::CreateBillboardMesh()
 		pMesh->CreateIndexBuffer16(indices.data(), (UINT)indices.size(), cmdlist);
 		});
 
-	SubmeshGeometry submesh;
-	submesh.IndexCount = (UINT)indices.size();
-	submesh.StartIndexLocation = 0;
-	submesh.BaseVertexLocation = 0;
+	Ptr<SubmeshGeometry> submesh = new SubmeshGeometry;
+	submesh->IndexCount = (UINT)indices.size();
+	submesh->StartIndexLocation = 0;
+	submesh->BaseVertexLocation = 0;
+	submesh->Bounds = GetGeomertyBoundingBox(vertices);
 
-	pMesh->m_DrawArgs["points"] = submesh;
+	pMesh->m_MeshBounds = submesh->Bounds;
+	pMesh->m_DrawArgs.emplace(L"points", std::move(submesh));
 
 	AddAsset<CMesh>(L"TreeBillboardsMesh", pMesh);
 }
@@ -1271,6 +1265,10 @@ void CAssetMgr::CreateTextures()
 	pTexture = new CTexture;
 	pTexture->CreateFromFile(L"textures\\noise\\noise_03.dds");
 	AddAsset<CTexture>(L"NoiseTexture", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\grasscube1024.dds", true);
+	AddAsset<CTexture>(L"SkyCubeTexture", pTexture);
 }
 
 void CAssetMgr::CreateMaterials()
@@ -1383,6 +1381,21 @@ void CAssetMgr::CreateMaterials()
 	pMaterial->m_Texture = FindAsset<CTexture>(L"AlphaCircleTexture");
 	AddAsset<CMaterial>(L"AlphaCircleMaterial", pMaterial);
 
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 14;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
+	pMaterial->m_Roughness = 1.0f;
+	pMaterial->m_Texture = FindAsset<CTexture>(L"SkyCubeTexture");
+	AddAsset<CMaterial>(L"SkyMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 15;
+	pMaterial->m_DiffuseAlbedo = XMFLOAT4(0.0f, 0.0f, 0.1f, 1.0f);
+	pMaterial->m_FresnelR0 = XMFLOAT3(0.98f, 0.97f, 0.95f);
+	pMaterial->m_Roughness = 0.1f;
+	pMaterial->m_bUseCubeReflection = 1;
+	AddAsset<CMaterial>(L"MirrorPlaneMaterial", pMaterial);
 }
 
 void CAssetMgr::CreateGraphicsShaders()
@@ -1391,7 +1404,7 @@ void CAssetMgr::CreateGraphicsShaders()
 
 	Ptr<CGraphicsShader> pShader = nullptr;
 
-	// default.fx
+	// default
 	const D3D_SHADER_MACRO opaqueDefines[] =
 	{
 		"FOG", "1",
@@ -1423,7 +1436,7 @@ void CAssetMgr::CreateGraphicsShaders()
 
 	AddAsset<CGraphicsShader>(L"DefaultShader", pShader);
 
-	// billboard.fx
+	// billboard
 	pShader = new CGraphicsShader;
 	pShader->BuildVertexShader(L"BillboardVS", strPath + L"shader\\billboard.vs.hlsl", nullptr, "VS", "vs_5_1");
 	pShader->m_InputLayout = {
@@ -1435,7 +1448,7 @@ void CAssetMgr::CreateGraphicsShaders()
 
 	AddAsset<CGraphicsShader>(L"BillboardShader", pShader);
 
-	// particle.fx
+	// particle
 	pShader = new CGraphicsShader;
 	pShader->BuildVertexShader(L"ParticleVS", strPath + L"shader\\particle.vs.hlsl", nullptr, "VS", "vs_5_1");
 	pShader->m_InputLayout = {
@@ -1447,7 +1460,7 @@ void CAssetMgr::CreateGraphicsShaders()
 
 	AddAsset<CGraphicsShader>(L"ParticleShader", pShader);
 
-	// TessQuadPatch.fx
+	// TessQuadPatch
 	pShader = new CGraphicsShader;
 	pShader->BuildVertexShader(L"TessQuadPatchVS", strPath + L"shader\\TessQuadPatch.vs.hlsl", nullptr, "VS", "vs_5_1");
 	pShader->m_InputLayout = {
@@ -1458,6 +1471,18 @@ void CAssetMgr::CreateGraphicsShaders()
 	pShader->BuildPixelShader(L"TessQuadPatchPS", strPath + L"shader\\TessQuadPatch.ps.hlsl", nullptr, "PS", "ps_5_1");
 
 	AddAsset<CGraphicsShader>(L"TessQuadPatchShader", pShader);
+
+	// sky
+	pShader = new CGraphicsShader;
+	pShader->BuildVertexShader(L"SkyVS", strPath + L"shader\\sky.vs.hlsl", nullptr, "VS", "vs_5_1");
+	pShader->m_InputLayout = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+	pShader->BuildPixelShader(L"SkyPS", strPath + L"shader\\sky.ps.hlsl", nullptr, "PS", "ps_5_1");
+
+	AddAsset<CGraphicsShader>(L"SkyShader", pShader);
 }
 
 void CAssetMgr::CreateComputeShaders()

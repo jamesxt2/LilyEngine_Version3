@@ -48,6 +48,7 @@ extern int g_MaxMaterialCount;
 
 extern int g_MaxTexture2DCount;
 extern int g_MaxTextureArrayCount;
+extern int g_MaxTextureCubeCount;
 
 //extern const int g_TextureDescriptorsCount;
 //extern const int g_BlurDescriptorCount;

@@ -122,11 +122,6 @@ void CParticleSystem::CalculateSpawnCount()
 			spawnCount = (int)floor(value);
 			m_Time -= (float)spawnCount * term;
 		}
-		//while (m_Time >= term)
-		//{
-		//	m_Time -= term;
-		//	++spawnCount;
-		//}
 
 		count.SpawnCount += spawnCount;
 	}
@@ -141,8 +136,6 @@ void CParticleSystem::Render()
 		return;
 
 	m_ParticleBuffer->Bind_Graphics_SRV_Table(CMDLIST.Get(), 5);
-
-	//GetMaterial()->Bind(3);
 
 	GetMesh()->Bind();
 

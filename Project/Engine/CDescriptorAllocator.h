@@ -37,7 +37,6 @@ private:
 	ComPtr<ID3D12Device>							m_Device;
 	ComPtr<ID3D12DescriptorHeap>					m_Heap;
 	UINT											m_Capacity{ 0 };
-	UINT											m_UsedCount{ 0 };
 	UINT											m_DescriptorSize{ 0 };
 	std::vector<FreeBlock>							m_FreeBlocks;
 

@@ -134,6 +134,9 @@
     <Filter Include="HLSL\blur">
       <UniqueIdentifier>{65ff79bb-c98f-4e47-8916-198271e9adfa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="HLSL\sky">
+      <UniqueIdentifier>{eaead5d5-0404-4613-80ec-aeaa18cb0762}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -242,9 +245,6 @@
       <Filter>07.Component\Script</Filter>
     </ClInclude>
     <ClInclude Include="MeshData.h">
-      <Filter>08.Asset\Mesh</Filter>
-    </ClInclude>
-    <ClInclude Include="Waves.h">
       <Filter>08.Asset\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="CMaterial.h">
@@ -370,9 +370,6 @@
     <ClCompile Include="CCameraMoveScript.cpp">
       <Filter>07.Component\Script</Filter>
     </ClCompile>
-    <ClCompile Include="Waves.cpp">
-      <Filter>08.Asset\Mesh</Filter>
-    </ClCompile>
     <ClCompile Include="CMaterial.cpp">
       <Filter>08.Asset\Material</Filter>
     </ClCompile>
@@ -439,9 +436,6 @@
     <None Include="LightingUtils.hlsli">
       <Filter>HLSL\header</Filter>
     </None>
-    <None Include="material.hlsli">
-      <Filter>HLSL\header</Filter>
-    </None>
     <None Include="struct.hlsli">
       <Filter>HLSL\header</Filter>
     </None>
@@ -480,6 +474,15 @@
     </None>
     <None Include="blur.cs.hlsl">
       <Filter>HLSL\blur</Filter>
+    </None>
+    <None Include="sky_common.hlsli">
+      <Filter>HLSL\sky</Filter>
+    </None>
+    <None Include="sky.vs.hlsl">
+      <Filter>HLSL\sky</Filter>
+    </None>
+    <None Include="sky.ps.hlsl">
+      <Filter>HLSL\sky</Filter>
     </None>
   </ItemGroup>
 </Project>

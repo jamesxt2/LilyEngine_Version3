@@ -14,10 +14,12 @@ public:
 	virtual void FinalTick() override;
 	virtual void Render() override;
 
+	virtual BoundingBox GetBounds() override;
+
 private:
-	SubmeshGeometry* m_SubMeshGeo;
+	Ptr<SubmeshGeometry> m_SubMeshGeo;
 
 public:
-	inline void SetSubMeshGeo(SubmeshGeometry* geo) { m_SubMeshGeo = geo; }
+	inline void SetSubMeshGeo(Ptr<SubmeshGeometry> geo) { m_SubMeshGeo = geo; }
 };
 

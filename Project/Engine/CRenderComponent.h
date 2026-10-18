@@ -14,6 +14,8 @@ public:
 	virtual void FinalTick() = 0;
 	virtual void Render() = 0;
 
+	virtual BoundingBox GetBounds() { return BoundingBox(); }
+
 private:
 	Ptr<CMesh>					m_Mesh;
 	Ptr<CMaterial>				m_Material;

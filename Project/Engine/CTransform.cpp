@@ -101,6 +101,8 @@ void CTransform::FinalTick()
 		for (int i = 0; i < 3; ++i)
 			m_WorldDir[i] = m_RelativeDir[i];
 	}
+
+	m_InvWorld = m_matWorld.Invert();
 }
 
 void CTransform::Bind()

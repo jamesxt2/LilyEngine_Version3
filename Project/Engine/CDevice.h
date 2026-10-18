@@ -91,10 +91,6 @@ public:
 	inline bool EnableMSAA() const { return m_EnableMSAA; }
 	inline UINT Get4xMSAAQuality() const { return m_4xMsaaQuality; }
 
-
-	// Help function
-	ComPtr<ID3D12Resource> CreateDefaultBuffer(const void* initData, UINT64 byteSize, ComPtr<ID3D12Resource>& uploadBuffer, ID3D12GraphicsCommandList* cmdlist = nullptr);
-
 /***********************Command Objects And Fence******************************/
 public:
 

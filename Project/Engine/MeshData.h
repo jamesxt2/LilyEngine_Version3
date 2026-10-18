@@ -58,7 +58,7 @@ private:
 // geometries are stored in one vertex and index buffer.  It provides the offsets
 // and data needed to draw a subset of geometry stores in the vertex and index 
 // buffers so that we can implement the technique described by Figure 6.3.
-struct SubmeshGeometry
+struct SubmeshGeometry : public TAsset
 {
 	UINT IndexCount = 0;
 	UINT StartIndexLocation = 0;
@@ -67,4 +67,15 @@ struct SubmeshGeometry
 	// Bounding box of the geometry defined by this submesh. 
 	// This is used in later chapters of the book.
 	DirectX::BoundingBox Bounds;
+
+	SubmeshGeometry()
+		: TAsset(ASSET_TYPE::SUBMESH_GEO)
+	{
+	}
+	SubmeshGeometry(const SubmeshGeometry& _other)
+		: TAsset(_other),
+		IndexCount(_other.IndexCount), StartIndexLocation(_other.StartIndexLocation),
+		BaseVertexLocation(_other.BaseVertexLocation), Bounds(_other.Bounds)
+	{
+	}
 };

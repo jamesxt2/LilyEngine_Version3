@@ -67,7 +67,7 @@ void CLevelMgr::Init()
 	pLandGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"LandMesh"));
 	pLandGrid->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"GrassMaterial"));
 	pLandGrid->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-	pLandGrid->GetMeshRenderComp()->SetSubMeshGeo(pLandGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
+	pLandGrid->GetMeshRenderComp()->SetSubMeshGeo(pLandGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"grid"));
 
 	pWaveLevel->AddObject(pLandGrid);
 
@@ -100,7 +100,7 @@ void CLevelMgr::Init()
 	pWoodBox->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 	pWoodBox->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WireFenceBoxMaterial"));
 	pWoodBox->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_ALPHA_TESTED);
-	pWoodBox->GetMeshRenderComp()->SetSubMeshGeo(pWoodBox->GetMeshRenderComp()->GetMesh()->GetSubGeo("box"));
+	pWoodBox->GetMeshRenderComp()->SetSubMeshGeo(pWoodBox->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"box"));
 
 	pWaveLevel->AddObject(pWoodBox);
 
@@ -123,9 +123,7 @@ void CLevelMgr::Init()
 	CGameObject* pParticle = new CGameObject;
 	pParticle->SetName(L"Particle");
 	pParticle->AddComponent(new CTransform);
-
 	
-
 	pParticle->AddComponent(new CParticleSystem(10000, CAssetMgr::GetInst()->FindAsset<CTexture>(L"NoiseTexture")->GetPoolIndex()));
 	
 	pParticle->GetTransformComp()->SetRelativePosition(30.f, 60.f, 0.f);
@@ -149,6 +147,8 @@ void CLevelMgr::Init()
 	/******************************************************************/
 	// Scene Level
 	/******************************************************************/
+	int sceneLevelObjIdx = 0;
+
 	CLevel* pSceneLevel = new CLevel;
 
 	CGameObject* pCamera2 = new CGameObject;
@@ -172,13 +172,13 @@ void CLevelMgr::Init()
 	pSceneGrid->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
 	pSceneGrid->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
 	pSceneGrid->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-	pSceneGrid->GetTransformComp()->SetObjCBIndex(0);
+	pSceneGrid->GetTransformComp()->SetObjCBIndex(sceneLevelObjIdx++);
 	pSceneGrid->GetTransformComp()->SetTexTransform(Matrix::CreateScale(5.f, 5.f, 1.f));
 
 	pSceneGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 	pSceneGrid->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"TileMaterial"));
 	pSceneGrid->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-	pSceneGrid->GetMeshRenderComp()->SetSubMeshGeo(pSceneGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo("grid"));
+	pSceneGrid->GetMeshRenderComp()->SetSubMeshGeo(pSceneGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"grid"));
 
 	pSceneLevel->AddObject(pSceneGrid);
 
@@ -190,12 +190,12 @@ void CLevelMgr::Init()
 	pBox->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
 	pBox->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
 	pBox->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-	pBox->GetTransformComp()->SetObjCBIndex(1);
+	pBox->GetTransformComp()->SetObjCBIndex(sceneLevelObjIdx++);
 
 	pBox->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 	pBox->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WoodBoxMaterial"));
 	pBox->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-	pBox->GetMeshRenderComp()->SetSubMeshGeo(pBox->GetMeshRenderComp()->GetMesh()->GetSubGeo("box"));
+	pBox->GetMeshRenderComp()->SetSubMeshGeo(pBox->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"box"));
 
 	pSceneLevel->AddObject(pBox);
 
@@ -207,13 +207,30 @@ void CLevelMgr::Init()
 	pSkull->GetTransformComp()->SetRelativePosition(0.f, 1.f, 0.f);
 	pSkull->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
 	pSkull->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-	pSkull->GetTransformComp()->SetObjCBIndex(2);
+	pSkull->GetTransformComp()->SetObjCBIndex(sceneLevelObjIdx++);
 
 	pSkull->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SkullMesh"));
 	pSkull->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"SkullMaterial"));
 	pSkull->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
 
 	pSceneLevel->AddObject(pSkull);
+
+	CGameObject* pSky = new CGameObject;
+	pSky->SetName(L"Sky");
+	pSky->AddComponent(new CTransform);
+	pSky->AddComponent(new CMeshRender);
+
+	pSky->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
+	pSky->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
+	pSky->GetTransformComp()->SetRelativeScale(5000.f, 5000.f, 5000.f);
+	pSky->GetTransformComp()->SetObjCBIndex(sceneLevelObjIdx++);
+
+	pSky->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
+	pSky->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"SkyMaterial"));
+	pSky->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_SKY);
+	pSky->GetMeshRenderComp()->SetSubMeshGeo(pSky->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"sphere"));
+
+	pSceneLevel->AddObject(pSky);
 
 	for (int i = 0; i < 5; ++i)
 	{
@@ -226,12 +243,12 @@ void CLevelMgr::Init()
 		pCylinder->GetTransformComp()->SetRelativePosition(-8.f, 1.5f, 6.f - 3 * i);
 		pCylinder->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
 		pCylinder->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-		pCylinder->GetTransformComp()->SetObjCBIndex(3 + 4 * i);
+		pCylinder->GetTransformComp()->SetObjCBIndex(sceneLevelObjIdx++);
 
 		pCylinder->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pCylinder->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
 		pCylinder->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-		pCylinder->GetMeshRenderComp()->SetSubMeshGeo(pCylinder->GetMeshRenderComp()->GetMesh()->GetSubGeo("cylinder"));
+		pCylinder->GetMeshRenderComp()->SetSubMeshGeo(pCylinder->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"cylinder"));
 
 		pSceneLevel->AddObject(pCylinder);
 
@@ -244,12 +261,12 @@ void CLevelMgr::Init()
 		pCylinder2->GetTransformComp()->SetRelativePosition(8.f, 1.5f, 6.f - 3 * i);
 		pCylinder2->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
 		pCylinder2->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-		pCylinder2->GetTransformComp()->SetObjCBIndex(3 + 4 * i + 1);
+		pCylinder2->GetTransformComp()->SetObjCBIndex(sceneLevelObjIdx++);
 
 		pCylinder2->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pCylinder2->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
 		pCylinder2->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-		pCylinder2->GetMeshRenderComp()->SetSubMeshGeo(pCylinder2->GetMeshRenderComp()->GetMesh()->GetSubGeo("cylinder"));
+		pCylinder2->GetMeshRenderComp()->SetSubMeshGeo(pCylinder2->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"cylinder"));
 
 		pSceneLevel->AddObject(pCylinder2);
 
@@ -262,12 +279,12 @@ void CLevelMgr::Init()
 		pSphere->GetTransformComp()->SetRelativePosition(-8.f, 3.5f, 6.f - 3 * i);
 		pSphere->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
 		pSphere->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-		pSphere->GetTransformComp()->SetObjCBIndex(3 + 4 * i + 2);
+		pSphere->GetTransformComp()->SetObjCBIndex(sceneLevelObjIdx++);
 
 		pSphere->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
-		pSphere->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"StoneMaterial"));
+		pSphere->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"MirrorPlaneMaterial"));
 		pSphere->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-		pSphere->GetMeshRenderComp()->SetSubMeshGeo(pSphere->GetMeshRenderComp()->GetMesh()->GetSubGeo("sphere"));
+		pSphere->GetMeshRenderComp()->SetSubMeshGeo(pSphere->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"sphere"));
 
 		pSceneLevel->AddObject(pSphere);
 
@@ -280,12 +297,12 @@ void CLevelMgr::Init()
 		pSphere2->GetTransformComp()->SetRelativePosition(8.f, 3.5f, 6.f - 3 * i);
 		pSphere2->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
 		pSphere2->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-		pSphere2->GetTransformComp()->SetObjCBIndex(3 + 4 * i + 3);
+		pSphere2->GetTransformComp()->SetObjCBIndex(sceneLevelObjIdx++);
 
 		pSphere2->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pSphere2->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"StoneMaterial"));
 		pSphere2->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-		pSphere2->GetMeshRenderComp()->SetSubMeshGeo(pSphere2->GetMeshRenderComp()->GetMesh()->GetSubGeo("sphere"));
+		pSphere2->GetMeshRenderComp()->SetSubMeshGeo(pSphere2->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"sphere"));
 
 		pSceneLevel->AddObject(pSphere2);
 	}
@@ -329,7 +346,7 @@ void CLevelMgr::Init()
 	pRoomFloor->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"RoomMesh"));
 	pRoomFloor->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"TileMaterial"));
 	pRoomFloor->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-	pRoomFloor->GetMeshRenderComp()->SetSubMeshGeo(pRoomFloor->GetMeshRenderComp()->GetMesh()->GetSubGeo("floor"));
+	pRoomFloor->GetMeshRenderComp()->SetSubMeshGeo(pRoomFloor->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"floor"));
 
 	pRoomLevel->AddObject(pRoomFloor);
 
@@ -346,7 +363,7 @@ void CLevelMgr::Init()
 	pRoomWall->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"RoomMesh"));
 	pRoomWall->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
 	pRoomWall->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-	pRoomWall->GetMeshRenderComp()->SetSubMeshGeo(pRoomWall->GetMeshRenderComp()->GetMesh()->GetSubGeo("wall"));
+	pRoomWall->GetMeshRenderComp()->SetSubMeshGeo(pRoomWall->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"wall"));
 
 	pRoomLevel->AddObject(pRoomWall);
 
@@ -392,7 +409,7 @@ void CLevelMgr::Init()
 	pRoomMirror->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"RoomMesh"));
 	pRoomMirror->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"MirrorMaterial"));
 	pRoomMirror->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_MIRRORS | OBJ_PSO_TYPE::PSO_TRANSPARENT);
-	pRoomMirror->GetMeshRenderComp()->SetSubMeshGeo(pRoomMirror->GetMeshRenderComp()->GetMesh()->GetSubGeo("mirror"));
+	pRoomMirror->GetMeshRenderComp()->SetSubMeshGeo(pRoomMirror->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"mirror"));
 
 	pRoomLevel->AddObject(pRoomMirror);
 

@@ -4,8 +4,6 @@
 #include "CPathMgr.h"
 #include "assets.h"
 #include "MeshData.h"
-#include "Waves.h"
-#include "BlurFilter.h"
 #include "CWaveObject.h"
 
 class CAssetMgr : public CSingleton<CAssetMgr>
@@ -17,19 +15,16 @@ public:
 	void Tick();
 
 	template<typename T>
-	Ptr<T> Load(const std::wstring& key, const std::wstring& relativePath);
+	Ptr<T> FindAsset(const std::wstring& name);
 
 	template<typename T>
-	Ptr<T> FindAsset(const std::wstring& key);
-
-	template<typename T>
-	void AddAsset(const std::wstring& key, Ptr<T> pAsset);
+	void AddAsset(const std::wstring& name, Ptr<T> pAsset);
 
 	void GetAssetNames(ASSET_TYPE type, _Out_ std::vector<std::string>& vecNames);
 	inline const std::unordered_map<std::wstring, Ptr<CAsset>>& GetAssets(ASSET_TYPE type) const { return m_AssetMap[(UINT)type]; }
 
-	Ptr<CMesh> CreateGridMesh(const std::wstring& key, float width, float depth, UINT rows, UINT columns);
-	Ptr<CMesh> CreateTessQuadPatchMesh(const std::wstring& key);
+	Ptr<CMesh> CreateGridMesh(const std::wstring& name, float width, float depth, UINT rows, UINT columns);
+	Ptr<CMesh> CreateTessQuadPatchMesh(const std::wstring& name);
 
 private:
 
@@ -73,6 +68,9 @@ private:
 	void AnimateMaterials();
 	void UpdateAndUploadMaterials();
 
+	template<typename T>
+	BoundingBox GetGeomertyBoundingBox(const std::vector<T>& vertices);
+
 	void CreateMeshes();
 
 	void CreateDefaultMeshes();
@@ -104,8 +102,6 @@ private:
 	void BuildPSO();
 	std::unordered_map<OBJ_PSO_TYPE, ComPtr<ID3D12PipelineState>>	m_PSOGroup;
 
-
-	//std::unique_ptr<BlurFilter> m_BlurFilter;
 	ComPtr<ID3D12DescriptorHeap>		m_CbvSrvUavDescriptorHeap;
 
 	void BuildDescriptorHeaps();
@@ -113,8 +109,6 @@ private:
 public:
 
 	inline UINT GetAssetSize(ASSET_TYPE type) const { return (UINT)m_AssetMap[(UINT)type].size(); }
-
-	//inline void ExecuteBlur(ID3D12Resource* input, int blurCount) const { m_BlurFilter->Execute(input, blurCount); }
 
 	inline ComPtr<ID3D12DescriptorHeap> GetDescriptorHeap() const { return m_CbvSrvUavDescriptorHeap; }
 
@@ -138,43 +132,12 @@ inline ASSET_TYPE GetAssetType()
 }
 
 template<typename T>
-inline Ptr<T> CAssetMgr::Load(const std::wstring& key, const std::wstring& relativePath)
-{
-	Ptr<CAsset> pAsset = FindAsset<T>(key).Get();
-	if (pAsset.Get() != nullptr)
-	{
-		return (T*)pAsset.Get();
-	}
-
-	std::wstring fullPath = CPathMgr::GetInst()->GetContentPath() + relativePath;
-	pAsset = new T;
-	if (FAILED(pAsset->Load(fullPath)))
-	{
-		MessageBox(nullptr, fullPath.c_str(), L"Error : Fail to load asset", MB_OK);
-		return nullptr;
-	}
-
-	pAsset->m_RelativePath = relativePath;
-
-	ASSET_TYPE type = GetAssetType<T>();
-
-	m_AssetMap[(UINT)type].insert(std::make_pair(key, pAsset.Get()));
-	pAsset->m_Key = key;
-
-#if defined(_DEBUG) || defined(DEBUG)
-	return dynamic_cast<T*>(pAsset.Get());
-#else
-	return (T*)pAsset.Get();
-#endif
-}
-
-template<typename T>
-inline Ptr<T> CAssetMgr::FindAsset(const std::wstring& key)
+inline Ptr<T> CAssetMgr::FindAsset(const std::wstring& name)
 {
 	ASSET_TYPE type = GetAssetType<T>();
 
 	std::unordered_map<std::wstring, Ptr<CAsset>>::iterator iter =
-		m_AssetMap[(UINT)type].find(key);
+		m_AssetMap[(UINT)type].find(name);
 
 	if (iter == m_AssetMap[(UINT)type].end())
 		return nullptr;
@@ -187,14 +150,36 @@ inline Ptr<T> CAssetMgr::FindAsset(const std::wstring& key)
 }
 
 template<typename T>
-inline void CAssetMgr::AddAsset(const std::wstring& key, Ptr<T> pAsset)
+inline void CAssetMgr::AddAsset(const std::wstring& name, Ptr<T> pAsset)
 {
-	Ptr<T> findAsset = FindAsset<T>(key);
+	Ptr<T> findAsset = FindAsset<T>(name);
 
 	assert(findAsset.Get() == nullptr);
 
 	ASSET_TYPE type = GetAssetType<T>();
 
-	m_AssetMap[(UINT)type].insert(std::make_pair(key, pAsset.Get()));
-	pAsset->m_Key = key;
+	m_AssetMap[(UINT)type].insert(std::make_pair(name, pAsset.Get()));
+	pAsset->m_Name = name;
+}
+
+template<typename T>
+inline BoundingBox CAssetMgr::GetGeomertyBoundingBox(const std::vector<T>& vertices)
+{
+	if (vertices.empty())
+		return BoundingBox();
+	Vector3 vMax = vertices[0].Position;
+	Vector3 vMin = vertices[0].Position;
+	for (size_t i = 1; i < vertices.size(); ++i)
+	{
+		vMax.x = std::max<float>(vMax.x, vertices[i].Position.x);
+		vMax.y = std::max<float>(vMax.y, vertices[i].Position.y);
+		vMax.z = std::max<float>(vMax.z, vertices[i].Position.z);
+		vMin.x = std::min<float>(vMin.x, vertices[i].Position.x);
+		vMin.y = std::min<float>(vMin.y, vertices[i].Position.y);
+		vMin.z = std::min<float>(vMin.z, vertices[i].Position.z);
+	}
+	BoundingBox bounds;
+	bounds.Center = 0.5f * (vMin + vMax);
+	bounds.Extents = 0.5f * (vMax - vMin);
+	return bounds;
 }

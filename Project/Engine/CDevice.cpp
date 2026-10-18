@@ -14,15 +14,7 @@ CDevice::CDevice()
 
 CDevice::~CDevice()
 {
-	if (m_FenceEvent != nullptr)
-	{
-		CloseHandle(m_FenceEvent);
-		m_FenceEvent = nullptr;
-	}
-	//for (int i = 0; i < g_NumFrameResources; ++i)
-	//{
-	//	m_FrameResources[i] = nullptr;
-	//}
+
 }
 
 void CDevice::Release()
@@ -41,6 +33,11 @@ void CDevice::Release()
 	m_UploadContexts.clear();
 	m_Fence.Reset();
 	m_CommandQueue.Reset();
+	if (m_FenceEvent != nullptr)
+	{
+		CloseHandle(m_FenceEvent);
+		m_FenceEvent = nullptr;
+	}
 }
 
 int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
@@ -100,8 +97,6 @@ int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
 	CreateRtvAndDsvDescriptorHeaps();
 
 	OnResize(m_RenderResolution);
-
-	
 
 	return S_OK;
 }
@@ -232,7 +227,6 @@ void CDevice::BuildFrameResources()
 	{
 		m_FrameResources.push_back(std::make_unique<FrameResource>(m_d3dDevice.Get()));
 		m_FrameResources[i]->CreateCB(sizeof(TObject), g_MaxObjectCount, CB_TYPE::OBJECT);
-		//m_FrameResources[i]->CreateCB(sizeof(TMaterial), g_MaxMaterialCount, CB_TYPE::MATERIAL);
 		m_FrameResources[i]->CreateCB(sizeof(TGlobal), 2, CB_TYPE::GLOBAL);
 		m_FrameResources[i]->CreateSB(sizeof(TMaterial), g_MaxMaterialCount, SB_TYPE::MATERIAL, STRUCTURED_BUFFER_TYPE::TABLE);
 	}
@@ -498,60 +492,3 @@ void CDevice::ExecuteAndFinishDrawCall()
 	m_CommandQueue->Signal(m_Fence.Get(), m_FenceValue);
 }
 
-
-ComPtr<ID3D12Resource> CDevice::CreateDefaultBuffer(const void* initData, UINT64 byteSize, ComPtr<ID3D12Resource>& uploadBuffer, ID3D12GraphicsCommandList* cmdlist)
-{
-	ComPtr<ID3D12Resource> defaultBuffer;
-
-	// Create actual default buffer resource
-	CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
-	CD3DX12_RESOURCE_DESC desc(CD3DX12_RESOURCE_DESC::Buffer(byteSize));
-	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
-		&heapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&desc,
-		D3D12_RESOURCE_STATE_COMMON,
-		nullptr,
-		IID_PPV_ARGS(defaultBuffer.GetAddressOf())
-	));
-
-	// To copy the data from CPU memory to default buffer, we need to create an intermediate upload buffer
-	heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
-		&heapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&desc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(uploadBuffer.GetAddressOf())
-	));
-
-	// describe the data we want to copy to the default buffer
-	D3D12_SUBRESOURCE_DATA subResourceData = {};
-	subResourceData.pData = initData;
-	subResourceData.RowPitch = byteSize;
-	subResourceData.SlicePitch = byteSize;
-
-	// copy
-
-	assert(cmdlist);
-
-	CD3DX12_RESOURCE_BARRIER barrier1(CD3DX12_RESOURCE_BARRIER::Transition(
-		defaultBuffer.Get(),
-		D3D12_RESOURCE_STATE_COMMON,
-		D3D12_RESOURCE_STATE_COPY_DEST
-	));
-	cmdlist->ResourceBarrier(1, &barrier1);
-	UpdateSubresources<1>(
-		cmdlist, defaultBuffer.Get(), uploadBuffer.Get(),
-		0, 0, 1, &subResourceData
-	);
-	CD3DX12_RESOURCE_BARRIER barrier2(CD3DX12_RESOURCE_BARRIER::Transition(
-		defaultBuffer.Get(),
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		D3D12_RESOURCE_STATE_GENERIC_READ
-	));
-	cmdlist->ResourceBarrier(1, &barrier2);
-
-	return defaultBuffer;
-}

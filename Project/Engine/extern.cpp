@@ -9,6 +9,7 @@ int g_MaxMaterialCount = 100;
 
 int g_MaxTexture2DCount = 4000;
 int g_MaxTextureArrayCount = 96;
+int g_MaxTextureCubeCount = 96;
 
 //const int g_TextureDescriptorsCount = 10;
 //const int g_BlurDescriptorCount = 4;

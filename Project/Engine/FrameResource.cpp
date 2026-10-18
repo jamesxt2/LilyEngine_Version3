@@ -32,10 +32,3 @@ void FrameResource::CreateSB(UINT elementByteSize, UINT elementCount, SB_TYPE ty
 {
 	m_SBs[(UINT)type] = std::make_shared<CStructuredBuffer>(elementByteSize, elementCount, type_Buffer);
 }
-
-/*
-void FrameResource::CreateWavesVB(UINT waveVtxCount)
-{
-	m_WavesVB = std::make_unique<UploadBuffer<(UINT)sizeof(Vertex)>>(DEVICE.Get(), waveVtxCount, false);
-}
-*/

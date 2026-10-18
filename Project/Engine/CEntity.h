@@ -9,7 +9,7 @@ public:
 
 	virtual CEntity* Clone() = 0;
 
-private:
+protected:
 	static UINT g_nextID;
 
 	std::wstring m_Name;

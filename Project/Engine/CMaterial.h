@@ -20,6 +20,8 @@ private:
 
 	Ptr<CTexture> m_Texture;
 
+	int m_bUseCubeReflection = 0;
+
 	Matrix m_MtrlTransform;
 
 	int m_NumFramesDirty = g_NumFrameResources;
@@ -27,11 +29,6 @@ private:
 public:
 	inline int GetMtrlCBIndex() const { return m_MtrlCBIndex; }
 
-	void DecreaseNumFramesDirty() 
-	{
-		if (m_NumFramesDirty >= 0)
-			--m_NumFramesDirty; 
-	}
 	void ResetNumFramesDirty() { m_NumFramesDirty = g_NumFrameResources; }
 };
 
