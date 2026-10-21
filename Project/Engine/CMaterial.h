@@ -26,6 +26,8 @@ private:
 
 	int m_NumFramesDirty = g_NumFrameResources;
 
+	Ptr<CTexture> m_NormalTexture;
+
 public:
 	inline int GetMtrlCBIndex() const { return m_MtrlCBIndex; }
 

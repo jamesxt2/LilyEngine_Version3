@@ -21,9 +21,9 @@ public:
 private:
 
 	void TestFrustumAndRender(CGameObject* obj);
-	void SortObjects();
+	
 	std::vector<CGameObject*> m_vecObjs;
-	std::unordered_map<OBJ_PSO_TYPE, std::vector<CGameObject*>> m_SortedObjs;
+	
 
 	void MarkDirty();
 

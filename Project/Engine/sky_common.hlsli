@@ -1,7 +1,7 @@
 #ifndef _SKY
 #define _SKY
 
-#include "struct.hlsli"
+#include "common.hlsli"
 
 struct VertexIn
 {

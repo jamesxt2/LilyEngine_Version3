@@ -10,6 +10,7 @@
 #include "CLevel.h"
 #include "CRenderComponent.h"
 #include "CTexturePool.h"
+#include "CShadowMap.h"
 
 CCamera::CCamera()
 	: CComponent(COMPONENT_TYPE::CAMERA),
@@ -73,11 +74,16 @@ void CCamera::FinalTick()
 		m_matProj = XMMatrixOrthographicLH(m_Scale * m_Width, m_Scale * m_Width / m_AspectRatio, 1.f, m_Far);
 
 	BoundingFrustum::CreateFromMatrix(m_CamFrustum, m_matProj);
+
+	g_Global.View = m_matView;
+	g_Global.Proj = m_matProj;
+	g_Global.ViewProj = m_matView * m_matProj;
 }
 
 void CCamera::Render()
 {
-	SortObjects();
+	CLevelMgr::GetInst()->GetCurrentLevel()->SortObjects();
+	std::unordered_map<OBJ_PSO_TYPE, std::vector<CGameObject*>>& sortedObjs = CLevelMgr::GetInst()->GetCurrentLevel()->GetSortedObjects();
 
 	if (m_IsDirty)
 	{
@@ -85,79 +91,59 @@ void CCamera::Render()
 		m_IsDirty = false;
 	}
 
-	g_Object.View = m_matView;
-	g_Object.Proj = m_matProj;
-	g_Object.ViewProj = m_matView * m_matProj;
-
-	CMDLIST->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Default").Get());
+	//CMDLIST->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Default").Get());
 
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(0, 0);
-	CDevice::GetInst()->GetCurrFrameResource()->GetStructuredBuffer(SB_TYPE::MATERIAL)->Bind_Graphics_SRV_Table(CMDLIST.Get(), 2);
-	CTexturePool::GetInst()->Bind_Graphics_Table_2D(CMDLIST.Get(), 3);
-	CTexturePool::GetInst()->Bind_Graphics_Table_Array(CMDLIST.Get(), 4);
-	CTexturePool::GetInst()->Bind_Graphics_Table_Cube(CMDLIST.Get(), 6);
+	//CDevice::GetInst()->GetCurrFrameResource()->GetStructuredBuffer(SB_TYPE::MATERIAL)->Bind_Graphics_SRV_Table(CMDLIST.Get(), 2);
+	//CTexturePool::GetInst()->Bind_Graphics_Table_2D(CMDLIST.Get(), 3);
+	//CTexturePool::GetInst()->Bind_Graphics_Table_Array(CMDLIST.Get(), 4);
+	//CTexturePool::GetInst()->Bind_Graphics_Table_Cube(CMDLIST.Get(), 6);
+
+	CMDLIST->SetGraphicsRootDescriptorTable(7, CShadowMap::GetInst()->GetSrvGpuHandle());
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_DEFAULT).Get());
-	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_DEFAULT])
+	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_DEFAULT])
 		TestFrustumAndRender(obj);
 
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_SKY).Get());
-	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_SKY])
+	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_SKY])
 		obj->Render();
 
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_ALPHA_TESTED).Get());
-	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_ALPHA_TESTED])
+	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_ALPHA_TESTED])
 		TestFrustumAndRender(obj);
 
 	
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH).Get());
-	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH])
+	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH])
 		TestFrustumAndRender(obj);
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_BILLBOARD).Get());
-	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_BILLBOARD])
+	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_BILLBOARD])
 		TestFrustumAndRender(obj);
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	
-	// the mirror area's pixel's stencils are set to 1
-	CMDLIST->OMSetStencilRef(1);
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_MIRRORS).Get());
-	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_MIRRORS])
-		obj->Render();
 
-	// stencil still 1 for mirror, 0 for other, if 1, render to the mirror area
-	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(1, 0);
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_REFLECTIONS).Get());
-	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_REFLECTIONS])
-		obj->Render();
 
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(0, 0);
-	CMDLIST->OMSetStencilRef(0);
+
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_TRANSPARENT).Get());
-	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_TRANSPARENT])
+	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_TRANSPARENT])
 		obj->Render();
 		
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_WAVE_RENDER).Get());
-	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_WAVE_RENDER])
+	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_WAVE_RENDER])
 		TestFrustumAndRender(obj);
-	
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_SHADOW).Get());
-	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_SHADOW])
-		obj->Render();
 
 	CMDLIST->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Particle").Get());
 		
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_PARTICLE_RENDER).Get());
-	for (const auto& obj : m_SortedObjs[OBJ_PSO_TYPE::PSO_PARTICLE_RENDER])
+	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_PARTICLE_RENDER])
 		obj->Render();
-
-	for (auto& obj : m_SortedObjs)
-		obj.second.clear();
 }
 
 void CCamera::TestFrustumAndRender(CGameObject* obj)
@@ -167,43 +153,6 @@ void CCamera::TestFrustumAndRender(CGameObject* obj)
 	m_CamFrustum.Transform(localSpaceFrustum, viewToLocal);
 	if (localSpaceFrustum.Contains(obj->GetRenderComp()->GetBounds()) != DISJOINT)
 		obj->Render();
-}
-
-void CCamera::SortObjects()
-{
-	m_vecObjs = CLevelMgr::GetInst()->GetCurrentLevel()->GetObjects();
-	for (const auto& obj : m_vecObjs)
-	{
-		if (obj->GetRenderComp() == nullptr)
-			continue;
-		OBJ_PSO_TYPE type = obj->GetRenderComp()->GetObjPSOType();
-		if ((uint32)(OBJ_PSO_TYPE::PSO_DEFAULT & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_DEFAULT].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_ALPHA_TESTED & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_ALPHA_TESTED].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_MIRRORS & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_MIRRORS].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_REFLECTIONS & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_REFLECTIONS].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_TRANSPARENT & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_TRANSPARENT].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_WIREFRAME & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_WIREFRAME].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_SHADOW & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_SHADOW].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_BILLBOARD & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_BILLBOARD].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_HORIZONTAL_BLUR & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_HORIZONTAL_BLUR].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_WAVE_RENDER & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_WAVE_RENDER].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_PARTICLE_RENDER & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_PARTICLE_RENDER].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_SKY & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_SKY].push_back(obj);
-	}
 }
 
 void CCamera::MarkDirty()

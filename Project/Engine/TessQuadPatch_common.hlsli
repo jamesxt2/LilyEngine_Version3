@@ -1,7 +1,7 @@
 #ifndef _TESS_QUAD_PATCH
 #define _TESS_QUAD_PATCH
 
-#include "struct.hlsli"
+#include "common.hlsli"
 
 
 struct VertexIn

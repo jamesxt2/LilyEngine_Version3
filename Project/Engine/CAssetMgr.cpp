@@ -5,11 +5,9 @@
 #include "CDevice.h"
 #include "CDescriptorAllocator.h"
 #include "CTimeMgr.h"
-#include "BlurFilter.h"
 #include "CTexturePool.h"
 
 CAssetMgr::CAssetMgr()
-	: m_CbvSrvUavDescriptorHeap(nullptr)
 {
 	
 }
@@ -33,7 +31,6 @@ void CAssetMgr::GetAssetNames(ASSET_TYPE type, _Out_ std::vector<std::string>& v
 void CAssetMgr::Init()
 {
 	BuildRootSignatures();
-	BuildDescriptorHeaps();
 
 	CTexturePool::GetInst()->Init();
 
@@ -48,10 +45,6 @@ void CAssetMgr::Init()
 
 void CAssetMgr::Tick()
 {
-	//UpdateWaves();
-	ID3D12DescriptorHeap* descriptorHeaps[] = { m_CbvSrvUavDescriptorHeap.Get() };
-	CMDLIST->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
-
 	AnimateMaterials();
 	UpdateAndUploadMaterials();
 }
@@ -94,26 +87,14 @@ void CAssetMgr::UpdateAndUploadMaterials()
 			MtrlData.MtrlTransform = mtrl->m_MtrlTransform;
 			MtrlData.TextureIndex = mtrl->m_Texture == nullptr ? 0 : mtrl->m_Texture->GetPoolIndex();
 			MtrlData.bUseCubeReflection = mtrl->m_bUseCubeReflection;
+			MtrlData.bUseNormalMap = mtrl->m_NormalTexture == nullptr ? 0 : 1;
+			MtrlData.NormalMapTexIndex = mtrl->m_NormalTexture == nullptr ? 0 : mtrl->m_NormalTexture->GetPoolIndex();
 
 			mtrlSB->CopyData(mtrl->m_MtrlCBIndex, (const void*)&MtrlData);
 			--mtrl->m_NumFramesDirty;
 		}
 	}
 	mtrlSB->UploadDataToGpu();
-}
-
-void CAssetMgr::BuildDescriptorHeaps()
-{
-	const UINT maxDescriptorCount = 16384;
-
-	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = maxDescriptorCount;
-	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	ThrowIfFailed(DEVICE->CreateDescriptorHeap(
-		&srvHeapDesc, IID_PPV_ARGS(&m_CbvSrvUavDescriptorHeap)));
-
-	CDescriptorAllocator::GetInst()->Initialize(DEVICE, m_CbvSrvUavDescriptorHeap, maxDescriptorCount);
 }
 
 void CAssetMgr::BuildRootSignatures()
@@ -136,8 +117,11 @@ void CAssetMgr::BuildRootSignatures()
 	CD3DX12_DESCRIPTOR_RANGE texCubeTable_Default;
 	texCubeTable_Default.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, g_MaxTextureCubeCount, 0, 4);
 
+	CD3DX12_DESCRIPTOR_RANGE shadowTexTable;
+	shadowTexTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 5);
+
 	// Root parameter can be a table, root descriptor or root constants.
-	CD3DX12_ROOT_PARAMETER slotRootParameter_Default[7];
+	CD3DX12_ROOT_PARAMETER slotRootParameter_Default[8];
 
 	// Perfomance TIP: Order from most frequent to least frequent.
 	// global : b1, object : b0
@@ -148,11 +132,12 @@ void CAssetMgr::BuildRootSignatures()
 	slotRootParameter_Default[4].InitAsDescriptorTable(1, &texArrTable_Default);
 	slotRootParameter_Default[5].InitAsDescriptorTable(1, &displacementMapTable);
 	slotRootParameter_Default[6].InitAsDescriptorTable(1, &texCubeTable_Default);
+	slotRootParameter_Default[7].InitAsDescriptorTable(1, &shadowTexTable);
 
 	auto staticSamplers = GetStaticSamplers();
 
 	// A root signature is an array of root parameters.
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc_Default(7, slotRootParameter_Default,
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc_Default(8, slotRootParameter_Default,
 		(UINT)staticSamplers.size(), staticSamplers.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
@@ -175,45 +160,6 @@ void CAssetMgr::BuildRootSignatures()
 		serializedRootSig->GetBufferSize(),
 		IID_PPV_ARGS(defaultRootSig.GetAddressOf())));
 	m_RootSignatureMap[L"Default"] = defaultRootSig;
-
-
-	/***************************************************************/
-	// PostProcess
-	/***************************************************************/
-	CD3DX12_DESCRIPTOR_RANGE srvTable_PostProcess;
-	srvTable_PostProcess.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-
-	CD3DX12_DESCRIPTOR_RANGE uavTable_PostProcess;
-	uavTable_PostProcess.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
-
-	CD3DX12_ROOT_PARAMETER slotRootParameter_PostProcess[3];
-
-	slotRootParameter_PostProcess[0].InitAsConstants(14, 0);
-	slotRootParameter_PostProcess[1].InitAsDescriptorTable(1, &srvTable_PostProcess);
-	slotRootParameter_PostProcess[2].InitAsDescriptorTable(1, &uavTable_PostProcess);
-
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc_PostProcess(3, slotRootParameter_PostProcess,
-		0, nullptr,
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-	serializedRootSig = nullptr;
-	errorBlob = nullptr;
-	hr = D3D12SerializeRootSignature(&rootSigDesc_PostProcess, D3D_ROOT_SIGNATURE_VERSION_1,
-		serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
-
-	if (errorBlob != nullptr)
-	{
-		::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
-	}
-	ThrowIfFailed(hr);
-
-	ComPtr<ID3D12RootSignature> postprocessRootSig;
-	ThrowIfFailed(DEVICE->CreateRootSignature(
-		0,
-		serializedRootSig->GetBufferPointer(),
-		serializedRootSig->GetBufferSize(),
-		IID_PPV_ARGS(postprocessRootSig.GetAddressOf())));
-	m_RootSignatureMap[L"PostProcess"] = postprocessRootSig;
 
 	/***************************************************************/
 	// Waves
@@ -348,7 +294,7 @@ void CAssetMgr::BuildRootSignatures()
 	m_RootSignatureMap[L"ParticleTick"] = particleTickRootSig;
 }
 
-std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> CAssetMgr::GetStaticSamplers()
+std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> CAssetMgr::GetStaticSamplers()
 {
 	// Applications usually only need a handful of samplers.  So just define them all up front
 	// and keep them available as part of the root signature.  
@@ -399,10 +345,22 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> CAssetMgr::GetStaticSamplers()
 		0.0f,                              // mipLODBias
 		8);                                // maxAnisotropy
 
+	const CD3DX12_STATIC_SAMPLER_DESC shadow(
+		6, // shaderRegister
+		D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressW
+		0.0f,                               // mipLODBias
+		16,                                 // maxAnisotropy
+		D3D12_COMPARISON_FUNC_LESS_EQUAL,
+		D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK);
+
 	return {
 		pointWrap, pointClamp,
 		linearWrap, linearClamp,
-		anisotropicWrap, anisotropicClamp };
+		anisotropicWrap, anisotropicClamp,
+		shadow};
 }
 
 ComPtr<ID3D12RootSignature> CAssetMgr::GetRootSignature(const std::wstring& key) const
@@ -416,7 +374,6 @@ ComPtr<ID3D12RootSignature> CAssetMgr::GetRootSignature(const std::wstring& key)
 void CAssetMgr::BuildPSO()
 {
 	ComPtr<ID3D12RootSignature> rootSignature(GetRootSignature(L"Default"));
-	ComPtr<ID3D12RootSignature> postProcessRootSignature(GetRootSignature(L"PostProcess"));
 	ComPtr<ID3D12RootSignature> wavesRootSignature(GetRootSignature(L"Waves"));
 	ComPtr<ID3D12RootSignature> particleRootSignature(GetRootSignature(L"Particle"));
 	ComPtr<ID3D12RootSignature> particleTickRootSignature(GetRootSignature(L"ParticleTick"));
@@ -478,80 +435,7 @@ void CAssetMgr::BuildPSO()
 	alphatestedPSODesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&alphatestedPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_ALPHA_TESTED])));
 
-	// Mirror PSO
-	CD3DX12_BLEND_DESC mirrorBlendState(D3D12_DEFAULT);
-	mirrorBlendState.RenderTarget[0].RenderTargetWriteMask = 0;
-
-	D3D12_DEPTH_STENCIL_DESC mirrorDSS;
-	mirrorDSS.DepthEnable = true;
-	mirrorDSS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-	mirrorDSS.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	mirrorDSS.StencilEnable = true;
-	mirrorDSS.StencilReadMask = 0xff;
-	mirrorDSS.StencilWriteMask = 0xff;
-
-	mirrorDSS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	mirrorDSS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	mirrorDSS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
-	mirrorDSS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-
-	mirrorDSS.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	mirrorDSS.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	mirrorDSS.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
-	mirrorDSS.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC markMirrorPSODesc = psoDesc;
-	markMirrorPSODesc.BlendState = mirrorBlendState;
-	markMirrorPSODesc.DepthStencilState = mirrorDSS;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&markMirrorPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_MIRRORS])));
-
-	D3D12_DEPTH_STENCIL_DESC reflectionsDSS;
-	reflectionsDSS.DepthEnable = true;
-	reflectionsDSS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	reflectionsDSS.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	reflectionsDSS.StencilEnable = true;
-	reflectionsDSS.StencilReadMask = 0xff;
-	reflectionsDSS.StencilWriteMask = 0xff;
-
-	reflectionsDSS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	reflectionsDSS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	reflectionsDSS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	reflectionsDSS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
-
-	reflectionsDSS.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	reflectionsDSS.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	reflectionsDSS.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	reflectionsDSS.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC drawReflectionPSODesc = psoDesc;
-	drawReflectionPSODesc.DepthStencilState = reflectionsDSS;
-	drawReflectionPSODesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
-	drawReflectionPSODesc.RasterizerState.FrontCounterClockwise = true;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&drawReflectionPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_REFLECTIONS])));
-
-	D3D12_DEPTH_STENCIL_DESC shadowDSS;
-	shadowDSS.DepthEnable = true;
-	shadowDSS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	shadowDSS.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	shadowDSS.StencilEnable = true;
-	shadowDSS.StencilReadMask = 0xff;
-	shadowDSS.StencilWriteMask = 0xff;
-
-	shadowDSS.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	shadowDSS.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	shadowDSS.FrontFace.StencilPassOp = D3D12_STENCIL_OP_INCR;
-	shadowDSS.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
-
-	// We are not rendering backfacing polygons, so these settings do not matter.
-	shadowDSS.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	shadowDSS.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	shadowDSS.BackFace.StencilPassOp = D3D12_STENCIL_OP_INCR;
-	shadowDSS.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC shadowPSODesc = transparencyPSODesc;
-	shadowPSODesc.DepthStencilState = shadowDSS;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&shadowPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_SHADOW])));
-
+	
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC billboardPSODesc = psoDesc;
 	shader = FindAsset<CGraphicsShader>(L"BillboardShader");
 	billboardPSODesc.VS =
@@ -573,29 +457,7 @@ void CAssetMgr::BuildPSO()
 	billboardPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
 	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&billboardPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_BILLBOARD])));
 
-	// CS
-	D3D12_COMPUTE_PIPELINE_STATE_DESC horzBlurPSODesc = {};
-	horzBlurPSODesc.pRootSignature = postProcessRootSignature.Get();
-	Ptr<CComputeShader> pCS = FindAsset<CComputeShader>(L"HorzBlurCS");
-	horzBlurPSODesc.CS =
-	{
-		reinterpret_cast<BYTE*>(pCS->GetCsByteCode()->GetBufferPointer()),
-		pCS->GetCsByteCode()->GetBufferSize()
-	};
-	horzBlurPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	ThrowIfFailed(DEVICE->CreateComputePipelineState(&horzBlurPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_HORIZONTAL_BLUR])));
-
-	D3D12_COMPUTE_PIPELINE_STATE_DESC vertBlurPSODesc = {};
-	vertBlurPSODesc.pRootSignature = postProcessRootSignature.Get();
-	pCS = FindAsset<CComputeShader>(L"VertBlurCS");
-	vertBlurPSODesc.CS =
-	{
-		reinterpret_cast<BYTE*>(pCS->GetCsByteCode()->GetBufferPointer()),
-		pCS->GetCsByteCode()->GetBufferSize()
-	};
-	vertBlurPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	ThrowIfFailed(DEVICE->CreateComputePipelineState(&vertBlurPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_VERTICAL_BLUR])));
-
+	
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC waveRenderPSODesc = transparencyPSODesc;
 	shader = FindAsset<CGraphicsShader>(L"DefaultShader");
 	waveRenderPSODesc.VS =
@@ -607,7 +469,7 @@ void CAssetMgr::BuildPSO()
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC waveUpdatePSODesc = {};
 	waveUpdatePSODesc.pRootSignature = wavesRootSignature.Get();
-	pCS = FindAsset<CComputeShader>(L"UpdateWavesCS");
+	Ptr<CComputeShader> pCS = FindAsset<CComputeShader>(L"UpdateWavesCS");
 	waveUpdatePSODesc.CS =
 	{
 		reinterpret_cast<BYTE*>(pCS->GetCsByteCode()->GetBufferPointer()),
@@ -706,6 +568,28 @@ void CAssetMgr::BuildPSO()
 		shader->GetPsByteCode(L"SkyPS")->GetBufferSize()
 	};
 	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&skyPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_SKY])));
+
+	// shadow map
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC shadowMapPSODesc = psoDesc;
+	shadowMapPSODesc.RasterizerState.DepthBias = 100000;
+	shadowMapPSODesc.RasterizerState.DepthBiasClamp = 0.f;
+	shadowMapPSODesc.RasterizerState.SlopeScaledDepthBias = 1.f;
+	shader = FindAsset<CGraphicsShader>(L"ShadowsShader");
+	shadowMapPSODesc.VS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetVsByteCode(L"ShadowsVS")->GetBufferPointer()),
+		shader->GetVsByteCode(L"ShadowsVS")->GetBufferSize()
+	};
+	shadowMapPSODesc.PS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetPsByteCode(L"ShadowsAlphaTestedPS")->GetBufferPointer()),
+		shader->GetPsByteCode(L"ShadowsAlphaTestedPS")->GetBufferSize()
+	};
+	shadowMapPSODesc.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
+	shadowMapPSODesc.NumRenderTargets = 0;
+	shadowMapPSODesc.SampleDesc.Count = 1;
+	shadowMapPSODesc.SampleDesc.Quality = 0;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&shadowMapPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_SHADOW_MAP])));
 }
 
 ComPtr<ID3D12PipelineState> CAssetMgr::GetPSO(OBJ_PSO_TYPE type) const
@@ -855,24 +739,28 @@ void CAssetMgr::CreateSceneMeshes()
 		vertices[k].Position = box->Vertices[i].Position;
 		vertices[k].Normal = box->Vertices[i].Normal;
 		vertices[k].TexCoord = box->Vertices[i].TexCoord;
+		vertices[k].TangentU = box->Vertices[i].TangentU;
 	}
 	for (size_t i = 0; i < grid->Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Position = grid->Vertices[i].Position;
 		vertices[k].Normal = grid->Vertices[i].Normal;
 		vertices[k].TexCoord = grid->Vertices[i].TexCoord;
+		vertices[k].TangentU = grid->Vertices[i].TangentU;
 	}
 	for (size_t i = 0; i < sphere->Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Position = sphere->Vertices[i].Position;
 		vertices[k].Normal = sphere->Vertices[i].Normal;
 		vertices[k].TexCoord = sphere->Vertices[i].TexCoord;
+		vertices[k].TangentU = sphere->Vertices[i].TangentU;
 	}
 	for (size_t i = 0; i < cylinder->Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Position = cylinder->Vertices[i].Position;
 		vertices[k].Normal = cylinder->Vertices[i].Normal;
 		vertices[k].TexCoord = cylinder->Vertices[i].TexCoord;
+		vertices[k].TangentU = cylinder->Vertices[i].TangentU;
 	}
 
 	std::vector<uint16> indices;
@@ -924,6 +812,7 @@ void CAssetMgr::CreateWaveSceneMeshes()
 		landGridVertices[i].Normal = n;
 
 		landGridVertices[i].TexCoord = pLandGridMeshData->Vertices[i].TexCoord;
+		landGridVertices[i].TangentU = pLandGridMeshData->Vertices[i].TangentU;
 	}
 
 	std::vector<uint16> waveGridIndices = pLandGridMeshData->GetIndices16();
@@ -962,22 +851,23 @@ Ptr<CMesh> CAssetMgr::CreateGridMesh(const std::wstring& name, float width, floa
 		vertices[i].Position = grid->Vertices[i].Position;
 		vertices[i].Normal = grid->Vertices[i].Normal;
 		vertices[i].TexCoord = grid->Vertices[i].TexCoord;
+		vertices[i].TangentU = grid->Vertices[i].TangentU;
 	}
 
 	std::vector<uint16> indices = grid->GetIndices16();
 
-	Ptr<CMesh> pWave = new CMesh;
+	Ptr<CMesh> pGrid = new CMesh;
 	
 	CDevice::GetInst()->UploadResourceAsync([&](ID3D12GraphicsCommandList* cmdlist) {
-		pWave->CreateVertexBuffer(vertices.data(), (UINT)vertices.size(), cmdlist);
-		pWave->CreateIndexBuffer16(indices.data(), (UINT)indices.size(), cmdlist);
+		pGrid->CreateVertexBuffer(vertices.data(), (UINT)vertices.size(), cmdlist);
+		pGrid->CreateIndexBuffer16(indices.data(), (UINT)indices.size(), cmdlist);
 		});
 
-	pWave->m_MeshBounds = GetGeomertyBoundingBox(vertices);
+	pGrid->m_MeshBounds = GetGeomertyBoundingBox(vertices);
 
-	AddAsset<CMesh>(name, pWave);
+	AddAsset<CMesh>(name, pGrid);
 
-	return pWave;
+	return pGrid;
 }
 
 Ptr<CMesh> CAssetMgr::CreateTessQuadPatchMesh(const std::wstring& name)
@@ -1092,33 +982,33 @@ void CAssetMgr::CreateRoomMeshes()
 	std::vector<Vertex> vertices =
 	{
 		// Floor: Observe we tile texture coordinates.
-		Vertex(-3.5f, 0.0f, -10.0f, 0.0f, 1.0f, 0.0f, 0.0f, 4.0f), // 0 
-		Vertex(-3.5f, 0.0f,   0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f),
-		Vertex(7.5f, 0.0f,   0.0f, 0.0f, 1.0f, 0.0f, 4.0f, 0.0f),
-		Vertex(7.5f, 0.0f, -10.0f, 0.0f, 1.0f, 0.0f, 4.0f, 4.0f),
+		Vertex(-3.5f, 0.0f, -10.0f, 0.0f, 1.0f, 0.0f, 0.0f, 4.0f, 1.f, 0.f, 0.f), // 0 
+		Vertex(-3.5f, 0.0f,   0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.f, 0.f, 0.f),
+		Vertex(7.5f, 0.0f,   0.0f, 0.0f, 1.0f, 0.0f, 4.0f, 0.0f, 1.f, 0.f, 0.f),
+		Vertex(7.5f, 0.0f, -10.0f, 0.0f, 1.0f, 0.0f, 4.0f, 4.0f, 1.f, 0.f, 0.f),
 
 		// Wall: Observe we tile texture coordinates, and that we
 		// leave a gap in the middle for the mirror.
-		Vertex(-3.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 2.0f), // 4
-		Vertex(-3.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f),
-		Vertex(-2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.5f, 0.0f),
-		Vertex(-2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.5f, 2.0f),
+		Vertex(-3.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 2.0f, 0.f, 1.f, 0.f), // 4
+		Vertex(-3.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.f, 1.f, 0.f),
+		Vertex(-2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.5f, 0.0f, 0.f, 1.f, 0.f),
+		Vertex(-2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.5f, 2.0f, 0.f, 1.f, 0.f),
 
-		Vertex(2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 2.0f), // 8 
-		Vertex(2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f),
-		Vertex(7.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 2.0f, 0.0f),
-		Vertex(7.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 2.0f, 2.0f),
+		Vertex(2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 2.0f, 0.f, 1.f, 0.f), // 8 
+		Vertex(2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.f, 1.f, 0.f),
+		Vertex(7.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 2.0f, 0.0f, 0.f, 1.f, 0.f),
+		Vertex(7.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 2.0f, 2.0f, 0.f, 1.f, 0.f),
 
-		Vertex(-3.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f), // 12
-		Vertex(-3.5f, 6.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f),
-		Vertex(7.5f, 6.0f, 0.0f, 0.0f, 0.0f, -1.0f, 6.0f, 0.0f),
-		Vertex(7.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 6.0f, 1.0f),
+		Vertex(-3.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.f, 1.f, 0.f), // 12
+		Vertex(-3.5f, 6.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.f, 1.f, 0.f),
+		Vertex(7.5f, 6.0f, 0.0f, 0.0f, 0.0f, -1.0f, 6.0f, 0.0f, 0.f, 1.f, 0.f),
+		Vertex(7.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 6.0f, 1.0f, 0.f, 1.f, 0.f),
 
 		// Mirror
-		Vertex(-2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f), // 16
-		Vertex(-2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f),
-		Vertex(2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f),
-		Vertex(2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f)
+		Vertex(-2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.f, 1.f, 0.f), // 16
+		Vertex(-2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.f, 1.f, 0.f),
+		Vertex(2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.f, 1.f, 0.f),
+		Vertex(2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.f, 1.f, 0.f)
 	};
 
 	std::array<uint16, 30> indices =
@@ -1267,8 +1157,24 @@ void CAssetMgr::CreateTextures()
 	AddAsset<CTexture>(L"NoiseTexture", pTexture);
 
 	pTexture = new CTexture;
-	pTexture->CreateFromFile(L"textures\\grasscube1024.dds", true);
+	pTexture->CreateFromFile(L"textures\\snowcube1024.dds", true);
 	AddAsset<CTexture>(L"SkyCubeTexture", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\tile_nmap.dds");
+	AddAsset<CTexture>(L"TileNormalTexture", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\bricks2.dds");
+	AddAsset<CTexture>(L"Bricks2Texture", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\bricks2_nmap.dds");
+	AddAsset<CTexture>(L"Bricks2NormalTexture", pTexture);
+
+	pTexture = new CTexture;
+	pTexture->CreateFromFile(L"textures\\bricks_nmap.dds");
+	AddAsset<CTexture>(L"BricksNormalTexture", pTexture);
 }
 
 void CAssetMgr::CreateMaterials()
@@ -1329,9 +1235,11 @@ void CAssetMgr::CreateMaterials()
 	pMaterial = new CMaterial;
 	pMaterial->m_MtrlCBIndex = 7;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-	pMaterial->m_FresnelR0 = Vector3(0.08f, 0.08f, 0.08f);
-	pMaterial->m_Roughness = 0.01f;
+	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
+	pMaterial->m_Roughness = 0.3f;
 	pMaterial->m_Texture = FindAsset<CTexture>(L"BricksTexture");
+	pMaterial->m_bUseCubeReflection = 1;
+	pMaterial->m_NormalTexture = FindAsset<CTexture>(L"BricksNormalTexture");
 	AddAsset<CMaterial>(L"BricksMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
@@ -1347,7 +1255,9 @@ void CAssetMgr::CreateMaterials()
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.02f, 0.02f, 0.02f);
 	pMaterial->m_Roughness = 0.3f;
+	pMaterial->m_bUseCubeReflection = true;
 	pMaterial->m_Texture = FindAsset<CTexture>(L"TileTexture");
+	pMaterial->m_NormalTexture = FindAsset<CTexture>(L"TileNormalTexture");
 	AddAsset<CMaterial>(L"TileMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
@@ -1396,6 +1306,34 @@ void CAssetMgr::CreateMaterials()
 	pMaterial->m_Roughness = 0.1f;
 	pMaterial->m_bUseCubeReflection = 1;
 	AddAsset<CMaterial>(L"MirrorPlaneMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 16;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
+	pMaterial->m_Roughness = 0.3f;
+	pMaterial->m_bUseCubeReflection = 1;
+	pMaterial->m_Texture = FindAsset<CTexture>(L"Bricks2Texture");
+	pMaterial->m_NormalTexture = FindAsset<CTexture>(L"Bricks2NormalTexture");
+	AddAsset<CMaterial>(L"Bricks2Material", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 17;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
+	pMaterial->m_Roughness = 0.3f;
+	pMaterial->m_bUseCubeReflection = 1;
+	pMaterial->m_Texture = FindAsset<CTexture>(L"Bricks2Texture");
+	AddAsset<CMaterial>(L"Bricks2NoNormalMaterial", pMaterial);
+
+	pMaterial = new CMaterial;
+	pMaterial->m_MtrlCBIndex = 18;
+	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
+	pMaterial->m_Roughness = 0.3f;
+	pMaterial->m_bUseCubeReflection = 1;
+	pMaterial->m_Texture = FindAsset<CTexture>(L"BricksTexture");
+	AddAsset<CMaterial>(L"BricksNoNormalMaterial", pMaterial);
 }
 
 void CAssetMgr::CreateGraphicsShaders()
@@ -1415,7 +1353,8 @@ void CAssetMgr::CreateGraphicsShaders()
 	pShader->m_InputLayout = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }, 
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 	pShader->BuildPixelShader(L"FogPS", strPath + L"shader\\default.ps.hlsl", opaqueDefines, "PS", "ps_5_1");
 
@@ -1483,6 +1422,23 @@ void CAssetMgr::CreateGraphicsShaders()
 	pShader->BuildPixelShader(L"SkyPS", strPath + L"shader\\sky.ps.hlsl", nullptr, "PS", "ps_5_1");
 
 	AddAsset<CGraphicsShader>(L"SkyShader", pShader);
+
+	// shadows
+	pShader = new CGraphicsShader;
+	pShader->BuildVertexShader(L"ShadowsVS", strPath + L"shader\\shadows.vs.hlsl", nullptr, "VS", "vs_5_1");
+	pShader->m_InputLayout = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+	const D3D_SHADER_MACRO shadowsAlphaTestDefines[] =
+	{
+		"ALPHA_TEST", "1",
+		NULL, NULL
+	};
+	pShader->BuildPixelShader(L"ShadowsPS", strPath + L"shader\\shadows.ps.hlsl", nullptr, "PS", "ps_5_1");
+	pShader->BuildPixelShader(L"ShadowsAlphaTestedPS", strPath + L"shader\\shadows.ps.hlsl", shadowsAlphaTestDefines, "PS", "ps_5_1");
+
+	AddAsset<CGraphicsShader>(L"ShadowsShader", pShader);
 }
 
 void CAssetMgr::CreateComputeShaders()
@@ -1490,14 +1446,6 @@ void CAssetMgr::CreateComputeShaders()
 	std::wstring strPath = CPathMgr::GetInst()->GetContentPath();
 
 	Ptr<CComputeShader> pShader = new CComputeShader;
-	pShader->BuildComputeShader(strPath + L"shader\\blur.cs.hlsl", nullptr, "HorzBlurCS", "cs_5_1");
-	AddAsset<CComputeShader>(L"HorzBlurCS", pShader);
-
-	pShader = new CComputeShader;
-	pShader->BuildComputeShader(strPath + L"shader\\blur.cs.hlsl", nullptr, "VertBlurCS", "cs_5_1");
-	AddAsset<CComputeShader>(L"VertBlurCS", pShader);
-
-	pShader = new CComputeShader;
 	pShader->BuildComputeShader(strPath + L"shader\\WaveSim.cs.hlsl", nullptr, "UpdateWavesCS", "cs_5_1");
 	AddAsset<CComputeShader>(L"UpdateWavesCS", pShader);
 

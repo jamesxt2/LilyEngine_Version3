@@ -23,11 +23,15 @@ VertexOut VS(VertexIn vin)
     
     vout.NormalW = mul(vin.NormalL, (float3x3) g_WorldInvTranspose);
     
+    vout.TangentW = mul(vin.TangentU, (float3x3) g_World);
+    
     vout.PosH = mul(posW, g_ViewProj);
     
     // Output vertex attributes for interpolation across triangle.
     float4 texCoord = mul(float4(vin.TexCoord, 0.0f, 1.0f), g_TexTransform);
     vout.TexCoord = mul(texCoord, MATERIAL.MtrlTransform).xy;
+    
+    vout.ShadowPosH = mul(posW, g_ShadowTransform);
     
     return vout;
 }

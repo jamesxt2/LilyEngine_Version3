@@ -1,7 +1,7 @@
 #ifndef _PARTICLE_TICK
 #define _PARTICLE_TICK
 
-#include "struct.hlsli"
+#include "common.hlsli"
 
 struct TParticle
 {

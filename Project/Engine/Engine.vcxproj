@@ -155,7 +155,6 @@ call Copy.bat</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="assets.h" />
-    <ClInclude Include="BlurFilter.h" />
     <ClInclude Include="CAsset.h" />
     <ClInclude Include="CAssetMgr.h" />
     <ClInclude Include="CCamera.h" />
@@ -181,6 +180,7 @@ call Copy.bat</Command>
     <ClInclude Include="CRenderMgr.h" />
     <ClInclude Include="CScript.h" />
     <ClInclude Include="CShader.h" />
+    <ClInclude Include="CShadowMap.h" />
     <ClInclude Include="CStructuredBuffer.h" />
     <ClInclude Include="CTexture.h" />
     <ClInclude Include="CTexturePool.h" />
@@ -205,7 +205,6 @@ call Copy.bat</Command>
     <ClInclude Include="UploadBuffer.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BlurFilter.cpp" />
     <ClCompile Include="CAsset.cpp" />
     <ClCompile Include="CAssetMgr.cpp" />
     <ClCompile Include="CCamera.cpp" />
@@ -231,6 +230,7 @@ call Copy.bat</Command>
     <ClCompile Include="CRenderMgr.cpp" />
     <ClCompile Include="CScript.cpp" />
     <ClCompile Include="CShader.cpp" />
+    <ClCompile Include="CShadowMap.cpp" />
     <ClCompile Include="CStructuredBuffer.cpp" />
     <ClCompile Include="CTexture.cpp" />
     <ClCompile Include="CTexturePool.cpp" />
@@ -266,6 +266,13 @@ call Copy.bat</Command>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName>
     </FxCompile>
+    <None Include="shadows.ps.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="shadows.vs.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="shadows_common.hlsli" />
     <None Include="sky.ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
@@ -281,11 +288,6 @@ call Copy.bat</Command>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Effect</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
-      <FileType>Document</FileType>
-    </None>
-    <None Include="blur.cs.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.0</ShaderModel>
       <FileType>Document</FileType>
     </None>
     <FxCompile Include="default.ps.hlsl">
@@ -336,7 +338,7 @@ call Copy.bat</Command>
       <FileType>Document</FileType>
     </None>
     <None Include="sky_common.hlsli" />
-    <None Include="struct.hlsli">
+    <None Include="common.hlsli">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Effect</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
       <FileType>Document</FileType>

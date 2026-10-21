@@ -246,7 +246,10 @@ void CLevelMgr::Init()
 		pCylinder->GetTransformComp()->SetObjCBIndex(sceneLevelObjIdx++);
 
 		pCylinder->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
-		pCylinder->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
+		if (i % 2 == 0)
+			pCylinder->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
+		else
+			pCylinder->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksNoNormalMaterial"));
 		pCylinder->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
 		pCylinder->GetMeshRenderComp()->SetSubMeshGeo(pCylinder->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"cylinder"));
 
@@ -314,110 +317,15 @@ void CLevelMgr::Init()
 	/******************************************************************/
 
 
-	/******************************************************************/
-	// Room Level
-	/******************************************************************/
-
-	CLevel* pRoomLevel = new CLevel;
-
-	CGameObject* pCamera3 = new CGameObject;
-	pCamera3->SetName(L"RoomMainCamera");
-	pCamera3->AddComponent(new CTransform);
-	pCamera3->AddComponent(new CCamera);
-	pCamera3->AddComponent(new CCameraMoveScript);
-	pCamera3->GetCameraComp()->SetProjType(PROJ_TYPE::PERSPECTIVE);
-
-	pCamera3->GetCameraComp()->SetCameraPriority(0, L"RoomLevel");
-
-	pCamera3->GetTransformComp()->SetRelativePosition(0.f, 5.f, -15.f);
-
-	pRoomLevel->AddObject(pCamera3);
-
-	CGameObject* pRoomFloor = new CGameObject;
-	pRoomFloor->SetName(L"RoomFloor");
-	pRoomFloor->AddComponent(new CTransform);
-	pRoomFloor->AddComponent(new CMeshRender);
-
-	pRoomFloor->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
-	pRoomFloor->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
-	pRoomFloor->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-	pRoomFloor->GetTransformComp()->SetObjCBIndex(0);
-
-	pRoomFloor->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"RoomMesh"));
-	pRoomFloor->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"TileMaterial"));
-	pRoomFloor->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-	pRoomFloor->GetMeshRenderComp()->SetSubMeshGeo(pRoomFloor->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"floor"));
-
-	pRoomLevel->AddObject(pRoomFloor);
-
-	CGameObject* pRoomWall = new CGameObject;
-	pRoomWall->SetName(L"RoomFloor");
-	pRoomWall->AddComponent(new CTransform);
-	pRoomWall->AddComponent(new CMeshRender);
-
-	pRoomWall->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
-	pRoomWall->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
-	pRoomWall->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-	pRoomWall->GetTransformComp()->SetObjCBIndex(1);
-
-	pRoomWall->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"RoomMesh"));
-	pRoomWall->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
-	pRoomWall->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-	pRoomWall->GetMeshRenderComp()->SetSubMeshGeo(pRoomWall->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"wall"));
-
-	pRoomLevel->AddObject(pRoomWall);
-
-	CGameObject* pRoomSkull = new CGameObject;
-	pRoomSkull->SetName(L"Skull");
-	pRoomSkull->AddComponent(new CTransform);
-	pRoomSkull->AddComponent(new CMeshRender);
-
-	pRoomSkull->GetTransformComp()->SetRelativePosition(1.f, 1.5f, -3.f);
-	pRoomSkull->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
-	pRoomSkull->GetTransformComp()->SetRelativeScale(0.3f, 0.3f, 0.3f);
-	pRoomSkull->GetTransformComp()->SetObjCBIndex(2);
-
-	pRoomSkull->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SkullMesh"));
-	pRoomSkull->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"SkullMaterial"));
-	pRoomSkull->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_DEFAULT);
-
-	pRoomLevel->AddObject(pRoomSkull);
-
-	CGameObject* pReflectedSkull = pRoomSkull->Clone();
-	pReflectedSkull->GetTransformComp()->SetObjCBIndex(3);
-	pReflectedSkull->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_REFLECTIONS);
-
-	pRoomLevel->AddObject(pReflectedSkull);
-
-	CGameObject* pShadowedSkull = pRoomSkull->Clone();
-	pShadowedSkull->GetTransformComp()->SetObjCBIndex(4);
-	pShadowedSkull->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"ShadowMaterial"));
-	pShadowedSkull->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_SHADOW);
-
-	pRoomLevel->AddObject(pShadowedSkull);
-
-	CGameObject* pRoomMirror = new CGameObject;
-	pRoomMirror->SetName(L"RoomMirror");
-	pRoomMirror->AddComponent(new CTransform);
-	pRoomMirror->AddComponent(new CMeshRender);
-
-	pRoomMirror->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
-	pRoomMirror->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
-	pRoomMirror->GetTransformComp()->SetRelativeScale(1.f, 1.f, 1.f);
-	pRoomMirror->GetTransformComp()->SetObjCBIndex(5);
-
-	pRoomMirror->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"RoomMesh"));
-	pRoomMirror->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"MirrorMaterial"));
-	pRoomMirror->GetMeshRenderComp()->SetObjPSOType(OBJ_PSO_TYPE::PSO_MIRRORS | OBJ_PSO_TYPE::PSO_TRANSPARENT);
-	pRoomMirror->GetMeshRenderComp()->SetSubMeshGeo(pRoomMirror->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"mirror"));
-
-	pRoomLevel->AddObject(pRoomMirror);
-
-	AddLevel(L"RoomLevel", pRoomLevel);
 	
-	/******************************************************************/
-	// Room Level
-	/******************************************************************/
+
+	
+
+	
+
+	
+	
+
 
 	/******************************************************************/
 	// Tess Level
@@ -477,12 +385,6 @@ void CLevelMgr::Tick()
 		OnLevelChange.Broadcast();
 	}
 	if (KEY_TAP(KEY::_3))
-	{
-		ChangeLevel(L"RoomLevel");
-		CRenderMgr::GetInst()->SetCurrentLevel(L"RoomLevel");
-		OnLevelChange.Broadcast();
-	}
-	if (KEY_TAP(KEY::_4))
 	{
 		ChangeLevel(L"TessLevel");
 		CRenderMgr::GetInst()->SetCurrentLevel(L"TessLevel");

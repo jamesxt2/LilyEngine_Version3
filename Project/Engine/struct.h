@@ -5,11 +5,12 @@ struct Vertex
 	Vector3 Position;
 	Vector3 Normal;
 	Vector2 TexCoord;
+	Vector3 TangentU;
 
 	Vertex() = default;
 
-	Vertex(float px, float py, float pz, float nx, float ny, float nz, float u, float v)
-		: Position(px, py, pz), Normal(nx, ny, nz), TexCoord(u, v)
+	Vertex(float px, float py, float pz, float nx, float ny, float nz, float u, float v, float tx, float ty, float tz)
+		: Position(px, py, pz), Normal(nx, ny, nz), TexCoord(u, v), TangentU(tx, ty, tz)
 	{ }
 };
 
@@ -23,9 +24,7 @@ struct TObject
 {
 	Matrix World;
 	Matrix WorldInvTranspose;
-	Matrix View;
-	Matrix Proj;
-	Matrix ViewProj;
+	
 
 	Matrix TexTransform;
 
@@ -48,6 +47,9 @@ struct TMaterial
 	UINT TextureIndex = 0;
 	int bIsTexArray = 0;
 	int bUseCubeReflection = 0;
+	int bUseNormalMap = 0;
+	UINT NormalMapTexIndex = 0;
+	Vector2 padding;
 
 	Matrix MtrlTransform;
 };
@@ -66,6 +68,11 @@ struct TLight
 
 struct TGlobal
 {
+	Matrix View;
+	Matrix Proj;
+	Matrix ViewProj;
+	Matrix ShadowTransform;
+
 	Vector3 EyePosW;
 	float padding1;
 	Vector4 AmbientLight;

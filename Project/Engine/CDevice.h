@@ -27,7 +27,7 @@ private:
 
 	void CreateCommandObjectsAndFence();
 	void CreateSwapChain();
-	void CreateRtvAndDsvDescriptorHeaps();
+	void BuildDescriptorHeaps();
 
 	ID3D12Resource* CurrentBackBuffer() const;
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;
@@ -54,6 +54,8 @@ private:
 
 	ComPtr<ID3D12DescriptorHeap>					m_RtvHeap;
 	ComPtr<ID3D12DescriptorHeap>					m_DsvHeap;
+
+	ComPtr<ID3D12DescriptorHeap>					m_CbvSrvUavDescriptorHeap;
 
 	ComPtr<ID3D12Resource>							m_MsaaRenderTarget;
 	ComPtr<ID3D12DescriptorHeap>					m_MsaaRtvHeap;
@@ -90,6 +92,8 @@ public:
 
 	inline bool EnableMSAA() const { return m_EnableMSAA; }
 	inline UINT Get4xMSAAQuality() const { return m_4xMsaaQuality; }
+
+	inline ComPtr<ID3D12DescriptorHeap> GetCbvSrvUavDescriptorHeap() const { return m_CbvSrvUavDescriptorHeap; }
 
 /***********************Command Objects And Fence******************************/
 public:

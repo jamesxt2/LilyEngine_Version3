@@ -15,6 +15,15 @@ float4 PS(VertexOut pin) : SV_Target
     
     pin.NormalW = normalize(pin.NormalW);
     
+    float3 bumpedNormalW = pin.NormalW;
+    float normalMapSampleA = 1.f;
+    if (MATERIAL.bUseNormalMap)
+    {
+        float4 normalMapSample = g_Textures2D[MATERIAL.NormalMapTexIndex].Sample(g_SamAnisotropicWrap, pin.TexCoord);
+        normalMapSampleA = normalMapSample.a;
+        bumpedNormalW = NormalSampleToWorldSpace(normalMapSample.rgb, pin.NormalW, pin.TangentW);
+    }
+    
     float3 toEyeW = g_EyePosW - pin.PosW;
     float distToEye = length(toEyeW);
     toEyeW /= distToEye;
@@ -23,18 +32,20 @@ float4 PS(VertexOut pin) : SV_Target
     float4 ambient = g_AmbientLight * diffuseAlbedo;
     
     // direct light
-    const float shininess = 1.f - MATERIAL.Roughness;
+    const float shininess = (1.f - MATERIAL.Roughness) * normalMapSampleA;
     Material mat = { diffuseAlbedo, MATERIAL.FresnelR0, shininess };
-    float3 shadowFactor = 1.f;
-    float4 directLight = ComputeLighting(g_Lights, mat, pin.PosW, pin.NormalW, toEyeW, shadowFactor);
+    
+    float3 shadowFactor = float3(1.f, 1.f, 1.f);
+    shadowFactor[0] = CalcShadowFactor(pin.ShadowPosH);
+    float4 directLight = ComputeLighting(g_Lights, mat, pin.PosW, bumpedNormalW, toEyeW, shadowFactor);
 
     float4 litColor = ambient + directLight;
     
     if (MATERIAL.bUseCubeReflection)
     {
-        float3 r = reflect(-toEyeW, pin.NormalW);
+        float3 r = reflect(-toEyeW, bumpedNormalW);
         float4 reflectionColor = g_TexturesCube[0].Sample(g_SamLinearWrap, r);
-        float3 fresnelFactor = SchlickFresnel(MATERIAL.FresnelR0, pin.NormalW, r);
+        float3 fresnelFactor = SchlickFresnel(MATERIAL.FresnelR0, bumpedNormalW, r);
         litColor.rgb += shininess * fresnelFactor * reflectionColor.rgb;
     }
     
@@ -44,6 +55,6 @@ float4 PS(VertexOut pin) : SV_Target
 #endif
     
     litColor.a = diffuseAlbedo.a;
-    
+
     return litColor;
 }

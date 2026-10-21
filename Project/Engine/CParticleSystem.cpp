@@ -83,7 +83,7 @@ void CParticleSystem::FinalTick()
 	CalculateSpawnCount();
 
 	CDevice::GetInst()->UploadResourceAsync([&](ID3D12GraphicsCommandList* cmdlist) {
-		ID3D12DescriptorHeap* descriptorHeaps[] = { CAssetMgr::GetInst()->GetDescriptorHeap().Get() };
+		ID3D12DescriptorHeap* descriptorHeaps[] = { CDevice::GetInst()->GetCbvSrvUavDescriptorHeap().Get() };
 		cmdlist->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
 		cmdlist->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_PARTICLE_TICK).Get());

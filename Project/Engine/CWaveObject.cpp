@@ -26,7 +26,7 @@ void CWaveObject::Tick()
 
 	CDevice::GetInst()->UploadResourceAsync([&](ID3D12GraphicsCommandList* cmdlist) {
 
-		ID3D12DescriptorHeap* descriptorHeaps[] = { CAssetMgr::GetInst()->GetDescriptorHeap().Get()};
+		ID3D12DescriptorHeap* descriptorHeaps[] = { CDevice::GetInst()->GetCbvSrvUavDescriptorHeap().Get()};
 		cmdlist->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
 		if (!m_IsResourceUploaded)

@@ -2,6 +2,7 @@
 #include "CRenderMgr.h"
 
 #include "CDevice.h"
+#include "CLevel.h"
 #include "CLevelMgr.h"
 #include "CCamera.h"
 
@@ -29,6 +30,11 @@ void CRenderMgr::Tick()
 void CRenderMgr::Render()
 {
 	if (!CLevelMgr::GetInst()->GetCurrentLevel()) return;
+
+	ID3D12DescriptorHeap* descriptorHeaps[] = { CDevice::GetInst()->GetCbvSrvUavDescriptorHeap().Get() };
+	CMDLIST->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+
+	CLevelMgr::GetInst()->GetCurrentLevel()->BuildLevelShadowMap();
 
 	CDevice::GetInst()->ClearTargetAndPrepareRender(Colors::LightSteelBlue);
 

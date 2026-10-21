@@ -1,7 +1,7 @@
 #ifndef _LIGHTING_UTILS
 #define _LIGHTING_UTILS
 
-#include "struct.hlsli"
+#include "common.hlsli"
 
 float CalcAttenuation(float d, float falloffStart, float falloffEnd)
 {

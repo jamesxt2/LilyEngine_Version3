@@ -97,20 +97,14 @@ private:
 
 	std::unordered_map<std::wstring, ComPtr<ID3D12RootSignature>> m_RootSignatureMap;
 	void BuildRootSignatures();
-	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
+	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GetStaticSamplers();
 
 	void BuildPSO();
 	std::unordered_map<OBJ_PSO_TYPE, ComPtr<ID3D12PipelineState>>	m_PSOGroup;
 
-	ComPtr<ID3D12DescriptorHeap>		m_CbvSrvUavDescriptorHeap;
-
-	void BuildDescriptorHeaps();
-
 public:
 
 	inline UINT GetAssetSize(ASSET_TYPE type) const { return (UINT)m_AssetMap[(UINT)type].size(); }
-
-	inline ComPtr<ID3D12DescriptorHeap> GetDescriptorHeap() const { return m_CbvSrvUavDescriptorHeap; }
 
 	ComPtr<ID3D12PipelineState> GetPSO(OBJ_PSO_TYPE type) const;
 	ComPtr<ID3D12RootSignature> GetRootSignature(const std::wstring& key) const;

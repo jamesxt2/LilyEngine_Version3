@@ -11,6 +11,7 @@
 #include "CKeyMgr.h"
 #include "CTexturePool.h"
 #include "CDescriptorAllocator.h"
+#include "CShadowMap.h"
 
 
 CEngine::CEngine()
@@ -171,6 +172,8 @@ void CEngine::ShutDown()
 	CTexturePool::GetInst()->Destroy();
 	CAssetMgr::GetInst()->Destroy();
 	CDescriptorAllocator::GetInst()->Destroy();
+	CShadowMap::GetInst()->Destroy();
+	
 	
 	CDevice::GetInst()->Release();
 	

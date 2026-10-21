@@ -2,6 +2,7 @@
 #include "CDevice.h"
 
 #include "CConstantBuffer.h"
+#include "CShadowMap.h"
 
 CDevice::CDevice()
 	: m_MainWnd(nullptr), m_RenderResolution{}, m_Format(DXGI_FORMAT_R8G8B8A8_UNORM),
@@ -25,6 +26,7 @@ void CDevice::Release()
 	m_MsaaRenderTarget.Reset();
 	m_DsvHeap.Reset();
 	m_RtvHeap.Reset();
+	m_CbvSrvUavDescriptorHeap.Reset();
 	m_DepthStencilBuffer.Reset();
 	for (int i = 0; i < m_SwapChainBufferCount; ++i)
 		m_SwapChainBuffer[i].Reset();
@@ -94,7 +96,7 @@ int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
 	/*************************************/
 	// Create RTV and DSV descriptor heaps
 	/*************************************/
-	CreateRtvAndDsvDescriptorHeaps();
+	BuildDescriptorHeaps();
 
 	OnResize(m_RenderResolution);
 
@@ -156,8 +158,19 @@ void CDevice::CreateSwapChain()
 	ThrowIfFailed(m_dxgiFactory->CreateSwapChain(m_CommandQueue.Get(), &scDesc, m_SwapChain.GetAddressOf()));
 }
 
-void CDevice::CreateRtvAndDsvDescriptorHeaps()
+void CDevice::BuildDescriptorHeaps()
 {
+	const UINT maxCbvSrvUavDescriptorCount = 16384;
+
+	D3D12_DESCRIPTOR_HEAP_DESC CbvSrvUavHeapDesc = {};
+	CbvSrvUavHeapDesc.NumDescriptors = maxCbvSrvUavDescriptorCount;
+	CbvSrvUavHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	CbvSrvUavHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	ThrowIfFailed(DEVICE->CreateDescriptorHeap(
+		&CbvSrvUavHeapDesc, IID_PPV_ARGS(&m_CbvSrvUavDescriptorHeap)));
+
+	CDescriptorAllocator::GetInst()->Initialize(DEVICE, m_CbvSrvUavDescriptorHeap, maxCbvSrvUavDescriptorCount);
+
 	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
 	rtvHeapDesc.NumDescriptors = m_SwapChainBufferCount;
 	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -176,11 +189,16 @@ void CDevice::CreateRtvAndDsvDescriptorHeaps()
 	}
 
 	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
-	dsvHeapDesc.NumDescriptors = 1;
+	dsvHeapDesc.NumDescriptors = 2;
 	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	dsvHeapDesc.NodeMask = 0;
 	ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_DsvHeap)));
+
+	CShadowMap::GetInst()->Initialize(2048, 2048, CD3DX12_CPU_DESCRIPTOR_HANDLE(
+		m_DsvHeap->GetCPUDescriptorHandleForHeapStart(), 1,
+		m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
+	));
 }
 
 ID3D12Resource* CDevice::CurrentBackBuffer() const
@@ -399,14 +417,6 @@ void CDevice::Update()
 
 void CDevice::ClearTargetAndPrepareRender(XMVECTORF32 color)
 {
-	// Reuse the memory associated with command recording.
-   // We can only reset when the associated command lists have finished execution on the GPU.
-	//ThrowIfFailed(m_CurrFrameResource->m_CmdListAlloc->Reset());
-
-	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
-	// Reusing the command list reuses memory.
-	//ThrowIfFailed(m_CommandList->Reset(m_CurrFrameResource->m_CmdListAlloc.Get(), nullptr));
-
 	m_CurrFrameResource->m_CmdList->RSSetViewports(1, &m_ScreenViewport);
 	m_CurrFrameResource->m_CmdList->RSSetScissorRects(1, &m_ScissorRect);
 

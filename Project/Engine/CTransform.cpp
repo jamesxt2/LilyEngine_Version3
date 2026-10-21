@@ -49,24 +49,6 @@ void CTransform::FinalTick()
 
 	m_matWorld = matScale * matRot * matTranslation;
 
-	if (GetOwner()->GetRenderComp() && (uint32)(GetOwner()->GetRenderComp()->GetObjPSOType() & OBJ_PSO_TYPE::PSO_REFLECTIONS))
-	{
-		// Update reflection world matrix.
-		Plane mirrorPlane(0.0f, 0.0f, 1.0f, 0.0f); // xy plane
-		Matrix R = Matrix::CreateReflection(mirrorPlane);
-		m_matWorld *= R;
-	}
-
-	if (GetOwner()->GetRenderComp() && (uint32)(GetOwner()->GetRenderComp()->GetObjPSOType() & OBJ_PSO_TYPE::PSO_SHADOW))
-	{
-		// Update shadow world matrix.
-		Plane shadowPlane(0.0f, 1.0f, 0.0f, 0.0f); // xz plane
-		Vector3 toMainLight = -g_Global.Lights[0].Direction;
-		Matrix S = XMMatrixShadow(shadowPlane, toMainLight);
-		Matrix shadowOffsetY = XMMatrixTranslation(0.0f, 0.001f, 0.0f);
-		m_matWorld *= S * shadowOffsetY;
-	}
-
 	m_WorldDir[(UINT)DIR_TYPE::RIGHT] = m_RelativeDir[(UINT)DIR_TYPE::RIGHT] = XAxis;
 	m_WorldDir[(UINT)DIR_TYPE::UP] = m_RelativeDir[(UINT)DIR_TYPE::UP] = YAxis;
 	m_WorldDir[(UINT)DIR_TYPE::FORWARD] = m_RelativeDir[(UINT)DIR_TYPE::FORWARD] = ZAxis;

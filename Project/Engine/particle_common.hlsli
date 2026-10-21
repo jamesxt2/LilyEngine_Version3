@@ -1,7 +1,7 @@
 #ifndef _PARTICLE
 #define _PARTICLE
 
-#include "struct.hlsli"
+#include "common.hlsli"
 
 struct TParticle
 {

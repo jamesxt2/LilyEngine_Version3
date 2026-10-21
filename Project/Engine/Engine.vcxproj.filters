@@ -95,9 +95,6 @@
     <Filter Include="08.Asset\Shader\ComputeShader">
       <UniqueIdentifier>{d8e5d576-be79-430d-9c87-432a9f0e4f94}</UniqueIdentifier>
     </Filter>
-    <Filter Include="08.Asset\Shader\ComputeShader\Filter">
-      <UniqueIdentifier>{56b396f1-db77-4bfe-bee0-8a5095c489fa}</UniqueIdentifier>
-    </Filter>
     <Filter Include="03.Device\StructuredBuffer">
       <UniqueIdentifier>{d1874b98-ca21-4a91-8f6f-32868228d9d7}</UniqueIdentifier>
     </Filter>
@@ -131,11 +128,14 @@
     <Filter Include="HLSL\WaveSim">
       <UniqueIdentifier>{231b5c0b-fd2a-42c4-8d6a-050821d51ae6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="HLSL\blur">
-      <UniqueIdentifier>{65ff79bb-c98f-4e47-8916-198271e9adfa}</UniqueIdentifier>
-    </Filter>
     <Filter Include="HLSL\sky">
       <UniqueIdentifier>{eaead5d5-0404-4613-80ec-aeaa18cb0762}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04.Manager\08.ShadowMap">
+      <UniqueIdentifier>{2b68b73a-7fe3-43f7-82cb-9102a2c347cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HLSL\shadow">
+      <UniqueIdentifier>{175c4786-13bc-4f09-acd3-c36ef80c17d4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -262,9 +262,6 @@
     <ClInclude Include="CComputeShader.h">
       <Filter>08.Asset\Shader\ComputeShader</Filter>
     </ClInclude>
-    <ClInclude Include="BlurFilter.h">
-      <Filter>08.Asset\Shader\ComputeShader\Filter</Filter>
-    </ClInclude>
     <ClInclude Include="CStructuredBuffer.h">
       <Filter>03.Device\StructuredBuffer</Filter>
     </ClInclude>
@@ -283,6 +280,9 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="CTexturePool.h">
       <Filter>08.Asset\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="CShadowMap.h">
+      <Filter>04.Manager\08.ShadowMap</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -382,9 +382,6 @@
     <ClCompile Include="CComputeShader.cpp">
       <Filter>08.Asset\Shader\ComputeShader</Filter>
     </ClCompile>
-    <ClCompile Include="BlurFilter.cpp">
-      <Filter>08.Asset\Shader\ComputeShader\Filter</Filter>
-    </ClCompile>
     <ClCompile Include="CStructuredBuffer.cpp">
       <Filter>03.Device\StructuredBuffer</Filter>
     </ClCompile>
@@ -402,6 +399,9 @@
     </ClCompile>
     <ClCompile Include="CTexturePool.cpp">
       <Filter>08.Asset\Texture</Filter>
+    </ClCompile>
+    <ClCompile Include="CShadowMap.cpp">
+      <Filter>04.Manager\08.ShadowMap</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -436,7 +436,7 @@
     <None Include="LightingUtils.hlsli">
       <Filter>HLSL\header</Filter>
     </None>
-    <None Include="struct.hlsli">
+    <None Include="common.hlsli">
       <Filter>HLSL\header</Filter>
     </None>
     <None Include="WaveSim.cs.hlsl">
@@ -472,9 +472,6 @@
     <None Include="particle_common.hlsli">
       <Filter>HLSL\particle</Filter>
     </None>
-    <None Include="blur.cs.hlsl">
-      <Filter>HLSL\blur</Filter>
-    </None>
     <None Include="sky_common.hlsli">
       <Filter>HLSL\sky</Filter>
     </None>
@@ -483,6 +480,15 @@
     </None>
     <None Include="sky.ps.hlsl">
       <Filter>HLSL\sky</Filter>
+    </None>
+    <None Include="shadows_common.hlsli">
+      <Filter>HLSL\shadow</Filter>
+    </None>
+    <None Include="shadows.vs.hlsl">
+      <Filter>HLSL\shadow</Filter>
+    </None>
+    <None Include="shadows.ps.hlsl">
+      <Filter>HLSL\shadow</Filter>
     </None>
   </ItemGroup>
 </Project>
