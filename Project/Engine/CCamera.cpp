@@ -11,6 +11,7 @@
 #include "CRenderComponent.h"
 #include "CTexturePool.h"
 #include "CShadowMap.h"
+#include "CSsao.h"
 
 CCamera::CCamera()
 	: CComponent(COMPONENT_TYPE::CAMERA),
@@ -78,12 +79,43 @@ void CCamera::FinalTick()
 	g_Global.View = m_matView;
 	g_Global.Proj = m_matProj;
 	g_Global.ViewProj = m_matView * m_matProj;
+
+	// SSAO
+	// Transform NDC space [-1,+1]^2 to texture space [0,1]^2
+	Matrix T(
+		0.5f, 0.0f, 0.0f, 0.0f,
+		0.0f, -0.5f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.0f, 1.0f);
+
+	g_Global.ViewProjTex = g_Global.ViewProj * T;
+
+	g_SSAO.Proj = m_matProj;
+	g_SSAO.InvProj = m_matProj.Invert();
+	g_SSAO.ProjTex = m_matProj * T;
+
+	CSsao::GetInst()->GetOffsetVectors(g_SSAO.OffsetVectors);
+
+	auto blurWeights = CSsao::GetInst()->CalcGaussWeights(2.5f);
+	g_SSAO.BlurWeights[0] = Vector4(&blurWeights[0]);
+	g_SSAO.BlurWeights[1] = Vector4(&blurWeights[4]);
+	g_SSAO.BlurWeights[2] = Vector4(&blurWeights[8]);
+
+	g_SSAO.InvRenderTargetSize = Vector2(1.0f / CSsao::GetInst()->GetSsaoMapWidth(), 1.0f / CSsao::GetInst()->GetSsaoMapHeight());
+
+	// Coordinates given in view space.
+	g_SSAO.OcclusionRadius = 0.5f;
+	g_SSAO.OcclusionFadeStart = 0.2f;
+	g_SSAO.OcclusionFadeEnd = 1.0f;
+	g_SSAO.SurfaceEpsilon = 0.05f;
+
+	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::SSAO)->CopyData(0, (const void*)&g_SSAO);
 }
 
 void CCamera::Render()
 {
 	CLevelMgr::GetInst()->GetCurrentLevel()->SortObjects();
-	std::unordered_map<OBJ_PSO_TYPE, std::vector<CGameObject*>>& sortedObjs = CLevelMgr::GetInst()->GetCurrentLevel()->GetSortedObjects();
+	std::unordered_map<PSO_TYPE, std::vector<CGameObject*>>& sortedObjs = CLevelMgr::GetInst()->GetCurrentLevel()->GetSortedObjects();
 
 	if (m_IsDirty)
 	{
@@ -94,35 +126,36 @@ void CCamera::Render()
 	//CMDLIST->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Default").Get());
 
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(0, 0);
-	//CDevice::GetInst()->GetCurrFrameResource()->GetStructuredBuffer(SB_TYPE::MATERIAL)->Bind_Graphics_SRV_Table(CMDLIST.Get(), 2);
-	//CTexturePool::GetInst()->Bind_Graphics_Table_2D(CMDLIST.Get(), 3);
-	//CTexturePool::GetInst()->Bind_Graphics_Table_Array(CMDLIST.Get(), 4);
-	//CTexturePool::GetInst()->Bind_Graphics_Table_Cube(CMDLIST.Get(), 6);
+	CDevice::GetInst()->GetCurrFrameResource()->GetStructuredBuffer(SB_TYPE::MATERIAL)->Bind_Graphics_SRV_Table(CMDLIST.Get(), 2);
+	CTexturePool::GetInst()->Bind_Graphics_Table_2D(CMDLIST.Get(), 3);
+	CTexturePool::GetInst()->Bind_Graphics_Table_Array(CMDLIST.Get(), 4);
+	CTexturePool::GetInst()->Bind_Graphics_Table_Cube(CMDLIST.Get(), 6);
 
 	CMDLIST->SetGraphicsRootDescriptorTable(7, CShadowMap::GetInst()->GetSrvGpuHandle());
+	CMDLIST->SetGraphicsRootDescriptorTable(8, CSsao::GetInst()->GetAmbientMap0SrvGpuHandle());
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_DEFAULT).Get());
-	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_DEFAULT])
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_DEFAULT).Get());
+	for (const auto& obj : sortedObjs[PSO_TYPE::PSO_DEFAULT])
 		TestFrustumAndRender(obj);
 
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_SKY).Get());
-	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_SKY])
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_SKY).Get());
+	for (const auto& obj : sortedObjs[PSO_TYPE::PSO_SKY])
 		obj->Render();
 
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_ALPHA_TESTED).Get());
-	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_ALPHA_TESTED])
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_ALPHA_TESTED).Get());
+	for (const auto& obj : sortedObjs[PSO_TYPE::PSO_ALPHA_TESTED])
 		TestFrustumAndRender(obj);
 
 	
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH).Get());
-	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH])
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_TESS_QUAD_PATCH).Get());
+	for (const auto& obj : sortedObjs[PSO_TYPE::PSO_TESS_QUAD_PATCH])
 		TestFrustumAndRender(obj);
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_BILLBOARD).Get());
-	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_BILLBOARD])
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_BILLBOARD).Get());
+	for (const auto& obj : sortedObjs[PSO_TYPE::PSO_BILLBOARD])
 		TestFrustumAndRender(obj);
 
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -130,19 +163,19 @@ void CCamera::Render()
 
 	CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Graphics(0, 0);
 
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_TRANSPARENT).Get());
-	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_TRANSPARENT])
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_TRANSPARENT).Get());
+	for (const auto& obj : sortedObjs[PSO_TYPE::PSO_TRANSPARENT])
 		obj->Render();
 		
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_WAVE_RENDER).Get());
-	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_WAVE_RENDER])
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_WAVE_RENDER).Get());
+	for (const auto& obj : sortedObjs[PSO_TYPE::PSO_WAVE_RENDER])
 		TestFrustumAndRender(obj);
 
 	CMDLIST->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Particle").Get());
 		
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_PARTICLE_RENDER).Get());
-	for (const auto& obj : sortedObjs[OBJ_PSO_TYPE::PSO_PARTICLE_RENDER])
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_PARTICLE_RENDER).Get());
+	for (const auto& obj : sortedObjs[PSO_TYPE::PSO_PARTICLE_RENDER])
 		obj->Render();
 }
 

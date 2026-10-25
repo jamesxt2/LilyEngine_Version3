@@ -97,8 +97,8 @@ void CCameraMoveScript::MoveByPerspective()
 	Vector3 vCurRot = transComp->GetRelativeRotation();
 	if (KEY_PRESSED(KEY::RBUTTON))
 	{
-		vCurRot.y += CKeyMgr::GetInst()->GetMouseMoveDir().x * XM_PI * DT * 3.f;
-		vCurRot.x -= CKeyMgr::GetInst()->GetMouseMoveDir().y * XM_PI * DT * 3.f;
+		vCurRot.y += CKeyMgr::GetInst()->GetMouseMoveDir().x * XM_PI * DT;
+		vCurRot.x -= CKeyMgr::GetInst()->GetMouseMoveDir().y * XM_PI * DT;
 		bMove = true;
 	}
 	transComp->SetRelativeRotation(vCurRot);

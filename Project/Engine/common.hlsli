@@ -25,6 +25,7 @@ Texture2D g_Textures2D[MAX_TEXTURES_2D] : register(t0, space0);
 Texture2DArray g_TexturesArr[MAX_TEXTURES_ARR] : register(t0, space1);
 TextureCube g_TexturesCube[MAX_TEXTURES_CUBE] : register(t0, space4);
 Texture2D g_ShadowMap : register(t0, space5);
+Texture2D g_SsaoMap : register(t1, space5);
 
 StructuredBuffer<MaterialData> g_Materials : register(t0, space2);
 
@@ -74,6 +75,7 @@ cbuffer GLOBAL : register(b1)
     row_major matrix g_Proj;
     row_major matrix g_ViewProj;
     row_major matrix g_ShadowTransform;
+    row_major matrix g_ViewProjTex;
     
     float3 g_EyePosW;
     float padding_Global1;

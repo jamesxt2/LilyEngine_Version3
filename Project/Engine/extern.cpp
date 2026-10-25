@@ -2,6 +2,7 @@
 
 TObject g_Object = {};
 TGlobal g_Global = {};
+TSSAO g_SSAO = {};
 
 int g_NumFrameResources = 3;
 int g_MaxObjectCount = 100;

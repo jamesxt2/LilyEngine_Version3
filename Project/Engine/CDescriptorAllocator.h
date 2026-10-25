@@ -17,11 +17,12 @@ public:
 		bool IsValid() const { return count > 0; }
 	};
 
-	void Initialize(ComPtr<ID3D12Device> device, ComPtr<ID3D12DescriptorHeap> heap, UINT capacity);
+	void InitHeapData(ComPtr<ID3D12DescriptorHeap> heap, UINT capacity);
 
-	Allocation Allocate(UINT count);
+	Allocation Allocate(D3D12_DESCRIPTOR_HEAP_TYPE type, UINT count);
+	Allocation GetAllocation(D3D12_DESCRIPTOR_HEAP_TYPE type, UINT startIdx, UINT count);
 
-	void Free(const Allocation& alloc);
+	void Free(D3D12_DESCRIPTOR_HEAP_TYPE type, const Allocation& alloc);
 
 private:
 
@@ -31,28 +32,32 @@ private:
 		UINT count;
 	};
 
-	bool FindFreeBlock(UINT count, _Out_ UINT& outStartIndex);
-	void MergeFreeBlocks();
+	bool FindFreeBlock(D3D12_DESCRIPTOR_HEAP_TYPE type, UINT count, _Out_ UINT& outStartIndex);
+	void MergeFreeBlocks(D3D12_DESCRIPTOR_HEAP_TYPE type);
 
-	ComPtr<ID3D12Device>							m_Device;
-	ComPtr<ID3D12DescriptorHeap>					m_Heap;
-	UINT											m_Capacity{ 0 };
-	UINT											m_DescriptorSize{ 0 };
-	std::vector<FreeBlock>							m_FreeBlocks;
+	struct HeapData
+	{
+		ComPtr<ID3D12DescriptorHeap>					Heap;
+		UINT											Capacity{ 0 };
+		UINT											DescriptorSize{ 0 };
+		std::vector<FreeBlock>							FreeBlocks;
+	};
+	std::unordered_map<D3D12_DESCRIPTOR_HEAP_TYPE, HeapData> m_HeapDataMap;
+	
 
 public:
-	inline CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(UINT index) const
+	inline CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(D3D12_DESCRIPTOR_HEAP_TYPE type, UINT index)
 	{
 		return CD3DX12_CPU_DESCRIPTOR_HANDLE(
-			m_Heap->GetCPUDescriptorHandleForHeapStart(),
-			index, m_DescriptorSize
+			m_HeapDataMap[type].Heap->GetCPUDescriptorHandleForHeapStart(),
+			index, m_HeapDataMap[type].DescriptorSize
 		);
 	}
-	inline CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(UINT index) const
+	inline CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(D3D12_DESCRIPTOR_HEAP_TYPE type, UINT index)
 	{
 		return CD3DX12_GPU_DESCRIPTOR_HANDLE(
-			m_Heap->GetGPUDescriptorHandleForHeapStart(),
-			index, m_DescriptorSize
+			m_HeapDataMap[type].Heap->GetGPUDescriptorHandleForHeapStart(),
+			index, m_HeapDataMap[type].DescriptorSize
 		);
 	}
 

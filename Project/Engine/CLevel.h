@@ -19,13 +19,12 @@ public:
 	void AddObject(CGameObject* object, bool bChildMove = false);
 	inline void RegisterObject(CGameObject* object) { m_vecObject.push_back(object); }
 
-	inline void Clear() { m_vecObject.clear(); }
-
 	CGameObject* FindObjectByName(const std::wstring& name);
 
 	void SortObjects();
 
 	void BuildLevelShadowMap();
+	void BuildNormalsAndDepth();
 
 private:
 
@@ -36,7 +35,8 @@ private:
 	std::vector<CGameObject*> m_vecParent;
 	std::vector<CGameObject*> m_vecObject;
 
-	std::unordered_map<OBJ_PSO_TYPE, std::vector<CGameObject*>> m_SortedObjs;
+	bool m_bIsObjSorted = false;
+	std::unordered_map<PSO_TYPE, std::vector<CGameObject*>> m_SortedObjs;
 
 	float m_SunTheta = 1.25f * XM_PI;
 	float m_SunPhi = XM_PIDIV4;
@@ -61,6 +61,6 @@ public:
 	inline const std::vector<CGameObject*>& GetParentObjects() const { return m_vecParent; }
 	inline const std::vector<CGameObject*>& GetObjects() const { return m_vecObject; }
 
-	inline std::unordered_map<OBJ_PSO_TYPE, std::vector<CGameObject*>>& GetSortedObjects() { return m_SortedObjs; }
+	inline std::unordered_map<PSO_TYPE, std::vector<CGameObject*>>& GetSortedObjects() { return m_SortedObjs; }
 };
 

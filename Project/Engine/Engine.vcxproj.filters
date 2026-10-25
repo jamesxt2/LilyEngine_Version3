@@ -137,6 +137,15 @@
     <Filter Include="HLSL\shadow">
       <UniqueIdentifier>{175c4786-13bc-4f09-acd3-c36ef80c17d4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="HLSL\ssao">
+      <UniqueIdentifier>{10d78f8c-823a-40c4-91bb-fd9827eef16c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04.Manager\09.Ssao">
+      <UniqueIdentifier>{676ed479-8695-45a5-b7cb-d2b51be67bb0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HLSL\fxaa">
+      <UniqueIdentifier>{5e7f4fa9-6642-42e4-afb1-a71eef04660b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -284,6 +293,9 @@
     <ClInclude Include="CShadowMap.h">
       <Filter>04.Manager\08.ShadowMap</Filter>
     </ClInclude>
+    <ClInclude Include="CSsao.h">
+      <Filter>04.Manager\09.Ssao</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -403,6 +415,9 @@
     <ClCompile Include="CShadowMap.cpp">
       <Filter>04.Manager\08.ShadowMap</Filter>
     </ClCompile>
+    <ClCompile Include="CSsao.cpp">
+      <Filter>04.Manager\09.Ssao</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="default.vs.hlsl">
@@ -489,6 +504,21 @@
     </None>
     <None Include="shadows.ps.hlsl">
       <Filter>HLSL\shadow</Filter>
+    </None>
+    <None Include="ssao_common.hlsli">
+      <Filter>HLSL\ssao</Filter>
+    </None>
+    <None Include="ssaoBlur.hlsl">
+      <Filter>HLSL\ssao</Filter>
+    </None>
+    <None Include="ssao.hlsl">
+      <Filter>HLSL\ssao</Filter>
+    </None>
+    <None Include="DrawNormals.hlsl">
+      <Filter>HLSL\ssao</Filter>
+    </None>
+    <None Include="fxaa.hlsl">
+      <Filter>HLSL\fxaa</Filter>
     </None>
   </ItemGroup>
 </Project>

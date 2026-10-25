@@ -16,7 +16,7 @@ CTexturePool::~CTexturePool()
 
 void CTexturePool::Init()
 {
-	m_Alloc = CDescriptorAllocator::GetInst()->Allocate(MAX_TEXTURES_TOTAL);
+	m_Alloc = CDescriptorAllocator::GetInst()->Allocate(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, MAX_TEXTURES_TOTAL);
 	m_DescriptorSize = DEVICE->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	m_Next2DIndex = 0;

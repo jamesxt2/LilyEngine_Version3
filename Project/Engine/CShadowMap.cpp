@@ -15,7 +15,7 @@ CShadowMap::~CShadowMap()
 
 }
 
-void CShadowMap::Initialize(UINT width, UINT height, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuDsv)
+void CShadowMap::Initialize(UINT width, UINT height)
 {
 	m_Width = width;
 	m_Height = height;
@@ -23,9 +23,9 @@ void CShadowMap::Initialize(UINT width, UINT height, CD3DX12_CPU_DESCRIPTOR_HAND
 	m_ScissorRect = { 0, 0, (int)width, (int)height };
 	BuildResource();
 
-	m_AllocSrv = CDescriptorAllocator::GetInst()->Allocate(1);
-	m_NullSrv = CDescriptorAllocator::GetInst()->Allocate(1);
-	m_CpuDsvHandle = hCpuDsv;
+	m_AllocSrv = CDescriptorAllocator::GetInst()->Allocate(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
+	m_NullSrv = CDescriptorAllocator::GetInst()->Allocate(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
+	m_AllocDsv = CDescriptorAllocator::GetInst()->Allocate(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
 	BuildDescriptors();
 }
 
@@ -75,7 +75,7 @@ void CShadowMap::BuildDescriptors()
 	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	dsvDesc.Texture2D.MipSlice = 0;
-	DEVICE->CreateDepthStencilView(m_ShadowMap.Get(), &dsvDesc, m_CpuDsvHandle);
+	DEVICE->CreateDepthStencilView(m_ShadowMap.Get(), &dsvDesc, m_AllocDsv.cpuHandle);
 }
 
 void CShadowMap::DrawSceneToShadowMap(const std::vector<CGameObject*>& objs)
@@ -103,15 +103,15 @@ void CShadowMap::DrawSceneToShadowMap(const std::vector<CGameObject*>& objs)
 	UINT passCBByteSize = Utilities::CalcConstantBufferByteSize(sizeof(TGlobal));
 
 	// Clear the back buffer and depth buffer.
-	CMDLIST->ClearDepthStencilView(m_CpuDsvHandle,
+	CMDLIST->ClearDepthStencilView(m_AllocDsv.cpuHandle,
 		D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 	// Set null render target because we are only going to draw to
 	// depth buffer.  Setting a null render target will disable color writes.
 	// Note the active PSO also must specify a render target count of 0.
-	CMDLIST->OMSetRenderTargets(0, nullptr, false, &m_CpuDsvHandle);
+	CMDLIST->OMSetRenderTargets(0, nullptr, false, &m_AllocDsv.cpuHandle);
 
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_SHADOW_MAP).Get());
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_SHADOW_MAP).Get());
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	for (const auto& obj : objs)

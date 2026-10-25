@@ -2,11 +2,11 @@
 #include "CDevice.h"
 
 #include "CConstantBuffer.h"
-#include "CShadowMap.h"
+#include "CSsao.h"
+#include "CAssetMgr.h"
 
 CDevice::CDevice()
 	: m_MainWnd(nullptr), m_RenderResolution{}, m_Format(DXGI_FORMAT_R8G8B8A8_UNORM),
-	m_4xMsaaQuality(0), m_EnableMSAA(true),
 	m_ScreenViewport(), m_ScissorRect{},
 	m_CurrFrameResource(nullptr), m_CurrFrameResourceIndex(0)
 {
@@ -22,8 +22,6 @@ void CDevice::Release()
 {
 	FlushCommandQueue();
 	m_FrameResources.clear();
-	m_MsaaRtvHeap.Reset();
-	m_MsaaRenderTarget.Reset();
 	m_DsvHeap.Reset();
 	m_RtvHeap.Reset();
 	m_CbvSrvUavDescriptorHeap.Reset();
@@ -40,6 +38,7 @@ void CDevice::Release()
 		CloseHandle(m_FenceEvent);
 		m_FenceEvent = nullptr;
 	}
+	m_SceneColor.Reset();
 }
 
 int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
@@ -71,19 +70,6 @@ int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
 	}
 
 	/*************************************/
-	// Detect 4X MSAA
-	/*************************************/
-	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS m_sQualityLevels;
-	m_sQualityLevels.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	m_sQualityLevels.SampleCount = 4;
-	m_sQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
-	m_sQualityLevels.NumQualityLevels = 0;
-	ThrowIfFailed(m_d3dDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &m_sQualityLevels, sizeof(m_sQualityLevels)));
-
-	m_4xMsaaQuality = m_sQualityLevels.NumQualityLevels;
-	assert(m_4xMsaaQuality > 0 && "Unexpected MSAA quality level.");
-
-	/*************************************/
 	// Create Command Objects And Fence
 	/*************************************/
 	CreateCommandObjectsAndFence();
@@ -98,8 +84,17 @@ int CDevice::Init(HWND _MainWnd, POINT _RenderResolution)
 	/*************************************/
 	BuildDescriptorHeaps();
 
+	BuildSceneColorResources();
+
+	/*************************************/
+	// SSAO
+	/*************************************/
+	CSsao::GetInst()->Initialize(m_RenderResolution.x, m_RenderResolution.y);
+
+
 	OnResize(m_RenderResolution);
 
+	
 	return S_OK;
 }
 
@@ -161,6 +156,8 @@ void CDevice::CreateSwapChain()
 void CDevice::BuildDescriptorHeaps()
 {
 	const UINT maxCbvSrvUavDescriptorCount = 16384;
+	const UINT maxRtvDescriptorCount = m_SwapChainBufferCount + 4;
+	const UINT maxDsvDescriptorCount = 2;
 
 	D3D12_DESCRIPTOR_HEAP_DESC CbvSrvUavHeapDesc = {};
 	CbvSrvUavHeapDesc.NumDescriptors = maxCbvSrvUavDescriptorCount;
@@ -169,36 +166,76 @@ void CDevice::BuildDescriptorHeaps()
 	ThrowIfFailed(DEVICE->CreateDescriptorHeap(
 		&CbvSrvUavHeapDesc, IID_PPV_ARGS(&m_CbvSrvUavDescriptorHeap)));
 
-	CDescriptorAllocator::GetInst()->Initialize(DEVICE, m_CbvSrvUavDescriptorHeap, maxCbvSrvUavDescriptorCount);
+	CDescriptorAllocator::GetInst()->InitHeapData(m_CbvSrvUavDescriptorHeap, maxCbvSrvUavDescriptorCount);
 
 	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
-	rtvHeapDesc.NumDescriptors = m_SwapChainBufferCount;
+	rtvHeapDesc.NumDescriptors = maxRtvDescriptorCount;
 	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	rtvHeapDesc.NodeMask = 0;
 	ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_RtvHeap)));
 
-	if (m_EnableMSAA)
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC msaRrtvHeapDesc;
-		msaRrtvHeapDesc.NumDescriptors = 1;
-		msaRrtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		msaRrtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		msaRrtvHeapDesc.NodeMask = 0;
-		ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(&msaRrtvHeapDesc, IID_PPV_ARGS(&m_MsaaRtvHeap)));
-	}
+	CDescriptorAllocator::GetInst()->InitHeapData(m_RtvHeap, maxRtvDescriptorCount);
+	CDescriptorAllocator::GetInst()->Allocate(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_SwapChainBufferCount);
 
 	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
-	dsvHeapDesc.NumDescriptors = 2;
+	dsvHeapDesc.NumDescriptors = maxDsvDescriptorCount;
 	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	dsvHeapDesc.NodeMask = 0;
 	ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_DsvHeap)));
 
-	CShadowMap::GetInst()->Initialize(2048, 2048, CD3DX12_CPU_DESCRIPTOR_HANDLE(
-		m_DsvHeap->GetCPUDescriptorHandleForHeapStart(), 1,
-		m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
-	));
+	CDescriptorAllocator::GetInst()->InitHeapData(m_DsvHeap, maxDsvDescriptorCount);
+	CDescriptorAllocator::GetInst()->Allocate(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
+
+	CSsao::GetInst()->BuildDescriptors(m_DepthStencilBuffer);
+
+	m_SceneColorRtv = CDescriptorAllocator::GetInst()->Allocate(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1);
+	m_SceneColorSrv = CDescriptorAllocator::GetInst()->Allocate(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
+}
+
+void CDevice::BuildSceneColorResources()
+{
+	D3D12_RESOURCE_DESC texDesc = {};
+	texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	texDesc.Alignment = 0;
+	texDesc.Width = (UINT64)m_RenderResolution.x;
+	texDesc.Height = (UINT)m_RenderResolution.y;
+	texDesc.DepthOrArraySize = 1;
+	texDesc.MipLevels = 1;
+	texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; 
+	texDesc.SampleDesc.Count = 1;                
+	texDesc.SampleDesc.Quality = 0;
+	texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	texDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET; 
+
+	D3D12_CLEAR_VALUE optClear = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8G8B8A8_UNORM, m_ClearColor);
+
+	CD3DX12_HEAP_PROPERTIES defaultHeapProps(D3D12_HEAP_TYPE_DEFAULT);
+	ThrowIfFailed(DEVICE->CreateCommittedResource(
+		&defaultHeapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&texDesc,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		&optClear,
+		IID_PPV_ARGS(&m_SceneColor)));
+
+	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+	rtvDesc.Texture2D.MipSlice = 0;
+	rtvDesc.Texture2D.PlaneSlice = 0;
+
+	DEVICE->CreateRenderTargetView(m_SceneColor.Get(), &rtvDesc, m_SceneColorRtv.cpuHandle);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = 1;
+
+	DEVICE->CreateShaderResourceView(m_SceneColor.Get(), &srvDesc, m_SceneColorSrv.cpuHandle);
 }
 
 ID3D12Resource* CDevice::CurrentBackBuffer() const
@@ -208,9 +245,6 @@ ID3D12Resource* CDevice::CurrentBackBuffer() const
 
 D3D12_CPU_DESCRIPTOR_HANDLE CDevice::CurrentBackBufferView() const
 {
-	if (m_EnableMSAA)
-		return CD3DX12_CPU_DESCRIPTOR_HANDLE(
-			m_MsaaRtvHeap->GetCPUDescriptorHandleForHeapStart());
 	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
 		m_RtvHeap->GetCPUDescriptorHandleForHeapStart(), m_CurrentBackBuffer,
 		m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
@@ -247,6 +281,7 @@ void CDevice::BuildFrameResources()
 		m_FrameResources[i]->CreateCB(sizeof(TObject), g_MaxObjectCount, CB_TYPE::OBJECT);
 		m_FrameResources[i]->CreateCB(sizeof(TGlobal), 2, CB_TYPE::GLOBAL);
 		m_FrameResources[i]->CreateSB(sizeof(TMaterial), g_MaxMaterialCount, SB_TYPE::MATERIAL, STRUCTURED_BUFFER_TYPE::TABLE);
+		m_FrameResources[i]->CreateCB(sizeof(TSSAO), 1, CB_TYPE::SSAO);
 	}
 	m_CurrFrameResource = m_FrameResources[0].get();
 }
@@ -288,51 +323,6 @@ void CDevice::OnResize(POINT newRenderResolution)
 	}
 
 	/*************************************************/
-	// Create MSAA Render Target
-	/*************************************************/
-	if (m_EnableMSAA)
-	{
-		m_MsaaRenderTarget.Reset();
-
-		D3D12_RESOURCE_DESC msaaDesc = {};
-		msaaDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		msaaDesc.Alignment = 0;
-		msaaDesc.Width = m_RenderResolution.x;
-		msaaDesc.Height = m_RenderResolution.y;
-		msaaDesc.DepthOrArraySize = 1;
-		msaaDesc.MipLevels = 1;
-		msaaDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		msaaDesc.SampleDesc.Count = m_EnableMSAA ? 4 : 1;
-		msaaDesc.SampleDesc.Quality = m_EnableMSAA ? (m_4xMsaaQuality - 1) : 0;
-		msaaDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-		msaaDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-
-		D3D12_CLEAR_VALUE msaaClear = {};
-		msaaClear.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		msaaClear.Color[0] = m_ClearColor[0];
-		msaaClear.Color[1] = m_ClearColor[1];
-		msaaClear.Color[2] = m_ClearColor[2];
-		msaaClear.Color[3] = m_ClearColor[3];
-
-		CD3DX12_HEAP_PROPERTIES msaaHeapProps(D3D12_HEAP_TYPE_DEFAULT);
-		ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
-			&msaaHeapProps,
-			D3D12_HEAP_FLAG_NONE,
-			&msaaDesc,
-			D3D12_RESOURCE_STATE_RENDER_TARGET,
-			&msaaClear,
-			IID_PPV_ARGS(&m_MsaaRenderTarget)
-		));
-
-		D3D12_RENDER_TARGET_VIEW_DESC msaaRtvDesc = {};
-		msaaRtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		msaaRtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
-		//msaaRtvDesc.Texture2DMS.UnusedField_NothingToDefine = 0;
-		CD3DX12_CPU_DESCRIPTOR_HANDLE msaaRtvHandle(m_MsaaRtvHeap->GetCPUDescriptorHandleForHeapStart());
-		m_d3dDevice->CreateRenderTargetView(m_MsaaRenderTarget.Get(), &msaaRtvDesc, msaaRtvHandle);
-	}
-
-	/*************************************************/
 	// Create Depth/Stencil buffer and view
 	/*************************************************/
 	D3D12_RESOURCE_DESC dsDesc = {};
@@ -343,8 +333,8 @@ void CDevice::OnResize(POINT newRenderResolution)
 	dsDesc.DepthOrArraySize = 1;
 	dsDesc.MipLevels = 1;
 	dsDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-	dsDesc.SampleDesc.Count = m_EnableMSAA ? 4 : 1;
-	dsDesc.SampleDesc.Quality = m_EnableMSAA ? (m_4xMsaaQuality - 1) : 0;
+	dsDesc.SampleDesc.Count = 1;
+	dsDesc.SampleDesc.Quality = 0;
 	dsDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	dsDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
@@ -364,7 +354,7 @@ void CDevice::OnResize(POINT newRenderResolution)
 
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
 	dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-	dsvDesc.ViewDimension = m_EnableMSAA ? D3D12_DSV_DIMENSION_TEXTURE2DMS : D3D12_DSV_DIMENSION_TEXTURE2D;
+	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	dsvDesc.Texture2D.MipSlice = 0;
 	m_d3dDevice->CreateDepthStencilView(m_DepthStencilBuffer.Get(), &dsvDesc, DepthStencilView());
@@ -382,6 +372,11 @@ void CDevice::OnResize(POINT newRenderResolution)
 	WaitForAllUploads();
 
 	/*************************************************/
+	// Scene Color
+	/*************************************************/
+	BuildSceneColorResources();
+
+	/*************************************************/
 	// Update the viewport transform
 	/*************************************************/
 	m_ScreenViewport.TopLeftX = 0;
@@ -394,6 +389,12 @@ void CDevice::OnResize(POINT newRenderResolution)
 	m_ScissorRect = { 0, 0, m_RenderResolution.x, m_RenderResolution.y };
 
 	OnWindowResize.Broadcast(m_RenderResolution.x, m_RenderResolution.y);
+
+	/*************************************************/
+	// Update SSAO
+	/*************************************************/
+	CSsao::GetInst()->OnResize(m_RenderResolution.x, m_RenderResolution.y);
+	CSsao::GetInst()->RebuildDescriptors(m_DepthStencilBuffer);
 }
 
 void CDevice::Update()
@@ -415,67 +416,61 @@ void CDevice::Update()
 	ThrowIfFailed(m_CurrFrameResource->m_CmdList->Reset(m_CurrFrameResource->m_CmdAlloc.Get(), nullptr));
 }
 
-void CDevice::ClearTargetAndPrepareRender(XMVECTORF32 color)
+void CDevice::SetViewportAndScissorRect()
 {
 	m_CurrFrameResource->m_CmdList->RSSetViewports(1, &m_ScreenViewport);
 	m_CurrFrameResource->m_CmdList->RSSetScissorRects(1, &m_ScissorRect);
+}
+
+void CDevice::ClearTargetAndPrepareRender()
+{
+	SetViewportAndScissorRect();
 
 	// Indicate a state transition on the resource usage.
-	CD3DX12_RESOURCE_BARRIER barrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	CD3DX12_RESOURCE_BARRIER barrier(CD3DX12_RESOURCE_BARRIER::Transition(m_SceneColor.Get(),
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &barrier);
 
 	// Clear the back buffer and depth buffer.
-	m_CurrFrameResource->m_CmdList->ClearRenderTargetView(CurrentBackBufferView(), m_ClearColor, 0, nullptr);
+	m_CurrFrameResource->m_CmdList->ClearRenderTargetView(m_SceneColorRtv.cpuHandle, m_ClearColor, 0, nullptr);
 	m_CurrFrameResource->m_CmdList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 	// Specify the buffers we are going to render to.
-	D3D12_CPU_DESCRIPTOR_HANDLE CurrBBV = CurrentBackBufferView();
+	D3D12_CPU_DESCRIPTOR_HANDLE SceneRtv = m_SceneColorRtv.cpuHandle;
 	D3D12_CPU_DESCRIPTOR_HANDLE DSV = DepthStencilView();
-	m_CurrFrameResource->m_CmdList->OMSetRenderTargets(1, &CurrBBV, true, &DSV);
+	m_CurrFrameResource->m_CmdList->OMSetRenderTargets(1, &SceneRtv, true, &DSV);
 
 }
 
 void CDevice::ExecuteAndFinishDrawCall()
 {
-	if (m_EnableMSAA)
-	{
-		// Back Buffer: RenderTarget -> ResolveDest
-		CD3DX12_RESOURCE_BARRIER toResolveDestBarrier(
-			CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_DEST));
-		m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &toResolveDestBarrier);
+	CD3DX12_RESOURCE_BARRIER scRT2PSRBarrier(CD3DX12_RESOURCE_BARRIER::Transition(m_SceneColor.Get(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+	m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &scRT2PSRBarrier);
 
-		// MSAA texture: RenderTarget -> ResolveSource
-		CD3DX12_RESOURCE_BARRIER toResolveSrcBarrier(
-			CD3DX12_RESOURCE_BARRIER::Transition(m_MsaaRenderTarget.Get(),
-				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RESOLVE_SOURCE));
-		m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &toResolveSrcBarrier);
+	
+	CD3DX12_RESOURCE_BARRIER bbP2RTBarrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &bbP2RTBarrier);
 
-		// MSAA -> Back Buffer
-		m_CurrFrameResource->m_CmdList->ResolveSubresource(
-			CurrentBackBuffer(), 0, m_MsaaRenderTarget.Get(),
-			0, DXGI_FORMAT_R8G8B8A8_UNORM
-		);
+	m_CurrFrameResource->m_CmdList->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"fxaa").Get());
+	m_CurrFrameResource->m_CmdList->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_FXAA).Get());
 
-		// MSAA texture: ResolveSource -> RenderTarget
-		CD3DX12_RESOURCE_BARRIER toRenderTargetBarrier(
-			CD3DX12_RESOURCE_BARRIER::Transition(m_MsaaRenderTarget.Get(),
-				D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET));
-		m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &toRenderTargetBarrier);
 
-		// Back Buffer: ResolveDest -> Render Target
-		CD3DX12_RESOURCE_BARRIER toRTBarrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-			D3D12_RESOURCE_STATE_RESOLVE_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET));
-		m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &toRTBarrier);
-	}
+	D3D12_CPU_DESCRIPTOR_HANDLE CurrBBV = CurrentBackBufferView();
+	m_CurrFrameResource->m_CmdList->OMSetRenderTargets(1, &CurrBBV, false, nullptr);
 
-	//CAssetMgr::GetInst()->ExecuteBlur(CurrentBackBuffer(), 4);
+	m_CurrFrameResource->m_CmdList->SetGraphicsRootDescriptorTable(0, m_SceneColorSrv.gpuHandle);
+	float invScreenSize[2] = { 1.f / m_RenderResolution.x, 1.f / m_RenderResolution.y };
+	m_CurrFrameResource->m_CmdList->SetGraphicsRoot32BitConstants(1, 2, invScreenSize, 0);
 
-	// Back Buffer: RenderTarget -> Present
-	CD3DX12_RESOURCE_BARRIER toPresentBarrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-	m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &toPresentBarrier);
+	m_CurrFrameResource->m_CmdList->IASetVertexBuffers(0, 0, nullptr);
+	m_CurrFrameResource->m_CmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_CurrFrameResource->m_CmdList->DrawInstanced(3, 1, 0, 0);
+
+	CD3DX12_RESOURCE_BARRIER bbRT2PBarrier(CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	m_CurrFrameResource->m_CmdList->ResourceBarrier(1, &bbRT2PBarrier);
 
 	// Done recording commands.
 	ThrowIfFailed(m_CurrFrameResource->m_CmdList->Close());

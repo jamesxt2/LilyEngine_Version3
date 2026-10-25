@@ -72,18 +72,19 @@ struct TGlobal
 	Matrix Proj;
 	Matrix ViewProj;
 	Matrix ShadowTransform;
+	Matrix ViewProjTex;
 
 	Vector3 EyePosW;
-	float padding1;
+	float padding1{ 0.f };
 	Vector4 AmbientLight;
 	TLight Lights[MaxLights];
 
 	Vector4 FogColor;
-	float FogStart;
-	float FogRange;
+	float FogStart{ 0.f };
+	float FogRange{ 0.f };
 	
-	float DeltaTime;
-	float TotalTime;
+	float DeltaTime{ 0.f };
+	float TotalTime{ 0.f };
 };
 extern TGlobal g_Global;
 
@@ -154,3 +155,21 @@ struct TParticleModule
 
 	Vector3 padding;
 };
+
+struct TSSAO
+{
+	Matrix Proj;
+	Matrix InvProj;
+	Matrix ProjTex;
+	Vector4 OffsetVectors[14];
+
+	Vector4 BlurWeights[3];
+
+	Vector2 InvRenderTargetSize;
+
+	float OcclusionRadius = 0.f;
+	float OcclusionFadeStart = 0.f;
+	float OcclusionFadeEnd = 0.f;
+	float SurfaceEpsilon = 0.f;
+};
+extern TSSAO g_SSAO;

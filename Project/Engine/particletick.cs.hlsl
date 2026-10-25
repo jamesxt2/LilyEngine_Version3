@@ -71,7 +71,7 @@ StructuredBuffer<TParticleModule> Module : register(t0, space3);
 
 cbuffer PARTICLE : register(b2)
 {
-    uint MaxParticleCount;
+    int MaxParticleCount;
     uint NoiseTexIndex;
 }
 

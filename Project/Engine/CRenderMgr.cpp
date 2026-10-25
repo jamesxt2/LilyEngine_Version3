@@ -5,6 +5,8 @@
 #include "CLevel.h"
 #include "CLevelMgr.h"
 #include "CCamera.h"
+#include "CSsao.h"
+#include "CAssetMgr.h"
 
 CRenderMgr::CRenderMgr()
 	: m_EditorCam(nullptr)
@@ -35,8 +37,11 @@ void CRenderMgr::Render()
 	CMDLIST->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
 	CLevelMgr::GetInst()->GetCurrentLevel()->BuildLevelShadowMap();
+	CLevelMgr::GetInst()->GetCurrentLevel()->BuildNormalsAndDepth();
+	CSsao::GetInst()->ComputeSsao(3);
 
-	CDevice::GetInst()->ClearTargetAndPrepareRender(Colors::LightSteelBlue);
+	CMDLIST->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Default").Get());
+	CDevice::GetInst()->ClearTargetAndPrepareRender();
 
 	(this->*Render_Func)();
 

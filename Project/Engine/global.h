@@ -14,6 +14,7 @@ using namespace Microsoft::WRL;
 
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
+using namespace DirectX::PackedVector;
 
 #pragma comment(lib,"d3dcompiler")
 #pragma comment(lib, "d3d12")

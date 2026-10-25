@@ -6,6 +6,7 @@
 #include "CDescriptorAllocator.h"
 #include "CTimeMgr.h"
 #include "CTexturePool.h"
+#include "CSsao.h"
 
 CAssetMgr::CAssetMgr()
 {
@@ -120,8 +121,11 @@ void CAssetMgr::BuildRootSignatures()
 	CD3DX12_DESCRIPTOR_RANGE shadowTexTable;
 	shadowTexTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 5);
 
+	CD3DX12_DESCRIPTOR_RANGE ssaoTexTable;
+	ssaoTexTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 5);
+
 	// Root parameter can be a table, root descriptor or root constants.
-	CD3DX12_ROOT_PARAMETER slotRootParameter_Default[8];
+	CD3DX12_ROOT_PARAMETER slotRootParameter_Default[9];
 
 	// Perfomance TIP: Order from most frequent to least frequent.
 	// global : b1, object : b0
@@ -133,11 +137,12 @@ void CAssetMgr::BuildRootSignatures()
 	slotRootParameter_Default[5].InitAsDescriptorTable(1, &displacementMapTable);
 	slotRootParameter_Default[6].InitAsDescriptorTable(1, &texCubeTable_Default);
 	slotRootParameter_Default[7].InitAsDescriptorTable(1, &shadowTexTable);
+	slotRootParameter_Default[8].InitAsDescriptorTable(1, &ssaoTexTable);
 
 	auto staticSamplers = GetStaticSamplers();
 
 	// A root signature is an array of root parameters.
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc_Default(8, slotRootParameter_Default,
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc_Default(9, slotRootParameter_Default,
 		(UINT)staticSamplers.size(), staticSamplers.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
@@ -292,6 +297,134 @@ void CAssetMgr::BuildRootSignatures()
 		serializedRootSig->GetBufferSize(),
 		IID_PPV_ARGS(particleTickRootSig.GetAddressOf())));
 	m_RootSignatureMap[L"ParticleTick"] = particleTickRootSig;
+
+	/***************************************************************/
+	// SSAO
+	/***************************************************************/
+	CD3DX12_DESCRIPTOR_RANGE texTable0_SSAO;
+	texTable0_SSAO.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
+
+	CD3DX12_DESCRIPTOR_RANGE texTable1_SSAO;
+	texTable1_SSAO.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2, 0);
+
+	CD3DX12_DESCRIPTOR_RANGE texTable2_SSAO;
+	texTable2_SSAO.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0);
+
+	// Root parameter can be a table, root descriptor or root constants.
+	CD3DX12_ROOT_PARAMETER slotRootParameter_SSAO[5];
+
+	// Perfomance TIP: Order from most frequent to least frequent.
+	slotRootParameter_SSAO[0].InitAsConstantBufferView(0);
+	slotRootParameter_SSAO[1].InitAsConstants(1, 1);
+	slotRootParameter_SSAO[2].InitAsDescriptorTable(1, &texTable0_SSAO, D3D12_SHADER_VISIBILITY_PIXEL);
+	slotRootParameter_SSAO[3].InitAsDescriptorTable(1, &texTable1_SSAO, D3D12_SHADER_VISIBILITY_PIXEL);
+	slotRootParameter_SSAO[4].InitAsDescriptorTable(1, &texTable2_SSAO, D3D12_SHADER_VISIBILITY_PIXEL);
+
+	const CD3DX12_STATIC_SAMPLER_DESC pointClamp(
+		0, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP); // addressW
+
+	const CD3DX12_STATIC_SAMPLER_DESC linearClamp(
+		1, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP); // addressW
+
+	const CD3DX12_STATIC_SAMPLER_DESC depthMapSam(
+		2, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressW
+		0.0f,
+		0,
+		D3D12_COMPARISON_FUNC_LESS_EQUAL,
+		D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE);
+
+	const CD3DX12_STATIC_SAMPLER_DESC linearWrap(
+		3, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP); // addressW
+
+	std::array<CD3DX12_STATIC_SAMPLER_DESC, 4> staticSamplers_SSAO =
+	{
+		pointClamp, linearClamp, depthMapSam, linearWrap
+	};
+
+	// A root signature is an array of root parameters.
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc_SSAO(5, slotRootParameter_SSAO,
+		(UINT)staticSamplers_SSAO.size(), staticSamplers_SSAO.data(),
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+	serializedRootSig = nullptr;
+	errorBlob = nullptr;
+	hr = D3D12SerializeRootSignature(&rootSigDesc_SSAO, D3D_ROOT_SIGNATURE_VERSION_1,
+		serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+	if (errorBlob != nullptr)
+	{
+		::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+	}
+	ThrowIfFailed(hr);
+
+	ComPtr<ID3D12RootSignature> ssaoRootSig;
+	ThrowIfFailed(DEVICE->CreateRootSignature(
+		0,
+		serializedRootSig->GetBufferPointer(),
+		serializedRootSig->GetBufferSize(),
+		IID_PPV_ARGS(ssaoRootSig.GetAddressOf())));
+	m_RootSignatureMap[L"SSAO"] = ssaoRootSig;
+
+	/***************************************************************/
+	// fxaa
+	/***************************************************************/
+	CD3DX12_DESCRIPTOR_RANGE texTable0_fxaa;
+	texTable0_fxaa.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
+
+	// Root parameter can be a table, root descriptor or root constants.
+	CD3DX12_ROOT_PARAMETER slotRootParameter_fxaa[2];
+
+	// Perfomance TIP: Order from most frequent to least frequent.
+	slotRootParameter_fxaa[0].InitAsDescriptorTable(1, &texTable0_fxaa, D3D12_SHADER_VISIBILITY_PIXEL);
+	slotRootParameter_fxaa[1].InitAsConstants(2, 0);
+
+
+	std::array<CD3DX12_STATIC_SAMPLER_DESC, 1> staticSamplers_fxaa =
+	{
+		linearClamp
+	};
+
+	// A root signature is an array of root parameters.
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc_fxaa(2, slotRootParameter_fxaa,
+		(UINT)staticSamplers_fxaa.size(), staticSamplers_fxaa.data(),
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+	serializedRootSig = nullptr;
+	errorBlob = nullptr;
+	hr = D3D12SerializeRootSignature(&rootSigDesc_fxaa, D3D_ROOT_SIGNATURE_VERSION_1,
+		serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+	if (errorBlob != nullptr)
+	{
+		::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+	}
+	ThrowIfFailed(hr);
+
+	ComPtr<ID3D12RootSignature> fxaaRootSig;
+	ThrowIfFailed(DEVICE->CreateRootSignature(
+		0,
+		serializedRootSig->GetBufferPointer(),
+		serializedRootSig->GetBufferSize(),
+		IID_PPV_ARGS(fxaaRootSig.GetAddressOf())));
+	m_RootSignatureMap[L"fxaa"] = fxaaRootSig;
 }
 
 std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> CAssetMgr::GetStaticSamplers()
@@ -377,6 +510,8 @@ void CAssetMgr::BuildPSO()
 	ComPtr<ID3D12RootSignature> wavesRootSignature(GetRootSignature(L"Waves"));
 	ComPtr<ID3D12RootSignature> particleRootSignature(GetRootSignature(L"Particle"));
 	ComPtr<ID3D12RootSignature> particleTickRootSignature(GetRootSignature(L"ParticleTick"));
+	ComPtr<ID3D12RootSignature> ssaoRootSignature(GetRootSignature(L"SSAO"));
+	ComPtr<ID3D12RootSignature> fxaaRootSignature(GetRootSignature(L"fxaa"));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
 	ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
@@ -400,15 +535,15 @@ void CAssetMgr::BuildPSO()
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	psoDesc.NumRenderTargets = 1;
 	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	psoDesc.SampleDesc.Count = CDevice::GetInst()->EnableMSAA() ? 4 : 1;
-	psoDesc.SampleDesc.Quality = CDevice::GetInst()->EnableMSAA() ? CDevice::GetInst()->Get4xMSAAQuality() - 1 : 0;
+	psoDesc.SampleDesc.Count = 1;
+	psoDesc.SampleDesc.Quality = 0;
 	psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_DEFAULT])));
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_DEFAULT])));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC wireframePSODesc = psoDesc;
 	wireframePSODesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&wireframePSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_WIREFRAME])));
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&wireframePSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_WIREFRAME])));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC transparencyPSODesc = psoDesc;
 	D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc;
@@ -424,7 +559,7 @@ void CAssetMgr::BuildPSO()
 	transparencyBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
 	transparencyPSODesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&transparencyPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_TRANSPARENT])));
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&transparencyPSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_TRANSPARENT])));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC alphatestedPSODesc = transparencyPSODesc;
 	alphatestedPSODesc.PS =
@@ -433,7 +568,7 @@ void CAssetMgr::BuildPSO()
 		shader->GetPsByteCode(L"AlphaTestedPS")->GetBufferSize()
 	};
 	alphatestedPSODesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&alphatestedPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_ALPHA_TESTED])));
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&alphatestedPSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_ALPHA_TESTED])));
 
 	
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC billboardPSODesc = psoDesc;
@@ -455,7 +590,7 @@ void CAssetMgr::BuildPSO()
 		shader->GetPsByteCode(L"AlphaTestedPS")->GetBufferSize()
 	};
 	billboardPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&billboardPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_BILLBOARD])));
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&billboardPSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_BILLBOARD])));
 
 	
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC waveRenderPSODesc = transparencyPSODesc;
@@ -465,7 +600,7 @@ void CAssetMgr::BuildPSO()
 		reinterpret_cast<BYTE*>(shader->GetVsByteCode(L"WaveVS")->GetBufferPointer()),
 		shader->GetVsByteCode(L"WaveVS")->GetBufferSize()
 	};
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&waveRenderPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_WAVE_RENDER])));
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&waveRenderPSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_WAVE_RENDER])));
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC waveUpdatePSODesc = {};
 	waveUpdatePSODesc.pRootSignature = wavesRootSignature.Get();
@@ -476,7 +611,7 @@ void CAssetMgr::BuildPSO()
 		pCS->GetCsByteCode()->GetBufferSize()
 	};
 	waveUpdatePSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	ThrowIfFailed(DEVICE->CreateComputePipelineState(&waveUpdatePSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_WAVE_UPDATE])));
+	ThrowIfFailed(DEVICE->CreateComputePipelineState(&waveUpdatePSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_WAVE_UPDATE])));
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC waveDisturbPSODesc = {};
 	waveDisturbPSODesc.pRootSignature = wavesRootSignature.Get();
@@ -487,7 +622,7 @@ void CAssetMgr::BuildPSO()
 		pCS->GetCsByteCode()->GetBufferSize()
 	};
 	waveDisturbPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	ThrowIfFailed(DEVICE->CreateComputePipelineState(&waveDisturbPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_WAVE_DISTURB])));
+	ThrowIfFailed(DEVICE->CreateComputePipelineState(&waveDisturbPSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_WAVE_DISTURB])));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC particleRenderPSODesc = transparencyPSODesc;
 	particleRenderPSODesc.pRootSignature = particleRootSignature.Get();
@@ -513,7 +648,7 @@ void CAssetMgr::BuildPSO()
 	particleRenderPSODesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
 	particleRenderPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
 	particleRenderPSODesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&particleRenderPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_PARTICLE_RENDER])));
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&particleRenderPSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_PARTICLE_RENDER])));
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC particleTickPSODesc = {};
 	particleTickPSODesc.pRootSignature = particleTickRootSignature.Get();
@@ -524,7 +659,7 @@ void CAssetMgr::BuildPSO()
 		pCS->GetCsByteCode()->GetBufferSize()
 	};
 	particleTickPSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	ThrowIfFailed(DEVICE->CreateComputePipelineState(&particleTickPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_PARTICLE_TICK])));
+	ThrowIfFailed(DEVICE->CreateComputePipelineState(&particleTickPSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_PARTICLE_TICK])));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC tessPSODesc = psoDesc;
 	shader = FindAsset<CGraphicsShader>(L"TessQuadPatchShader");
@@ -551,7 +686,7 @@ void CAssetMgr::BuildPSO()
 	};
 	tessPSODesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 	tessPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&tessPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH])));
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&tessPSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_TESS_QUAD_PATCH])));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyPSODesc = psoDesc;
 	shader = FindAsset<CGraphicsShader>(L"SkyShader");
@@ -567,7 +702,7 @@ void CAssetMgr::BuildPSO()
 		reinterpret_cast<BYTE*>(shader->GetPsByteCode(L"SkyPS")->GetBufferPointer()),
 		shader->GetPsByteCode(L"SkyPS")->GetBufferSize()
 	};
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&skyPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_SKY])));
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&skyPSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_SKY])));
 
 	// shadow map
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC shadowMapPSODesc = psoDesc;
@@ -589,12 +724,90 @@ void CAssetMgr::BuildPSO()
 	shadowMapPSODesc.NumRenderTargets = 0;
 	shadowMapPSODesc.SampleDesc.Count = 1;
 	shadowMapPSODesc.SampleDesc.Quality = 0;
-	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&shadowMapPSODesc, IID_PPV_ARGS(&m_PSOGroup[OBJ_PSO_TYPE::PSO_SHADOW_MAP])));
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&shadowMapPSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_SHADOW_MAP])));
+
+	// Draw Normals
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC drawNormalsPsoDesc = psoDesc;
+	shader = FindAsset<CGraphicsShader>(L"DrawNormalsShader");
+	drawNormalsPsoDesc.InputLayout = { shader->GetInputLayout().data(), (UINT)shader->GetInputLayout().size() };
+	drawNormalsPsoDesc.VS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetVsByteCode(L"DrawNormalsVS")->GetBufferPointer()),
+		shader->GetVsByteCode(L"DrawNormalsVS")->GetBufferSize()
+	};
+	drawNormalsPsoDesc.PS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetPsByteCode(L"DrawNormalsPS")->GetBufferPointer()),
+		shader->GetPsByteCode(L"DrawNormalsPS")->GetBufferSize()
+	};
+	drawNormalsPsoDesc.RTVFormats[0] = CSsao::NormalMapFormat;
+	drawNormalsPsoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&drawNormalsPsoDesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_DRAW_NORMALS])));
+
+	// SSAO
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC ssaoPsoDesc = psoDesc;
+	ssaoPsoDesc.pRootSignature = ssaoRootSignature.Get();
+	shader = FindAsset<CGraphicsShader>(L"SsaoShader");
+	ssaoPsoDesc.InputLayout = { nullptr, 0 };
+	ssaoPsoDesc.VS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetVsByteCode(L"SsaoVS")->GetBufferPointer()),
+		shader->GetVsByteCode(L"SsaoVS")->GetBufferSize()
+	};
+	ssaoPsoDesc.PS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetPsByteCode(L"SsaoPS")->GetBufferPointer()),
+		shader->GetPsByteCode(L"SsaoPS")->GetBufferSize()
+	};
+	// SSAO effect does not need the depth buffer.
+	ssaoPsoDesc.DepthStencilState.DepthEnable = false;
+	ssaoPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	ssaoPsoDesc.RTVFormats[0] = CSsao::AmbientMapFormat;
+	ssaoPsoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&ssaoPsoDesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_SSAO])));
+
+	// SSAO Blur
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC ssaoBlurPsoDesc = ssaoPsoDesc;
+	ssaoBlurPsoDesc.pRootSignature = ssaoRootSignature.Get();
+	shader = FindAsset<CGraphicsShader>(L"SsaoBlurShader");
+	ssaoBlurPsoDesc.InputLayout = { nullptr, 0 };
+	ssaoBlurPsoDesc.VS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetVsByteCode(L"SsaoBlurVS")->GetBufferPointer()),
+		shader->GetVsByteCode(L"SsaoBlurVS")->GetBufferSize()
+	};
+	ssaoBlurPsoDesc.PS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetPsByteCode(L"SsaoBlurPS")->GetBufferPointer()),
+		shader->GetPsByteCode(L"SsaoBlurPS")->GetBufferSize()
+	};
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&ssaoBlurPsoDesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_SSAO_BLUR])));
+
+	// fxaa
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC fxaaPsoDesc = psoDesc;
+	fxaaPsoDesc.pRootSignature = fxaaRootSignature.Get();
+	shader = FindAsset<CGraphicsShader>(L"fxaaShader");
+	fxaaPsoDesc.InputLayout = { nullptr, 0 };
+	fxaaPsoDesc.VS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetVsByteCode(L"fxaaVS")->GetBufferPointer()),
+		shader->GetVsByteCode(L"fxaaVS")->GetBufferSize()
+	};
+	fxaaPsoDesc.PS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetPsByteCode(L"fxaaPS")->GetBufferPointer()),
+		shader->GetPsByteCode(L"fxaaPS")->GetBufferSize()
+	};
+	fxaaPsoDesc.DepthStencilState.DepthEnable = false;
+	fxaaPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	fxaaPsoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&fxaaPsoDesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_FXAA])));
+
 }
 
-ComPtr<ID3D12PipelineState> CAssetMgr::GetPSO(OBJ_PSO_TYPE type) const
+ComPtr<ID3D12PipelineState> CAssetMgr::GetPSO(PSO_TYPE type) const
 {
-	std::unordered_map<OBJ_PSO_TYPE, ComPtr<ID3D12PipelineState>>::const_iterator iter = m_PSOGroup.find(type);
+	std::unordered_map<PSO_TYPE, ComPtr<ID3D12PipelineState>>::const_iterator iter = m_PSOGroup.find(type);
 	if (iter == m_PSOGroup.end())
 		return nullptr;
 	return iter->second;
@@ -1439,6 +1652,41 @@ void CAssetMgr::CreateGraphicsShaders()
 	pShader->BuildPixelShader(L"ShadowsAlphaTestedPS", strPath + L"shader\\shadows.ps.hlsl", shadowsAlphaTestDefines, "PS", "ps_5_1");
 
 	AddAsset<CGraphicsShader>(L"ShadowsShader", pShader);
+
+	// DrawNormals
+	pShader = new CGraphicsShader;
+	pShader->BuildVertexShader(L"DrawNormalsVS", strPath + L"shader\\DrawNormals.hlsl", nullptr, "VS", "vs_5_1");
+	pShader->m_InputLayout = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+	pShader->BuildPixelShader(L"DrawNormalsPS", strPath + L"shader\\DrawNormals.hlsl", nullptr, "PS", "ps_5_1");
+	pShader->BuildPixelShader(L"DrawNormalsAlphaTestedPS", strPath + L"shader\\DrawNormals.hlsl", shadowsAlphaTestDefines, "PS", "ps_5_1");
+
+	AddAsset<CGraphicsShader>(L"DrawNormalsShader", pShader);
+
+	// SSAO
+	pShader = new CGraphicsShader;
+	pShader->BuildVertexShader(L"SsaoVS", strPath + L"shader\\ssao.hlsl", nullptr, "VS", "vs_5_1");
+	pShader->BuildPixelShader(L"SsaoPS", strPath + L"shader\\ssao.hlsl", nullptr, "PS", "ps_5_1");
+
+	AddAsset<CGraphicsShader>(L"SsaoShader", pShader);
+
+	// SSAO blur
+	pShader = new CGraphicsShader;
+	pShader->BuildVertexShader(L"SsaoBlurVS", strPath + L"shader\\ssaoBlur.hlsl", nullptr, "VS", "vs_5_1");
+	pShader->BuildPixelShader(L"SsaoBlurPS", strPath + L"shader\\ssaoBlur.hlsl", nullptr, "PS", "ps_5_1");
+
+	AddAsset<CGraphicsShader>(L"SsaoBlurShader", pShader);
+
+	// fxaa
+	pShader = new CGraphicsShader;
+	pShader->BuildVertexShader(L"fxaaVS", strPath + L"shader\\fxaa.hlsl", nullptr, "VS", "vs_5_1");
+	pShader->BuildPixelShader(L"fxaaPS", strPath + L"shader\\fxaa.hlsl", nullptr, "PS", "ps_5_1");
+
+	AddAsset<CGraphicsShader>(L"fxaaShader", pShader);
 }
 
 void CAssetMgr::CreateComputeShaders()

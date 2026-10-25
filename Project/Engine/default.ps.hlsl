@@ -28,8 +28,14 @@ float4 PS(VertexOut pin) : SV_Target
     float distToEye = length(toEyeW);
     toEyeW /= distToEye;
     
+    // SSAO
+    pin.SsaoPosH /= pin.SsaoPosH.w;
+    float ambientAccess = g_SsaoMap.Sample(g_SamLinearClamp, pin.SsaoPosH.xy, 0.f).r;
+    
+    //return float4(ambientAccess, ambientAccess, ambientAccess, 1.f);
+    
     // indirect light
-    float4 ambient = g_AmbientLight * diffuseAlbedo;
+    float4 ambient = ambientAccess * g_AmbientLight * diffuseAlbedo;
     
     // direct light
     const float shininess = (1.f - MATERIAL.Roughness) * normalMapSampleA;

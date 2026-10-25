@@ -9,6 +9,7 @@ typedef unsigned long long uint64;
 #define SINGLE(Type)	private:\
 							Type();\
 							Type(const Type& _other) = delete;\
+                            Type& operator=(const Type& rhs) = delete;\
 							~Type();\
 							friend class CSingleton<Type>;
 #endif

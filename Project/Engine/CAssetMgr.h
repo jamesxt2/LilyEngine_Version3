@@ -100,13 +100,13 @@ private:
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GetStaticSamplers();
 
 	void BuildPSO();
-	std::unordered_map<OBJ_PSO_TYPE, ComPtr<ID3D12PipelineState>>	m_PSOGroup;
+	std::unordered_map<PSO_TYPE, ComPtr<ID3D12PipelineState>>	m_PSOGroup;
 
 public:
 
 	inline UINT GetAssetSize(ASSET_TYPE type) const { return (UINT)m_AssetMap[(UINT)type].size(); }
 
-	ComPtr<ID3D12PipelineState> GetPSO(OBJ_PSO_TYPE type) const;
+	ComPtr<ID3D12PipelineState> GetPSO(PSO_TYPE type) const;
 	ComPtr<ID3D12RootSignature> GetRootSignature(const std::wstring& key) const;
 };
 

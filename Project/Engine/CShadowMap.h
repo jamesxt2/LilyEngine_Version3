@@ -10,7 +10,7 @@ class CShadowMap : public CSingleton<CShadowMap>
 	SINGLE(CShadowMap)
 public:
 	
-	void Initialize(UINT width, UINT height, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuDsv);
+	void Initialize(UINT width, UINT height);
 	
 	void DrawSceneToShadowMap(const std::vector<CGameObject*>& objs);
 private:
@@ -24,8 +24,7 @@ private:
 	DXGI_FORMAT m_Format = DXGI_FORMAT_R24G8_TYPELESS;
 
 	CDescriptorAllocator::Allocation m_AllocSrv;
-	CD3DX12_CPU_DESCRIPTOR_HANDLE m_CpuDsvHandle;
-
+	CDescriptorAllocator::Allocation m_AllocDsv;
 	CDescriptorAllocator::Allocation m_NullSrv;
 
 	ComPtr<ID3D12Resource> m_ShadowMap = nullptr;

@@ -49,7 +49,7 @@ void CStructuredBuffer::BuildResources()
 
 void CStructuredBuffer::BuildDescriptors()
 {
-	m_SrvAlloc = CDescriptorAllocator::GetInst()->Allocate(1);
+	m_SrvAlloc = CDescriptorAllocator::GetInst()->Allocate(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
 	assert(m_SrvAlloc.IsValid());
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -63,7 +63,7 @@ void CStructuredBuffer::BuildDescriptors()
 
 	DEVICE->CreateShaderResourceView(m_GpuBuffer.Get(), &srvDesc, m_SrvAlloc.cpuHandle);
 
-	m_UavAlloc = CDescriptorAllocator::GetInst()->Allocate(1);
+	m_UavAlloc = CDescriptorAllocator::GetInst()->Allocate(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
 	assert(m_UavAlloc.IsValid());
 
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};

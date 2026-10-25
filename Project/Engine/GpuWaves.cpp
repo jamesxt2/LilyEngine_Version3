@@ -131,7 +131,7 @@ void GpuWaves::UploadResources(ID3D12GraphicsCommandList* cmdlist)
 
 void GpuWaves::BuildDescriptors()
 {
-	auto alloc = CDescriptorAllocator::GetInst()->Allocate(6);
+	auto alloc = CDescriptorAllocator::GetInst()->Allocate(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 6);
 	assert(alloc.IsValid());
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -171,7 +171,7 @@ void GpuWaves::Update(ID3D12GraphicsCommandList* cmdlist)
 	static float t = 0.f;
 	t += CTimeMgr::GetInst()->DeltaTime();
 
-	cmdlist->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_WAVE_UPDATE).Get());
+	cmdlist->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_WAVE_UPDATE).Get());
 	cmdlist->SetComputeRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Waves").Get());
 
 	if (t > m_TimeStep)
@@ -212,7 +212,7 @@ void GpuWaves::Update(ID3D12GraphicsCommandList* cmdlist)
 
 void GpuWaves::Disturb(ID3D12GraphicsCommandList* cmdlist, UINT i, UINT j, float magnitude)
 {
-	cmdlist->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_WAVE_DISTURB).Get());
+	cmdlist->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_WAVE_DISTURB).Get());
 	cmdlist->SetComputeRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Waves").Get());
 
 	UINT disturbIndex[2] = { j, i };

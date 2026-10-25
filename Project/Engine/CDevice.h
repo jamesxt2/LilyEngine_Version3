@@ -1,6 +1,8 @@
 #pragma once
 #include "singleton.h"
 
+#include "CDescriptorAllocator.h"
+
 class CConstantBuffer;
 class CStructuredBuffer;
 
@@ -18,21 +20,24 @@ public:
 
 	void Update();
 
-	void ClearTargetAndPrepareRender(XMVECTORF32 color);
+	void SetViewportAndScissorRect();
+	void ClearTargetAndPrepareRender();
 	void ExecuteAndFinishDrawCall();
 
 	void FlushCommandQueue();
+
+	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
 
 private:
 
 	void CreateCommandObjectsAndFence();
 	void CreateSwapChain();
 	void BuildDescriptorHeaps();
+	void BuildSceneColorResources();
 
 	ID3D12Resource* CurrentBackBuffer() const;
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;
-	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
-
+	
 	void BuildFrameResources();
 
 
@@ -42,8 +47,6 @@ private:
 
 	ComPtr<ID3D12Device>							m_d3dDevice;
 	ComPtr<IDXGIFactory4>							m_dxgiFactory;
-
-	UINT											m_4xMsaaQuality;
 
 	int												m_CurrentBackBuffer = 0;
 	static constexpr int							m_SwapChainBufferCount = 2;
@@ -57,9 +60,9 @@ private:
 
 	ComPtr<ID3D12DescriptorHeap>					m_CbvSrvUavDescriptorHeap;
 
-	ComPtr<ID3D12Resource>							m_MsaaRenderTarget;
-	ComPtr<ID3D12DescriptorHeap>					m_MsaaRtvHeap;
-	bool											m_EnableMSAA;
+	ComPtr<ID3D12Resource>							m_SceneColor;
+	CDescriptorAllocator::Allocation				m_SceneColorRtv;
+	CDescriptorAllocator::Allocation				m_SceneColorSrv;
 
 	D3D12_VIEWPORT									m_ScreenViewport;
 	D3D12_RECT										m_ScissorRect;
@@ -89,9 +92,6 @@ public:
 	inline float GetAspectRatio() const { return (float)m_RenderResolution.x / (float)m_RenderResolution.y; }
 
 	inline FrameResource* GetCurrFrameResource() const { return m_CurrFrameResource; }
-
-	inline bool EnableMSAA() const { return m_EnableMSAA; }
-	inline UINT Get4xMSAAQuality() const { return m_4xMsaaQuality; }
 
 	inline ComPtr<ID3D12DescriptorHeap> GetCbvSrvUavDescriptorHeap() const { return m_CbvSrvUavDescriptorHeap; }
 

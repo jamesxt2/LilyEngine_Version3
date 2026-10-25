@@ -7,6 +7,7 @@
 #include "CTimeMgr.h"
 #include "CRenderComponent.h"
 #include "CShadowMap.h"
+#include "CSsao.h"
 
 CLevel::CLevel()
 	: m_State(LEVEL_STATE::STOP)
@@ -137,6 +138,7 @@ void CLevel::UpdateShadowTransform()
 void CLevel::RegisterClear()
 {
 	m_vecObject.clear();
+	m_bIsObjSorted = false;
 }
 
 void CLevel::AddObject(CGameObject* object, bool bChildMove)
@@ -169,36 +171,44 @@ void CLevel::ChangeState(LEVEL_STATE nextState)
 
 void CLevel::SortObjects()
 {
+	if (m_bIsObjSorted) return;
+
 	for (auto& pair : m_SortedObjs)
 		pair.second.clear();
 	for (const auto& obj : m_vecObject)
 	{
 		if (obj->GetRenderComp() == nullptr)
 			continue;
-		OBJ_PSO_TYPE type = obj->GetRenderComp()->GetObjPSOType();
-		if ((uint32)(OBJ_PSO_TYPE::PSO_DEFAULT & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_DEFAULT].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_ALPHA_TESTED & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_ALPHA_TESTED].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_TRANSPARENT & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_TRANSPARENT].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_WIREFRAME & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_WIREFRAME].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_BILLBOARD & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_BILLBOARD].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_WAVE_RENDER & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_WAVE_RENDER].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_PARTICLE_RENDER & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_PARTICLE_RENDER].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_TESS_QUAD_PATCH].push_back(obj);
-		if ((uint32)(OBJ_PSO_TYPE::PSO_SKY & type))
-			m_SortedObjs[OBJ_PSO_TYPE::PSO_SKY].push_back(obj);
+		PSO_TYPE type = obj->GetRenderComp()->GetObjPSOType();
+		if ((uint32)(PSO_TYPE::PSO_DEFAULT & type))
+			m_SortedObjs[PSO_TYPE::PSO_DEFAULT].push_back(obj);
+		if ((uint32)(PSO_TYPE::PSO_ALPHA_TESTED & type))
+			m_SortedObjs[PSO_TYPE::PSO_ALPHA_TESTED].push_back(obj);
+		if ((uint32)(PSO_TYPE::PSO_TRANSPARENT & type))
+			m_SortedObjs[PSO_TYPE::PSO_TRANSPARENT].push_back(obj);
+		if ((uint32)(PSO_TYPE::PSO_WIREFRAME & type))
+			m_SortedObjs[PSO_TYPE::PSO_WIREFRAME].push_back(obj);
+		if ((uint32)(PSO_TYPE::PSO_BILLBOARD & type))
+			m_SortedObjs[PSO_TYPE::PSO_BILLBOARD].push_back(obj);
+		if ((uint32)(PSO_TYPE::PSO_WAVE_RENDER & type))
+			m_SortedObjs[PSO_TYPE::PSO_WAVE_RENDER].push_back(obj);
+		if ((uint32)(PSO_TYPE::PSO_PARTICLE_RENDER & type))
+			m_SortedObjs[PSO_TYPE::PSO_PARTICLE_RENDER].push_back(obj);
+		if ((uint32)(PSO_TYPE::PSO_TESS_QUAD_PATCH & type))
+			m_SortedObjs[PSO_TYPE::PSO_TESS_QUAD_PATCH].push_back(obj);
+		if ((uint32)(PSO_TYPE::PSO_SKY & type))
+			m_SortedObjs[PSO_TYPE::PSO_SKY].push_back(obj);
 	}
+	m_bIsObjSorted = true;
 }
 
 void CLevel::BuildLevelShadowMap()
 {
 	SortObjects();
-	CShadowMap::GetInst()->DrawSceneToShadowMap(m_SortedObjs[OBJ_PSO_TYPE::PSO_DEFAULT]);
+	CShadowMap::GetInst()->DrawSceneToShadowMap(m_SortedObjs[PSO_TYPE::PSO_DEFAULT]);
+}
+
+void CLevel::BuildNormalsAndDepth()
+{
+	CSsao::GetInst()->DrawNormalsAndDepth(m_SortedObjs[PSO_TYPE::PSO_DEFAULT]);
 }

@@ -44,9 +44,8 @@ extern const char* COMPONENT_TYPE_STRING[(UINT)COMPONENT_TYPE::END];
 enum class CB_TYPE
 {
 	OBJECT,
-	//MATERIAL,
 	GLOBAL,
-	ANIMATION,
+	SSAO,
 
 	END
 };
@@ -80,7 +79,7 @@ enum class LEVEL_STATE
 };
 
 // PSO
-enum class OBJ_PSO_TYPE : uint32
+enum class PSO_TYPE : uint32
 {
 	PSO_NONE = 0,
 	PSO_DEFAULT = 1 << 0,
@@ -96,30 +95,34 @@ enum class OBJ_PSO_TYPE : uint32
 	PSO_TESS_QUAD_PATCH = 1 << 10,
 	PSO_SKY = 1 << 11,
 	PSO_SHADOW_MAP = 1 << 12,
+	PSO_DRAW_NORMALS = 1 << 13,
+	PSO_SSAO = 1 << 14,
+	PSO_SSAO_BLUR = 1 << 15,
+	PSO_FXAA = 1 << 16,
 };
 
-inline OBJ_PSO_TYPE operator|(OBJ_PSO_TYPE a, OBJ_PSO_TYPE b)
+inline PSO_TYPE operator|(PSO_TYPE a, PSO_TYPE b)
 {
-	return static_cast<OBJ_PSO_TYPE>(static_cast<uint32>(a) | static_cast<uint32>(b));
+	return static_cast<PSO_TYPE>(static_cast<uint32>(a) | static_cast<uint32>(b));
 }
 
-inline OBJ_PSO_TYPE operator&(OBJ_PSO_TYPE a, OBJ_PSO_TYPE b)
+inline PSO_TYPE operator&(PSO_TYPE a, PSO_TYPE b)
 {
-	return static_cast<OBJ_PSO_TYPE>(static_cast<uint32>(a) & static_cast<uint32>(b));
+	return static_cast<PSO_TYPE>(static_cast<uint32>(a) & static_cast<uint32>(b));
 }
 
-inline OBJ_PSO_TYPE operator~(OBJ_PSO_TYPE a)
+inline PSO_TYPE operator~(PSO_TYPE a)
 {
-	return static_cast<OBJ_PSO_TYPE>(~static_cast<uint32>(a));
+	return static_cast<PSO_TYPE>(~static_cast<uint32>(a));
 }
 
-inline OBJ_PSO_TYPE operator|=(OBJ_PSO_TYPE& a, OBJ_PSO_TYPE b)
+inline PSO_TYPE operator|=(PSO_TYPE& a, PSO_TYPE b)
 {
 	a = a | b;
 	return a;
 }
 
-inline OBJ_PSO_TYPE operator&=(OBJ_PSO_TYPE& a, OBJ_PSO_TYPE b)
+inline PSO_TYPE operator&=(PSO_TYPE& a, PSO_TYPE b)
 {
 	a = a & b;
 	return a;

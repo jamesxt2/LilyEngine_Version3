@@ -33,5 +33,7 @@ VertexOut VS(VertexIn vin)
     
     vout.ShadowPosH = mul(posW, g_ShadowTransform);
     
+    vout.SsaoPosH = mul(posW, g_ViewProjTex);
+    
     return vout;
 }

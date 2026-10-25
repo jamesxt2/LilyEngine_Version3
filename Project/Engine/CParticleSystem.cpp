@@ -86,7 +86,7 @@ void CParticleSystem::FinalTick()
 		ID3D12DescriptorHeap* descriptorHeaps[] = { CDevice::GetInst()->GetCbvSrvUavDescriptorHeap().Get() };
 		cmdlist->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
-		cmdlist->SetPipelineState(CAssetMgr::GetInst()->GetPSO(OBJ_PSO_TYPE::PSO_PARTICLE_TICK).Get());
+		cmdlist->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_PARTICLE_TICK).Get());
 		cmdlist->SetComputeRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"ParticleTick").Get());
 
 		CDevice::GetInst()->GetCurrFrameResource()->GetConstantBuffer(CB_TYPE::GLOBAL)->Bind_Compute(cmdlist, 0);

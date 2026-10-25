@@ -12,6 +12,7 @@
 #include "CTexturePool.h"
 #include "CDescriptorAllocator.h"
 #include "CShadowMap.h"
+#include "CSsao.h"
 
 
 CEngine::CEngine()
@@ -49,6 +50,7 @@ int CEngine::Init(HWND _MainWnd, POINT _Resolution)
 	CKeyMgr::GetInst()->Init();
 	CAssetMgr::GetInst()->Init();
 	CDevice::GetInst()->PostInit();
+	CShadowMap::GetInst()->Initialize(2048, 2048);
 	CRenderMgr::GetInst()->Init();
 	CLevelMgr::GetInst()->Init();
 
@@ -173,7 +175,7 @@ void CEngine::ShutDown()
 	CAssetMgr::GetInst()->Destroy();
 	CDescriptorAllocator::GetInst()->Destroy();
 	CShadowMap::GetInst()->Destroy();
-	
+	CSsao::GetInst()->Destroy();
 	
 	CDevice::GetInst()->Release();
 	

@@ -2,7 +2,7 @@
 #include "CRenderComponent.h"
 
 CRenderComponent::CRenderComponent(COMPONENT_TYPE type)
-	: CComponent(type), m_PSOType(OBJ_PSO_TYPE::PSO_NONE)
+	: CComponent(type), m_PSOType(PSO_TYPE::PSO_NONE)
 {
 }
 
