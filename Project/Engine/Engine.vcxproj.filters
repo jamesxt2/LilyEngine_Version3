@@ -146,6 +146,12 @@
     <Filter Include="HLSL\fxaa">
       <UniqueIdentifier>{5e7f4fa9-6642-42e4-afb1-a71eef04660b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="07.Component\03.Animator">
+      <UniqueIdentifier>{99ad7e49-c40e-4db6-9e35-9fa10bdc047e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.Basis\M3DLoader">
+      <UniqueIdentifier>{1e085d88-34ef-4d4b-8569-cd53f17483bf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -296,6 +302,18 @@
     <ClInclude Include="CSsao.h">
       <Filter>04.Manager\09.Ssao</Filter>
     </ClInclude>
+    <ClInclude Include="CAnimator.h">
+      <Filter>07.Component\03.Animator</Filter>
+    </ClInclude>
+    <ClInclude Include="M3DLoader.h">
+      <Filter>01.Basis\M3DLoader</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimData.h">
+      <Filter>07.Component\03.Animator</Filter>
+    </ClInclude>
+    <ClInclude Include="CAnimInst.h">
+      <Filter>07.Component\03.Animator</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -417,6 +435,18 @@
     </ClCompile>
     <ClCompile Include="CSsao.cpp">
       <Filter>04.Manager\09.Ssao</Filter>
+    </ClCompile>
+    <ClCompile Include="CAnimator.cpp">
+      <Filter>07.Component\03.Animator</Filter>
+    </ClCompile>
+    <ClCompile Include="M3DLoader.cpp">
+      <Filter>01.Basis\M3DLoader</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimData.cpp">
+      <Filter>07.Component\03.Animator</Filter>
+    </ClCompile>
+    <ClCompile Include="CAnimInst.cpp">
+      <Filter>07.Component\03.Animator</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

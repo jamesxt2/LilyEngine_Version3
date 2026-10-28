@@ -6,6 +6,8 @@
 #include "MeshData.h"
 #include "CWaveObject.h"
 
+class CAnimInst;
+
 class CAssetMgr : public CSingleton<CAssetMgr>
 {
 	SINGLE(CAssetMgr)
@@ -25,6 +27,10 @@ public:
 
 	Ptr<CMesh> CreateGridMesh(const std::wstring& name, float width, float depth, UINT rows, UINT columns);
 	Ptr<CMesh> CreateTessQuadPatchMesh(const std::wstring& name);
+
+	void LoadSkinnedModel(const std::wstring& filename, const std::wstring& meshName, const std::wstring& animInstName);
+
+	UINT g_MtrlIndex = 0;
 
 private:
 
@@ -123,6 +129,8 @@ inline ASSET_TYPE GetAssetType()
 		return ASSET_TYPE::TEXTURE;
 	if constexpr (std::is_same_v<T, CComputeShader>)
 		return ASSET_TYPE::COMPUTE_SHADER;
+	if constexpr (std::is_same_v<T, CAnimInst>)
+		return ASSET_TYPE::ANIM_INST;
 }
 
 template<typename T>
@@ -148,7 +156,8 @@ inline void CAssetMgr::AddAsset(const std::wstring& name, Ptr<T> pAsset)
 {
 	Ptr<T> findAsset = FindAsset<T>(name);
 
-	assert(findAsset.Get() == nullptr);
+	if (findAsset.Get() != nullptr)
+		return;
 
 	ASSET_TYPE type = GetAssetType<T>();
 

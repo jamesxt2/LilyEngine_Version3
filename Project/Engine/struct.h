@@ -14,6 +14,16 @@ struct Vertex
 	{ }
 };
 
+struct SkinnedVertex
+{
+	Vector3 Pos;
+	Vector3 Normal;
+	Vector2 TexC;
+	Vector3 TangentU;
+	Vector3 BoneWeights;
+	BYTE BoneIndices[4] = {};
+};
+
 struct BillboardVertex
 {
 	Vector3 Position;
@@ -173,3 +183,9 @@ struct TSSAO
 	float SurfaceEpsilon = 0.f;
 };
 extern TSSAO g_SSAO;
+
+struct TSkinned
+{
+	Matrix BoneTransforms[96];
+	Matrix BoneInvTranspose[96];
+};

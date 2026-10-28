@@ -32,7 +32,7 @@ public:
 
 	std::vector<float> CalcGaussWeights(float sigma);
 
-	void DrawNormalsAndDepth(const std::vector<CGameObject*>& objs);
+	void DrawNormalsAndDepth(const std::vector<CGameObject*>& defaultObjs, const std::vector<CGameObject*>& skinnedObjs);
 
 	void ComputeSsao(int blurCount);
 

@@ -41,9 +41,7 @@ void CTransform::FinalTick()
 
 	Matrix matScale = XMMatrixScaling(m_RelativeScale.x, m_RelativeScale.y, m_RelativeScale.z);
 
-	Matrix matRot = XMMatrixRotationX(m_RelativeRotation.x)
-		* XMMatrixRotationY(m_RelativeRotation.y)
-		* XMMatrixRotationZ(m_RelativeRotation.z);
+	Matrix matRot = XMMatrixRotationQuaternion(m_RelativeRotationQuat);
 
 	Matrix matTranslation = XMMatrixTranslation(m_RelativePosition.x, m_RelativePosition.y, m_RelativePosition.z);
 
@@ -123,4 +121,10 @@ Vector3 CTransform::GetWorldScale()
 	}
 
 	return worldScale;
+}
+
+void CTransform::SetRelativeRotation(const Vector3& rotation)
+{
+	m_RelativeRotation = rotation;
+	m_RelativeRotationQuat = Quaternion::CreateFromYawPitchRoll(rotation.y, rotation.x, rotation.z);
 }

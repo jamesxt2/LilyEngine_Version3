@@ -179,7 +179,7 @@ void CLevel::SortObjects()
 	{
 		if (obj->GetRenderComp() == nullptr)
 			continue;
-		PSO_TYPE type = obj->GetRenderComp()->GetObjPSOType();
+		PSO_TYPE type = obj->GetObjPSOType();
 		if ((uint32)(PSO_TYPE::PSO_DEFAULT & type))
 			m_SortedObjs[PSO_TYPE::PSO_DEFAULT].push_back(obj);
 		if ((uint32)(PSO_TYPE::PSO_ALPHA_TESTED & type))
@@ -198,6 +198,8 @@ void CLevel::SortObjects()
 			m_SortedObjs[PSO_TYPE::PSO_TESS_QUAD_PATCH].push_back(obj);
 		if ((uint32)(PSO_TYPE::PSO_SKY & type))
 			m_SortedObjs[PSO_TYPE::PSO_SKY].push_back(obj);
+		if ((uint32)(PSO_TYPE::PSO_DEFAULT_SKINNED & type))
+			m_SortedObjs[PSO_TYPE::PSO_DEFAULT_SKINNED].push_back(obj);
 	}
 	m_bIsObjSorted = true;
 }
@@ -205,10 +207,14 @@ void CLevel::SortObjects()
 void CLevel::BuildLevelShadowMap()
 {
 	SortObjects();
-	CShadowMap::GetInst()->DrawSceneToShadowMap(m_SortedObjs[PSO_TYPE::PSO_DEFAULT]);
+	CShadowMap::GetInst()->DrawSceneToShadowMap(
+		m_SortedObjs[PSO_TYPE::PSO_DEFAULT], 
+		m_SortedObjs[PSO_TYPE::PSO_DEFAULT_SKINNED]);
 }
 
 void CLevel::BuildNormalsAndDepth()
 {
-	CSsao::GetInst()->DrawNormalsAndDepth(m_SortedObjs[PSO_TYPE::PSO_DEFAULT]);
+	CSsao::GetInst()->DrawNormalsAndDepth(
+		m_SortedObjs[PSO_TYPE::PSO_DEFAULT], 
+		m_SortedObjs[PSO_TYPE::PSO_DEFAULT_SKINNED]);
 }

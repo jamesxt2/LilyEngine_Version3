@@ -7,6 +7,7 @@ class CCamera;
 class CMeshRender;
 class CRenderComponent;
 class CScript;
+class CAnimator;
 
 class CGameObject : public CEntity
 {
@@ -37,16 +38,22 @@ private:
 
 	bool						m_Dead;
 
+	PSO_TYPE					m_PSOType;
+
 public:
 	inline CComponent* GetComponent(COMPONENT_TYPE type) const { return m_arrComp[(UINT)type]; }
 	inline CTransform* GetTransformComp() const { return (CTransform*)m_arrComp[(UINT)COMPONENT_TYPE::TRANSFORM]; }
 	inline CCamera* GetCameraComp() const { return (CCamera*)m_arrComp[(UINT)COMPONENT_TYPE::CAMERA]; }
 	inline CRenderComponent* GetRenderComp() const { return m_RenderComp; }
 	inline CMeshRender* GetMeshRenderComp() const { return (CMeshRender*)m_arrComp[(UINT)COMPONENT_TYPE::MESHRENDER]; }
+	inline CAnimator* GetAnimatorComp() const { return (CAnimator*)m_arrComp[(UINT)COMPONENT_TYPE::ANIMATOR]; }
 
 	inline const std::vector<CGameObject*>& GetChild() const { return m_vecChild; }
 	inline CGameObject* GetParent() const { return m_Parent; }
 
 	inline bool IsDead() const { return m_Dead; }
+
+	inline void SetObjPSOType(PSO_TYPE type) { m_PSOType = type; }
+	inline PSO_TYPE GetObjPSOType() const { return m_PSOType; }
 };
 

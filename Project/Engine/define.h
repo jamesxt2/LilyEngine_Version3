@@ -45,3 +45,5 @@ inline std::wstring AnsiToWString(const std::string& str)
 #define KEY_NONE(Key) KEY_CHECK(Key, KEY_STATE::NONE)
 
 #define DT CTimeMgr::GetInst()->DeltaTime()
+
+#define PI 3.14159f

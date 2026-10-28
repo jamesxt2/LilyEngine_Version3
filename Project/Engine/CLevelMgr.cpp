@@ -14,6 +14,7 @@
 #include "CConstantBuffer.h"
 #include "CWaveObject.h"
 #include "CParticleSystem.h"
+#include "CAnimator.h"
 
 CLevelMgr::CLevelMgr()
 	: m_CurLevel(nullptr)
@@ -66,7 +67,7 @@ void CLevelMgr::Init()
 
 	pLandGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"LandMesh"));
 	pLandGrid->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"GrassMaterial"));
-	pLandGrid->GetMeshRenderComp()->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
+	pLandGrid->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
 	pLandGrid->GetMeshRenderComp()->SetSubMeshGeo(pLandGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"grid"));
 
 	pWaveLevel->AddObject(pLandGrid);
@@ -83,7 +84,7 @@ void CLevelMgr::Init()
 	
 	pWave->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->CreateGridMesh(L"WaveMesh", 160.f, 160.f, 256, 256));
 	pWave->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WaterMaterial"));
-	pWave->GetMeshRenderComp()->SetObjPSOType(PSO_TYPE::PSO_WAVE_RENDER);
+	pWave->SetObjPSOType(PSO_TYPE::PSO_WAVE_RENDER);
 	
 	pWaveLevel->AddObject(pWave);
 
@@ -99,7 +100,7 @@ void CLevelMgr::Init()
 
 	pWoodBox->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 	pWoodBox->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WireFenceBoxMaterial"));
-	pWoodBox->GetMeshRenderComp()->SetObjPSOType(PSO_TYPE::PSO_ALPHA_TESTED);
+	pWoodBox->SetObjPSOType(PSO_TYPE::PSO_ALPHA_TESTED);
 	pWoodBox->GetMeshRenderComp()->SetSubMeshGeo(pWoodBox->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"box"));
 
 	pWaveLevel->AddObject(pWoodBox);
@@ -116,7 +117,7 @@ void CLevelMgr::Init()
 	
 	pTreeBillboard->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"TreeBillboardsMesh"));
 	pTreeBillboard->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"TreeBillboardMaterial"));
-	pTreeBillboard->GetMeshRenderComp()->SetObjPSOType(PSO_TYPE::PSO_BILLBOARD);
+	pTreeBillboard->SetObjPSOType(PSO_TYPE::PSO_BILLBOARD);
 
 	pWaveLevel->AddObject(pTreeBillboard);
 
@@ -133,7 +134,7 @@ void CLevelMgr::Init()
 	
 	pParticle->GetRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"PointMesh"));
 	pParticle->GetRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"AlphaCircleMaterial"));
-	pParticle->GetRenderComp()->SetObjPSOType(PSO_TYPE::PSO_PARTICLE_RENDER);
+	pParticle->SetObjPSOType(PSO_TYPE::PSO_PARTICLE_RENDER);
 	
 	pWaveLevel->AddObject(pParticle);
 
@@ -177,7 +178,7 @@ void CLevelMgr::Init()
 
 	pSceneGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 	pSceneGrid->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"TileMaterial"));
-	pSceneGrid->GetMeshRenderComp()->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
+	pSceneGrid->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
 	pSceneGrid->GetMeshRenderComp()->SetSubMeshGeo(pSceneGrid->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"grid"));
 
 	pSceneLevel->AddObject(pSceneGrid);
@@ -194,7 +195,7 @@ void CLevelMgr::Init()
 
 	pBox->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 	pBox->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"WoodBoxMaterial"));
-	pBox->GetMeshRenderComp()->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
+	pBox->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
 	pBox->GetMeshRenderComp()->SetSubMeshGeo(pBox->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"box"));
 
 	pSceneLevel->AddObject(pBox);
@@ -211,9 +212,48 @@ void CLevelMgr::Init()
 
 	pSkull->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SkullMesh"));
 	pSkull->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"SkullMaterial"));
-	pSkull->GetMeshRenderComp()->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
+	pSkull->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
 
 	pSceneLevel->AddObject(pSkull);
+
+	CGameObject* pSoldier = new CGameObject;
+	pSoldier->AddComponent(new CTransform);
+	pSoldier->GetTransformComp()->SetRelativePosition(0.f, 0.f, 0.f);
+	pSoldier->GetTransformComp()->SetRelativeRotation(0.f, 0.f, 0.f);
+	pSoldier->GetTransformComp()->SetRelativeScale(1.6f, 1.6f, 1.6f);
+	pSoldier->GetTransformComp()->SetObjCBIndex(sceneLevelObjIdx++);
+
+	CAssetMgr::GetInst()->LoadSkinnedModel(L"models\\soldier.m3d", L"SoliderMesh", L"SoliderAnimInst");
+	Ptr<CAnimInst> pSoldierAnimInst = CAssetMgr::GetInst()->FindAsset<CAnimInst>(L"SoliderAnimInst");
+
+	for (UINT i = 0; i < pSoldierAnimInst->m_SkinnedMtrl.size(); ++i)
+	{
+		std::wstring submeshName = L"sm_" + std::to_wstring(i);
+
+		CGameObject* subSoldierObj = new CGameObject;
+		subSoldierObj->AddComponent(new CTransform);
+		subSoldierObj->AddComponent(new CMeshRender);
+		subSoldierObj->AddComponent(new CAnimator);
+
+		// Reflect to change coordinate system from the RHS the data was exported out as.
+		subSoldierObj->GetTransformComp()->SetRelativeScale(Vector3(0.05f, 0.05f, -0.05f));
+		subSoldierObj->GetTransformComp()->SetRelativeRotation(Vector3(0.f));
+		subSoldierObj->GetTransformComp()->SetRelativePosition(Vector3(0.f, 0.f, -5.f));
+
+		subSoldierObj->GetTransformComp()->SetObjCBIndex(sceneLevelObjIdx++);
+		subSoldierObj->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(pSoldierAnimInst->m_SkinnedMtrl[i].Name));
+		subSoldierObj->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SoliderMesh"));
+		subSoldierObj->GetMeshRenderComp()->SetSubMeshGeo(subSoldierObj->GetMeshRenderComp()->GetMesh()->GetSubGeo(submeshName));
+
+		subSoldierObj->SetObjPSOType(PSO_TYPE::PSO_DEFAULT_SKINNED);
+
+		subSoldierObj->GetAnimatorComp()->SetSkinnedCBIndex(0);
+		subSoldierObj->GetAnimatorComp()->SetAnimInst(pSoldierAnimInst, L"Take1");
+
+		pSoldier->AddChild(subSoldierObj);
+		//pSceneLevel->AddObject(subSoldierObj);
+	}
+	pSceneLevel->AddObject(pSoldier);
 
 	CGameObject* pSky = new CGameObject;
 	pSky->SetName(L"Sky");
@@ -227,7 +267,7 @@ void CLevelMgr::Init()
 
 	pSky->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 	pSky->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"SkyMaterial"));
-	pSky->GetMeshRenderComp()->SetObjPSOType(PSO_TYPE::PSO_SKY);
+	pSky->SetObjPSOType(PSO_TYPE::PSO_SKY);
 	pSky->GetMeshRenderComp()->SetSubMeshGeo(pSky->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"sphere"));
 
 	pSceneLevel->AddObject(pSky);
@@ -250,7 +290,7 @@ void CLevelMgr::Init()
 			pCylinder->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
 		else
 			pCylinder->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksNoNormalMaterial"));
-		pCylinder->GetMeshRenderComp()->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
+		pCylinder->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
 		pCylinder->GetMeshRenderComp()->SetSubMeshGeo(pCylinder->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"cylinder"));
 
 		pSceneLevel->AddObject(pCylinder);
@@ -268,7 +308,7 @@ void CLevelMgr::Init()
 
 		pCylinder2->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pCylinder2->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"BricksMaterial"));
-		pCylinder2->GetMeshRenderComp()->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
+		pCylinder2->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
 		pCylinder2->GetMeshRenderComp()->SetSubMeshGeo(pCylinder2->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"cylinder"));
 
 		pSceneLevel->AddObject(pCylinder2);
@@ -286,7 +326,7 @@ void CLevelMgr::Init()
 
 		pSphere->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pSphere->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"MirrorPlaneMaterial"));
-		pSphere->GetMeshRenderComp()->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
+		pSphere->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
 		pSphere->GetMeshRenderComp()->SetSubMeshGeo(pSphere->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"sphere"));
 
 		pSceneLevel->AddObject(pSphere);
@@ -304,7 +344,7 @@ void CLevelMgr::Init()
 
 		pSphere2->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->FindAsset<CMesh>(L"SceneGeoMesh"));
 		pSphere2->GetMeshRenderComp()->SetMaterial(CAssetMgr::GetInst()->FindAsset<CMaterial>(L"StoneMaterial"));
-		pSphere2->GetMeshRenderComp()->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
+		pSphere2->SetObjPSOType(PSO_TYPE::PSO_DEFAULT);
 		pSphere2->GetMeshRenderComp()->SetSubMeshGeo(pSphere2->GetMeshRenderComp()->GetMesh()->GetSubGeo(L"sphere"));
 
 		pSceneLevel->AddObject(pSphere2);
@@ -347,7 +387,7 @@ void CLevelMgr::Init()
 	pTessGrid->GetTransformComp()->SetObjCBIndex(0);
 
 	pTessGrid->GetMeshRenderComp()->SetMesh(CAssetMgr::GetInst()->CreateTessQuadPatchMesh(L"TessQuadPatch"));
-	pTessGrid->GetMeshRenderComp()->SetObjPSOType(PSO_TYPE::PSO_TESS_QUAD_PATCH);
+	pTessGrid->SetObjPSOType(PSO_TYPE::PSO_TESS_QUAD_PATCH);
 
 	pTessLevel->AddObject(pTessGrid);
 

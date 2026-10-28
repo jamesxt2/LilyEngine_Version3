@@ -7,6 +7,10 @@ struct VertexIn
 {
     float3 PosL : POSITION;
     float2 TexCoord : TEXCOORD;
+#ifdef SKINNED
+    float3 BoneWeights : WEIGHTS;
+    uint4 BoneIndices  : BONEINDICES;
+#endif
 };
 
 struct VertexOut

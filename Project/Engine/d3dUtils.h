@@ -16,6 +16,8 @@ public:
 
 namespace Utilities
 {
+	const float Infinity = FLT_MAX;
+
 	void WStringToString(_In_ const std::wstring& wstr, _Out_ std::string& str);
 	void StringToWString(_In_ const std::string& str, _Out_ std::wstring& wstr);
 	std::string WStringToString(_In_ const std::wstring& wstr);

@@ -154,7 +154,10 @@ call Copy.bat</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AnimData.h" />
     <ClInclude Include="assets.h" />
+    <ClInclude Include="CAnimator.h" />
+    <ClInclude Include="CAnimInst.h" />
     <ClInclude Include="CAsset.h" />
     <ClInclude Include="CAssetMgr.h" />
     <ClInclude Include="CCamera.h" />
@@ -197,6 +200,7 @@ call Copy.bat</Command>
     <ClInclude Include="framework.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="GpuWaves.h" />
+    <ClInclude Include="M3DLoader.h" />
     <ClInclude Include="MeshData.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="ptr.h" />
@@ -206,6 +210,9 @@ call Copy.bat</Command>
     <ClInclude Include="UploadBuffer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AnimData.cpp" />
+    <ClCompile Include="CAnimator.cpp" />
+    <ClCompile Include="CAnimInst.cpp" />
     <ClCompile Include="CAsset.cpp" />
     <ClCompile Include="CAssetMgr.cpp" />
     <ClCompile Include="CCamera.cpp" />
@@ -245,6 +252,7 @@ call Copy.bat</Command>
     <ClCompile Include="extern.cpp" />
     <ClCompile Include="FrameResource.cpp" />
     <ClCompile Include="GpuWaves.cpp" />
+    <ClCompile Include="M3DLoader.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

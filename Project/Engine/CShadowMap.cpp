@@ -78,7 +78,7 @@ void CShadowMap::BuildDescriptors()
 	DEVICE->CreateDepthStencilView(m_ShadowMap.Get(), &dsvDesc, m_AllocDsv.cpuHandle);
 }
 
-void CShadowMap::DrawSceneToShadowMap(const std::vector<CGameObject*>& objs)
+void CShadowMap::DrawSceneToShadowMap(const std::vector<CGameObject*>& defaultObjs, const std::vector<CGameObject*>& skinnedObjs)
 {
 	CMDLIST->SetGraphicsRootSignature(CAssetMgr::GetInst()->GetRootSignature(L"Default").Get());
 
@@ -111,11 +111,17 @@ void CShadowMap::DrawSceneToShadowMap(const std::vector<CGameObject*>& objs)
 	// Note the active PSO also must specify a render target count of 0.
 	CMDLIST->OMSetRenderTargets(0, nullptr, false, &m_AllocDsv.cpuHandle);
 
-	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_SHADOW_MAP).Get());
 	CMDLIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	for (const auto& obj : objs)
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_SHADOW_MAP_SKINNED).Get());
+	for (const auto& obj : skinnedObjs)
 		obj->Render();
+
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_SHADOW_MAP).Get());
+	for (const auto& obj : defaultObjs)
+		obj->Render();
+
+	
 
 	// Change back to GENERIC_READ so we can read the texture in a shader.
 	CD3DX12_RESOURCE_BARRIER SmDW2GRbarrier(CD3DX12_RESOURCE_BARRIER::Transition(m_ShadowMap.Get(),

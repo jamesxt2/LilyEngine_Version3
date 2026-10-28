@@ -12,7 +12,7 @@ public:
 	
 	void Initialize(UINT width, UINT height);
 	
-	void DrawSceneToShadowMap(const std::vector<CGameObject*>& objs);
+	void DrawSceneToShadowMap(const std::vector<CGameObject*>& defaultObjs, const std::vector<CGameObject*>& skinnedObjs);
 private:
 	void BuildResource();
 	void BuildDescriptors();

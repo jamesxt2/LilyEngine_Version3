@@ -9,14 +9,15 @@
 #include "CScript.h"
 #include "MeshData.h"
 #include "CDevice.h"
+#include "CAnimator.h"
 
 CGameObject::CGameObject()
-	: m_arrComp{}, m_RenderComp(nullptr), m_Parent(nullptr), m_Dead(false)
+	: m_arrComp{}, m_RenderComp(nullptr), m_Parent(nullptr), m_Dead(false), m_PSOType(PSO_TYPE::PSO_NONE)
 {
 }
 
 CGameObject::CGameObject(const CGameObject& other)
-	: CEntity(other), m_RenderComp(nullptr), m_arrComp{}, m_Parent(nullptr), m_Dead(false)
+	: CEntity(other), m_RenderComp(nullptr), m_arrComp{}, m_Parent(nullptr), m_Dead(false), m_PSOType(other.m_PSOType)
 {
 	for (UINT i = 0; i < (UINT)COMPONENT_TYPE::END; ++i)
 	{
@@ -97,6 +98,11 @@ void CGameObject::Render(UINT objCBRootParamIndex)
 		{
 			CDevice::GetInst()->GetConstBuffer(CB_TYPE::OBJECT)->Bind_Graphics(GetTransformComp()->GetObjCBIndex(), objCBRootParamIndex);
 			GetTransformComp()->Bind();
+		}
+		if (GetAnimatorComp() != nullptr)
+		{
+			CDevice::GetInst()->GetConstBuffer(CB_TYPE::SKINNED)->Bind_Graphics(0, 9);
+			GetAnimatorComp()->Bind();
 		}
 
 		m_RenderComp->Render();

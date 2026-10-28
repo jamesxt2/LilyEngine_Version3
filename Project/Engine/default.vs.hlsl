@@ -18,6 +18,32 @@ VertexOut VS(VertexIn vin)
     vin.NormalL = normalize(float3(-r + l, 2.0f * g_GridSpatialStep, b - t));
 #endif    
 
+#ifdef SKINNED
+    
+    float weights[4] = { 0.f, 0.f, 0.f, 0.f };
+    weights[0] = vin.BoneWeights.x;
+    weights[1] = vin.BoneWeights.y;
+    weights[2] = vin.BoneWeights.z;
+    weights[3] = 1 - weights[0] - weights[1] - weights[2];
+    
+    float3 posL = float3(0.f, 0.f, 0.f);
+    float3 normalL = float3(0.f, 0.f, 0.f);
+    float3 tangentL = float3(0.f, 0.f, 0.f);
+    [unroll]
+    for (int i = 0; i < 4; ++i)
+    {
+        posL += weights[i] * mul(float4(vin.PosL, 1.f), g_BoneTransforms[vin.BoneIndices[i]]).xyz;
+        normalL += weights[i] * mul(vin.NormalL, (float3x3)g_BoneInvTranspose[vin.BoneIndices[i]]);
+        tangentL += weights[i] * mul(vin.TangentU, (float3x3)g_BoneTransforms[vin.BoneIndices[i]]);
+    }
+    
+    vin.PosL = posL;
+    vin.NormalL = normalL;
+    vin.TangentU = tangentL;
+    
+#endif
+    
+    
     float4 posW = mul(float4(vin.PosL, 1.f), g_World);
     vout.PosW = posW.xyz;
     

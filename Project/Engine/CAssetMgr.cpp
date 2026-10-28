@@ -7,6 +7,9 @@
 #include "CTimeMgr.h"
 #include "CTexturePool.h"
 #include "CSsao.h"
+#include "M3DLoader.h"
+#include "CAnimInst.h"
+
 
 CAssetMgr::CAssetMgr()
 {
@@ -125,10 +128,10 @@ void CAssetMgr::BuildRootSignatures()
 	ssaoTexTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 5);
 
 	// Root parameter can be a table, root descriptor or root constants.
-	CD3DX12_ROOT_PARAMETER slotRootParameter_Default[9];
+	CD3DX12_ROOT_PARAMETER slotRootParameter_Default[10];
 
 	// Perfomance TIP: Order from most frequent to least frequent.
-	// global : b1, object : b0
+	// global : b1, object : b0, skinned : b2
 	slotRootParameter_Default[0].InitAsConstantBufferView(1);
 	slotRootParameter_Default[1].InitAsConstantBufferView(0);
 	slotRootParameter_Default[2].InitAsDescriptorTable(1, &mtrlDataTable_Default);
@@ -138,11 +141,12 @@ void CAssetMgr::BuildRootSignatures()
 	slotRootParameter_Default[6].InitAsDescriptorTable(1, &texCubeTable_Default);
 	slotRootParameter_Default[7].InitAsDescriptorTable(1, &shadowTexTable);
 	slotRootParameter_Default[8].InitAsDescriptorTable(1, &ssaoTexTable);
+	slotRootParameter_Default[9].InitAsConstantBufferView(2);
 
 	auto staticSamplers = GetStaticSamplers();
 
 	// A root signature is an array of root parameters.
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc_Default(9, slotRootParameter_Default,
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc_Default(10, slotRootParameter_Default,
 		(UINT)staticSamplers.size(), staticSamplers.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
@@ -545,6 +549,15 @@ void CAssetMgr::BuildPSO()
 	wireframePSODesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&wireframePSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_WIREFRAME])));
 
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC skinnedPsoDesc = psoDesc;
+	skinnedPsoDesc.InputLayout = { shader->GetSkinnedInputLayout().data(), (UINT)shader->GetSkinnedInputLayout().size() };
+	skinnedPsoDesc.VS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetVsByteCode(L"DefaultSkinnedVS")->GetBufferPointer()),
+		shader->GetVsByteCode(L"DefaultSkinnedVS")->GetBufferSize()
+	};
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&skinnedPsoDesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_DEFAULT_SKINNED])));
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC transparencyPSODesc = psoDesc;
 	D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc;
 	transparencyBlendDesc.BlendEnable = true;
@@ -726,6 +739,20 @@ void CAssetMgr::BuildPSO()
 	shadowMapPSODesc.SampleDesc.Quality = 0;
 	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&shadowMapPSODesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_SHADOW_MAP])));
 
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC skinnedShadowMapPsoDesc = shadowMapPSODesc;
+	skinnedShadowMapPsoDesc.InputLayout = { shader->GetSkinnedInputLayout().data(), (UINT)shader->GetSkinnedInputLayout().size() };
+	skinnedShadowMapPsoDesc.VS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetVsByteCode(L"ShadowsSkinnedVS")->GetBufferPointer()),
+		shader->GetVsByteCode(L"ShadowsSkinnedVS")->GetBufferSize()
+	};
+	skinnedShadowMapPsoDesc.PS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetPsByteCode(L"ShadowsPS")->GetBufferPointer()),
+		shader->GetPsByteCode(L"ShadowsPS")->GetBufferSize()
+	};
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&skinnedShadowMapPsoDesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_SHADOW_MAP_SKINNED])));
+
 	// Draw Normals
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC drawNormalsPsoDesc = psoDesc;
 	shader = FindAsset<CGraphicsShader>(L"DrawNormalsShader");
@@ -743,6 +770,16 @@ void CAssetMgr::BuildPSO()
 	drawNormalsPsoDesc.RTVFormats[0] = CSsao::NormalMapFormat;
 	drawNormalsPsoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&drawNormalsPsoDesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_DRAW_NORMALS])));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC skinnedDrawNormalsPsoDesc = drawNormalsPsoDesc;
+	skinnedDrawNormalsPsoDesc.InputLayout = { shader->GetSkinnedInputLayout().data(), (UINT)shader->GetSkinnedInputLayout().size() };
+	skinnedDrawNormalsPsoDesc.VS =
+	{
+		reinterpret_cast<BYTE*>(shader->GetVsByteCode(L"DrawNormalsSkinnedVS")->GetBufferPointer()),
+		shader->GetVsByteCode(L"DrawNormalsSkinnedVS")->GetBufferSize()
+	};
+	ThrowIfFailed(DEVICE->CreateGraphicsPipelineState(&skinnedDrawNormalsPsoDesc, IID_PPV_ARGS(&m_PSOGroup[PSO_TYPE::PSO_DRAW_NORMALS_SKINNED])));
+
 
 	// SSAO
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC ssaoPsoDesc = psoDesc;
@@ -811,6 +848,63 @@ ComPtr<ID3D12PipelineState> CAssetMgr::GetPSO(PSO_TYPE type) const
 	if (iter == m_PSOGroup.end())
 		return nullptr;
 	return iter->second;
+}
+
+void CAssetMgr::LoadSkinnedModel(const std::wstring& filename, const std::wstring& meshName, const std::wstring& animInstName)
+{
+	std::vector<SkinnedVertex> vertices;
+	std::vector<uint16> indices;
+
+	Ptr<CAnimInst> pAnimInst = new CAnimInst;
+
+	M3DLoader m3dLoader;
+	m3dLoader.LoadM3d(filename, vertices, indices,
+		pAnimInst->m_SkinnedSubsets, pAnimInst->m_SkinnedMtrl, pAnimInst->m_SkinnedData);
+
+	const UINT vbByteSize = (UINT)vertices.size() * sizeof(SkinnedVertex);
+	const UINT ibByteSize = (UINT)indices.size() * sizeof(uint16);
+
+	Ptr<CMesh> pMesh = new CMesh;
+	CDevice::GetInst()->UploadResourceAsync([&](ID3D12GraphicsCommandList* cmdlist) {
+		pMesh->CreateVertexBuffer(vertices.data(), (UINT)vertices.size(), cmdlist);
+		pMesh->CreateIndexBuffer16(indices.data(), (UINT)indices.size(), cmdlist);
+		});
+
+	for (UINT i = 0; i < (UINT)pAnimInst->m_SkinnedSubsets.size(); ++i)
+	{
+		Ptr<SubmeshGeometry> submesh = new SubmeshGeometry;
+		std::wstring name = L"sm_" + std::to_wstring(i);
+
+		submesh->IndexCount = (UINT)pAnimInst->m_SkinnedSubsets[i].FaceCount * 3;
+		submesh->StartIndexLocation = pAnimInst->m_SkinnedSubsets[i].FaceStart * 3;
+		submesh->BaseVertexLocation = 0;
+
+		pMesh->m_DrawArgs[name] = submesh;
+	}
+	AddAsset<CMesh>(meshName, pMesh);
+
+	for (UINT i = 0; i < (UINT)pAnimInst->m_SkinnedMtrl.size(); ++i)
+	{
+		Ptr<CTexture> pDiffuseTexture = new CTexture;
+		pDiffuseTexture->CreateFromFile(L"textures\\" + pAnimInst->m_SkinnedMtrl[i].DiffuseMapName);
+		AddAsset<CTexture>(pAnimInst->m_SkinnedMtrl[i].DiffuseMapName, pDiffuseTexture);
+
+		Ptr<CTexture> pNormalTexture = new CTexture;
+		pNormalTexture->CreateFromFile(L"textures\\" + pAnimInst->m_SkinnedMtrl[i].NormalMapName);
+		AddAsset<CTexture>(pAnimInst->m_SkinnedMtrl[i].NormalMapName, pNormalTexture);
+
+		Ptr<CMaterial> pMaterial = new CMaterial;
+		pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
+		pMaterial->m_DiffuseAlbedo = pAnimInst->m_SkinnedMtrl[i].DiffuseAlbedo;
+		pMaterial->m_FresnelR0 = pAnimInst->m_SkinnedMtrl[i].FresnelR0;
+		pMaterial->m_Roughness = pAnimInst->m_SkinnedMtrl[i].Roughness;
+		pMaterial->m_bUseCubeReflection = 1;
+		pMaterial->m_Texture = pDiffuseTexture;
+		pMaterial->m_NormalTexture = pNormalTexture;
+		AddAsset<CMaterial>(pAnimInst->m_SkinnedMtrl[i].Name, pMaterial);
+	}
+
+	AddAsset<CAnimInst>(animInstName, pAnimInst);
 }
 
 void CAssetMgr::CreateMeshes()
@@ -1396,25 +1490,25 @@ void CAssetMgr::CreateMaterials()
 	pMaterial->m_DiffuseAlbedo = Vector4(0.2f, 0.6f, 0.2f, 1.f);
 	pMaterial->m_FresnelR0 = Vector3(0.01f, 0.01f, 0.01f);
 	pMaterial->m_Roughness = 0.125f;
-	pMaterial->m_MtrlCBIndex = 0;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	AddAsset<CMaterial>(L"GreenMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
 	pMaterial->m_DiffuseAlbedo = Vector4(0.f, 0.2f, 0.6f, 1.f);
 	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
 	pMaterial->m_Roughness = 0.f;
-	pMaterial->m_MtrlCBIndex = 1;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	AddAsset<CMaterial>(L"BlueMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.03f, 0.03f, 0.03f);
 	pMaterial->m_Roughness = 0.3f;
-	pMaterial->m_MtrlCBIndex = 2;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	AddAsset<CMaterial>(L"SkullMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 3;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
 	pMaterial->m_Roughness = 0.25f;
@@ -1422,7 +1516,7 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"WoodBoxMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 4;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
 	pMaterial->m_Roughness = 0.25f;
@@ -1430,7 +1524,7 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"WireFenceBoxMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 5;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.01f, 0.01f, 0.01f);
 	pMaterial->m_Roughness = 0.125f;
@@ -1438,7 +1532,7 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"GrassMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 6;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 0.5f);
 	pMaterial->m_FresnelR0 = Vector3(0.2f, 0.2f, 0.2f);
 	pMaterial->m_Roughness = 0.f;
@@ -1446,7 +1540,7 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"WaterMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 7;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
 	pMaterial->m_Roughness = 0.3f;
@@ -1456,7 +1550,7 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"BricksMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 8;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.05f, 0.05f, 0.05f);
 	pMaterial->m_Roughness = 0.3f;
@@ -1464,7 +1558,7 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"StoneMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 9;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.02f, 0.02f, 0.02f);
 	pMaterial->m_Roughness = 0.3f;
@@ -1474,7 +1568,7 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"TileMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 10;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.f, 1.f, 1.f, 0.3f);
 	pMaterial->m_FresnelR0 = Vector3(0.1f);
 	pMaterial->m_Roughness = 0.5f;
@@ -1482,14 +1576,14 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"MirrorMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 11;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(0.f, 0.f, 0.f, 0.5f);
 	pMaterial->m_FresnelR0 = Vector3(0.001f);
 	pMaterial->m_Roughness = 0.f;
 	AddAsset<CMaterial>(L"ShadowMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 12;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.f, 1.f, 1.f, 1.f);
 	pMaterial->m_FresnelR0 = Vector3(0.01f);
 	pMaterial->m_Roughness = 0.125f;
@@ -1497,7 +1591,7 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"TreeBillboardMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 13;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.f, 1.f, 1.f, 1.f);
 	pMaterial->m_FresnelR0 = Vector3(0.01f);
 	pMaterial->m_Roughness = 0.125f;
@@ -1505,7 +1599,7 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"AlphaCircleMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 14;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
 	pMaterial->m_Roughness = 1.0f;
@@ -1513,7 +1607,7 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"SkyMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 15;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = XMFLOAT4(0.0f, 0.0f, 0.1f, 1.0f);
 	pMaterial->m_FresnelR0 = XMFLOAT3(0.98f, 0.97f, 0.95f);
 	pMaterial->m_Roughness = 0.1f;
@@ -1521,7 +1615,7 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"MirrorPlaneMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 16;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
 	pMaterial->m_Roughness = 0.3f;
@@ -1531,7 +1625,7 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"Bricks2Material", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 17;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
 	pMaterial->m_Roughness = 0.3f;
@@ -1540,7 +1634,7 @@ void CAssetMgr::CreateMaterials()
 	AddAsset<CMaterial>(L"Bricks2NoNormalMaterial", pMaterial);
 
 	pMaterial = new CMaterial;
-	pMaterial->m_MtrlCBIndex = 18;
+	pMaterial->m_MtrlCBIndex = g_MtrlIndex++;
 	pMaterial->m_DiffuseAlbedo = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	pMaterial->m_FresnelR0 = Vector3(0.1f, 0.1f, 0.1f);
 	pMaterial->m_Roughness = 0.3f;
@@ -1561,13 +1655,27 @@ void CAssetMgr::CreateGraphicsShaders()
 		"FOG", "1",
 		NULL, NULL
 	};
+	const D3D_SHADER_MACRO skinnedDefines[] =
+	{
+		"SKINNED", "1",
+		NULL, NULL
+	};
 	pShader = new CGraphicsShader;
 	pShader->BuildVertexShader(L"DefaultVS", strPath + L"shader\\default.vs.hlsl", nullptr, "VS", "vs_5_1");
+	pShader->BuildVertexShader(L"DefaultSkinnedVS", strPath + L"shader\\default.vs.hlsl", skinnedDefines, "VS", "vs_5_1");
 	pShader->m_InputLayout = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }, 
 		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+	pShader->m_SkinnedInputLayout = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "WEIGHTS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 44, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "BONEINDICES", 0, DXGI_FORMAT_R8G8B8A8_UINT, 0, 56, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 	pShader->BuildPixelShader(L"FogPS", strPath + L"shader\\default.ps.hlsl", opaqueDefines, "PS", "ps_5_1");
 
@@ -1639,9 +1747,16 @@ void CAssetMgr::CreateGraphicsShaders()
 	// shadows
 	pShader = new CGraphicsShader;
 	pShader->BuildVertexShader(L"ShadowsVS", strPath + L"shader\\shadows.vs.hlsl", nullptr, "VS", "vs_5_1");
+	pShader->BuildVertexShader(L"ShadowsSkinnedVS", strPath + L"shader\\shadows.vs.hlsl", skinnedDefines, "VS", "vs_5_1");
 	pShader->m_InputLayout = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+	pShader->m_SkinnedInputLayout = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "WEIGHTS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 44, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "BONEINDICES", 0, DXGI_FORMAT_R8G8B8A8_UINT, 0, 56, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 	const D3D_SHADER_MACRO shadowsAlphaTestDefines[] =
 	{
@@ -1656,11 +1771,20 @@ void CAssetMgr::CreateGraphicsShaders()
 	// DrawNormals
 	pShader = new CGraphicsShader;
 	pShader->BuildVertexShader(L"DrawNormalsVS", strPath + L"shader\\DrawNormals.hlsl", nullptr, "VS", "vs_5_1");
+	pShader->BuildVertexShader(L"DrawNormalsSkinnedVS", strPath + L"shader\\DrawNormals.hlsl", skinnedDefines, "VS", "vs_5_1");
 	pShader->m_InputLayout = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+	pShader->m_SkinnedInputLayout = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "WEIGHTS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 44, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "BONEINDICES", 0, DXGI_FORMAT_R8G8B8A8_UINT, 0, 56, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 	pShader->BuildPixelShader(L"DrawNormalsPS", strPath + L"shader\\DrawNormals.hlsl", nullptr, "PS", "ps_5_1");
 	pShader->BuildPixelShader(L"DrawNormalsAlphaTestedPS", strPath + L"shader\\DrawNormals.hlsl", shadowsAlphaTestDefines, "PS", "ps_5_1");

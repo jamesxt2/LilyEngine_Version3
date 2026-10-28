@@ -16,6 +16,7 @@ public:
 private:
 	Vector3		m_RelativePosition;
 	Vector3		m_RelativeRotation;
+	Quaternion  m_RelativeRotationQuat;
 	Vector3		m_RelativeScale;
 	Matrix		m_matWorld;
 	Matrix		m_InvWorld;
@@ -31,15 +32,16 @@ private:
 	Matrix		m_matTexTransform;
 
 public:
-	inline Vector3 GetRelativePosition() const { return m_RelativePosition; }
-	inline Vector3 GetRelativeRotation() const { return m_RelativeRotation; }
-	inline Vector3 GetRelativeScale() const { return m_RelativeScale; }
+	inline Vector3& GetRelativePosition() { return m_RelativePosition; }
+	inline Vector3& GetRelativeRotation() { return m_RelativeRotation; }
+	inline Quaternion& GetRelativeRotationQuat() { return m_RelativeRotationQuat; }
+	inline Vector3& GetRelativeScale() { return m_RelativeScale; }
 
 	Vector3 GetWorldPosition() const;
 	Vector3 GetWorldScale();
 
 	inline void SetRelativePosition(const Vector3& position) { m_RelativePosition = position; }
-	inline void SetRelativeRotation(const Vector3& rotation) { m_RelativeRotation = rotation; }
+	void SetRelativeRotation(const Vector3& rotation);
 	inline void SetRelativeScale(const Vector3& scale) { m_RelativeScale = scale; }
 
 	inline void SetRelativePosition(float x, float y, float z) { m_RelativePosition = Vector3(x, y, z); }
@@ -47,7 +49,7 @@ public:
 	inline void SetRelativeScale(float x, float y, float z) { m_RelativeScale = Vector3(x, y, z); }
 
 	inline void SetWorldMat(const Matrix& mat) { m_matWorld = mat; }
-	inline const Matrix& GetWorldMat() const { return m_matWorld; }
+	inline Matrix& GetWorldMat() { return m_matWorld; }
 	inline const Matrix& GetInvWorld() const { return m_InvWorld; }
 
 	inline Vector3 GetRelativeDir(DIR_TYPE type) const { return m_RelativeDir[(UINT)type]; }

@@ -282,6 +282,7 @@ void CDevice::BuildFrameResources()
 		m_FrameResources[i]->CreateCB(sizeof(TGlobal), 2, CB_TYPE::GLOBAL);
 		m_FrameResources[i]->CreateSB(sizeof(TMaterial), g_MaxMaterialCount, SB_TYPE::MATERIAL, STRUCTURED_BUFFER_TYPE::TABLE);
 		m_FrameResources[i]->CreateCB(sizeof(TSSAO), 1, CB_TYPE::SSAO);
+		m_FrameResources[i]->CreateCB(sizeof(TSkinned), 1, CB_TYPE::SKINNED);
 	}
 	m_CurrFrameResource = m_FrameResources[0].get();
 }

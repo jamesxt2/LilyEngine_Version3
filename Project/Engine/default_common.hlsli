@@ -20,12 +20,17 @@
 
 Texture2D g_DisplacementMap : register(t0, space3);
 
+
 struct VertexIn
 {
     float3 PosL : POSITION;
     float3 NormalL : NORMAL;
     float2 TexCoord : TEXCOORD;
     float3 TangentU : TANGENT;
+#ifdef SKINNED
+    float3 BoneWeights : WEIGHTS;
+    uint4 BoneIndices : BONEINDICES;
+#endif
 };
 
 struct VertexOut

@@ -2,15 +2,14 @@
 #include "CRenderComponent.h"
 
 CRenderComponent::CRenderComponent(COMPONENT_TYPE type)
-	: CComponent(type), m_PSOType(PSO_TYPE::PSO_NONE)
+	: CComponent(type)
 {
 }
 
 CRenderComponent::CRenderComponent(const CRenderComponent& other)
 	: CComponent(other),
 	m_Mesh(other.m_Mesh),
-	m_Material(other.m_Material),
-	m_PSOType(other.m_PSOType)
+	m_Material(other.m_Material)
 {
 	
 }

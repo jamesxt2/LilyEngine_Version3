@@ -139,6 +139,10 @@ void CCamera::Render()
 	for (const auto& obj : sortedObjs[PSO_TYPE::PSO_DEFAULT])
 		TestFrustumAndRender(obj);
 
+	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_DEFAULT_SKINNED).Get());
+	for (const auto& obj : sortedObjs[PSO_TYPE::PSO_DEFAULT_SKINNED])
+		obj->Render();
+
 	CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_SKY).Get());
 	for (const auto& obj : sortedObjs[PSO_TYPE::PSO_SKY])
 		obj->Render();

@@ -295,7 +295,7 @@ std::vector<float> CSsao::CalcGaussWeights(float sigma)
     return weights;
 }
 
-void CSsao::DrawNormalsAndDepth(const std::vector<CGameObject*>& objs)
+void CSsao::DrawNormalsAndDepth(const std::vector<CGameObject*>& defaultObjs, const std::vector<CGameObject*>& skinnedObjs)
 {
     CDevice::GetInst()->SetViewportAndScissorRect();
 
@@ -319,7 +319,12 @@ void CSsao::DrawNormalsAndDepth(const std::vector<CGameObject*>& objs)
 
     CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_DRAW_NORMALS).Get());
 
-    for (const auto& obj : objs)
+    for (const auto& obj : defaultObjs)
+        obj->Render();
+
+    CMDLIST->SetPipelineState(CAssetMgr::GetInst()->GetPSO(PSO_TYPE::PSO_DRAW_NORMALS_SKINNED).Get());
+
+    for (const auto& obj : skinnedObjs)
         obj->Render();
 
     // Change back to GENERIC_READ so we can read the texture in a shader.

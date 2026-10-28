@@ -51,7 +51,7 @@ cbuffer OBJECT : register(b0)
     uint g_MaterialIndex;
     
     //float padding_object;
-}
+};
 
 #define MATERIAL g_Materials[g_MaterialIndex]
 
@@ -88,7 +88,13 @@ cbuffer GLOBAL : register(b1)
     
     float g_DeltaTime;
     float g_TotalTime;
-}
+};
+
+cbuffer SKINNED_DATA : register(b2)
+{
+    row_major matrix g_BoneTransforms[96];
+    row_major matrix g_BoneInvTranspose[96];
+};
 
 float3 NormalSampleToWorldSpace(float3 normalMapSample, float3 unitNormalW, 
                                 float3 tangentW)
