@@ -1,4 +1,4 @@
-#LilyEngine_Version3 - 现代 3D 游戏引擎 (Modern 3D Game Engine)
+# LilyEngine_Version3 - 现代 3D 游戏引擎 (Modern 3D Game Engine)
 
 <p align="center">
   <b>基于 C++17 与 DirectX 12 从零手写的模块化现代图形引擎。不依赖任何商业引擎黑盒，旨在深度探索 GPU 硬件底层、现代图形管线与引擎架构设计。</b>
