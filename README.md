@@ -11,13 +11,13 @@
 ##  渲染效果展示 (Gallery)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jamesxt2/LilyEngine_Version3/main/images/p1.png" width="800" alt="Scene Screenshot 1">
+  <img src="https://raw.githubusercontent.com/jamesxt2/LilyEngine_Version3/main/images/p2.png" width="800" alt="Scene Screenshot 1">
   <br>
   <i>场景渲染展示：材质, 阴影, SSAO 与动画</i>
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jamesxt2/LilyEngine_Version3/main/images/p2.png" width="800" alt="Scene Screenshot 2">
+  <img src="https://raw.githubusercontent.com/jamesxt2/LilyEngine_Version3/main/images/p1.png" width="800" alt="Scene Screenshot 2">
   <br>
   <i>场景渲染展示：水面与粒子</i>
 </p>
